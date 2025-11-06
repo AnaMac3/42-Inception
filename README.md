@@ -1,7 +1,6 @@
 # 42-Inception
 42 Common Core Inception 
 - de qué va??
-- ---
 - System administration
 - Docker technology
 
