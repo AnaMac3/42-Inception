@@ -8,7 +8,8 @@
 - [How to use](#how-to-use)
 - [Docker](#docker)
 - [Paso a paso](#paso-a-paso)
-  - [Virtual Machine](#virtual-machine)
+  - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
+  - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
 - [Fixed-point numbers](#fixed-point-numbers)
 - [More info](#more-info)
 
@@ -120,6 +121,8 @@ Ejemplo de la estructura del directorio (`ls -alR` -> muestra archivos, -a inclu
 Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guardarse localmente de varias maneras / en varios archivos y deben ser ignorados por git. Las credenciales almacenadas publicamente suponen el suspenso del proyecto.  
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
+SEPARAR EXPLICACIÓN TEÓRICA DE QUÉ SON LAS COSAS Y LUEGO EL PASO A PASO Y CÓMO HAY QUE CONFIGURAR LAS COSAS DE ESTE PROYECTO EN CONCRETO.
+
 ## Docker
 
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores** / que permite empaquetar una aplicación y sus dependencias en un contenedor aislado.  
@@ -135,13 +138,51 @@ Ventajas de Docker frente a las máquinas virtuales:
 
 ### Docker Compose
 **Docker Compose** es una herramienta que te permite levantar varios contenedores a la vez junto con sus redes y sus volúmenes / es una herramienta desarrollada para definir y compartir aplicaciones multicontenedor.  
-Con Compose se puede crear un archivo YAML para definir servicios e iniciar y detener todo con un solo comando.  
+Con Compose se puede crear un archivo YML para definir servicios e iniciar y detener todo con un solo comando.  
 En vez de ejecutar muchos comandos `docker run`, describimos todo en un archivo:
 
       docker-compose.yml
 
+**Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltipels contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
+- `network`: se definen las redes.
+  - red llamada amacarulnet (TIENE QUE LLAMARSE ASÍ?)
+  - controlador de red `bridge`: permite a los contenedores comunicarse entre sí en el mismo host
+
+        networks:
+          amacarulnet:
+              name: amacarulnet
+              driver: bridge
+
+- `services`: se definen los servicios que ejecutarán los contenedores. Servicios que tneemos: `nginx`, `wordpress`, `mariadb`.
+  - container_name: asigna un nombre específico al contenedor que se crea a partir de este servicio
+  - build: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
+  - image: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
+  - ports: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
+  - volumes: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
+  - restart: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
+  - networks: especifica a qué redes tiene que estar conectado el contenedor.
+
+        services:
+          nginx:
+              continer_name: nginx
+              build: ./requeriments/nginx
+              image: nginx
+              ports:
+              - 443:443
+              volumes:
+              - wordpress_data:/var/www/html
+              restart: always
+              networks:
+              - amacarulnet
+
+...... -> seguir en: https://github.com/gemartin99/Inception?tab=readme-ov-file#1--descargar-imagen-de-la-maquina-virtual-
+
+
+
+
 ## Contenedores, Servicios e Imágenes
 - **Cada servicio = un contenedor**: el proyecto pide tres servicios principales:
+  
 | Servicio | Contenedor | Qué contiene |
 |----------|------------|--------------|
 | NGINX | `nginx` | Servidor web con TLS |
@@ -166,6 +207,7 @@ Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede 
               Dockerfile
 
   - Palabras clave de Dockerfile
+ 
 | Keyword | Definition |
 |---------|------------|
 | FROM | Indica a Docker en qué sistema operativo debe ejecutarse tu máquina virtual. Serán `debian:buster?bookworm?` para Debian o `alpine:x:xx` para Linux. |
@@ -227,7 +269,7 @@ NGINX debe exponer solo el puerto 443.
 
 
 ## Paso a paso
-### Virtual Machine: instalación y configuración
+### Virtual Machine: instalación y creación de una VM
 1. Descargar [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 2. Crear la VM en VirtualBox:
    - Abre VirtualBox -> clic en **Nueva**
@@ -246,10 +288,10 @@ NGINX debe exponer solo el puerto 443.
       - Chipset: Default
     - Sistema -> Procesador:
       - CPUS: 2 (si tu equipo tiene >= 4 cores, pon 2 o 4)
-      - Enable PAE/NX (no me aparece eso)
+      - Enable PAE/NX
     - Pantalla -> Video Memory: 16-64MB (no crítico)
     - Almacenamiento:
-      - Controlador: IDE o SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar
+      - Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
     - Red:
       - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
     - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git.
@@ -264,9 +306,18 @@ NGINX debe exponer solo el puerto 443.
      - Domain name: campo opcional en el SO debian que se usa en redes corporativas... dejarlo vacio o poner local
      - Root password: blablapassword
      - Usuario y contraseña: Crea un usuario con login de 42 -> amacarul, passuser
-     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH (esto qué era???)
-     - No instalar software adicional innecesario, se pueden añadir herramientas luego
-    - Finaliza y reinicia. 
+     - Particionado: guided - use entire disk -> el instalador se crea automaticamente el en disco virtual inception.vdi -> /swap
+     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH -> Sí -> permite conectarte a la vm desde tu host usando `ssh`, facilita trabajar en la vm sin abrir interfaz gráfica todo el tiempo. Acceder a la máquina virtual via SSH
+       - Arrancar la VM
+       - Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`
+       - Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH
+       - En tu host:
+      
+             ssh <login>@<IP_VM>
+  
+       - Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM
+   - No instalar software adicional innecesario, se pueden añadir herramientas lueg
+   - Finaliza y reinicia. 
 
 ### Instalar Docker y Docker Compose
 6. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
@@ -300,7 +351,47 @@ Verifica:
 
 
 ### Configurar carpetas de datos (volúmenes enlazados)
+7. Crea las carpetas del host que luego montarás como volúmenes
+
+       mkdir -p /home/<login>/data/wordpress
+       mkdir -p /home/<login>/data/mariadb
+
+       #Ajustar permisos para que Docker pueda escribir
+       sudo chown -R <login>:<login> /home/<login>/data
+
+   ESTAS CARPETAS HAY QUE CREARLAS DÓNDE? OSEA QUIERO QUE SEAN ACCESIBLES DESDE EL HOST, TAMBIÉN, NO? SON LAS COSAS QUE HE DE SUBIR AL REPOSITORIO.... Y LA ESTRUCTURA DE DATOS QUE TENGO NO HAY NINGUNA CARPETA DATA
+
+
+## Red y cómo apuntar el dominio local
+8. Averiguar IP de la VM (si usamos bridged):
+
+       ip a show
+       # ó
+       hostname -I
+
+   - En tu máquina host añade el /etc/hosts
+  
+           <IP_VM> <login>.42.fr
+
+   - Con esto, cuando desde tu PC accedas a https://amacarul.42.fr se redigirá a la VM.
+  
+## Firewall (recomendable)
+9. Si usas `ufw` o `iptables`, abre puerto 443
+
+        sudo apt install -y ufw
+        sudo ufw allow OpenSSH
+        sudo ufw allow 443/tcp
+        sudo ufw enable
+
+## Clonar tu repo y preparar proyecto
+10. Clona el repo donde pondrás los Dockefiles y docker-compose.
+
+        cd /home/<login>
+        git clone <login> inception
+        cd inception
+        #Aquí irán srcs/, Makefile...
 
 ## More info
-Other repos &rarr; [HERE](https://github.com/Forstman1/inception-42)  
-Grademe tutorial &arr; [HERE](https://tuto.grademe.fr/inception/)
+[Forstman1 repo](https://github.com/Forstman1/inception-42)  
+[gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
+[Grademe tutorial](https://tuto.grademe.fr/inception/)
