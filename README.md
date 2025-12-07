@@ -224,7 +224,76 @@ NGINX debe exponer solo el puerto 443.
 
 
 ## Paso a paso
-### 
+### Virtual Machine
+1. Descargar [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
+2. Crear la VM en VirtualBox:
+   - Abre VirtualBox -> clic en **Nueva**
+     - Name: inception
+     - Folder: 42-Inception
+     - ISO Image: ?
+     - OS: Linux
+     - OS Distribution: Debian
+     - OS Version: Debian (64-bit)
+     - Memoria RAM: 2048 minimo, 4096 recomendado
+     - Number oc CPU: 1??
+     - Disk Size: 20 GB minimo
+  - Ajustes recomendados antes de arrancar la VM: **Configuración**
+    - Sistema -> Placa Base:
+      - Orden de arranque: dejar `Optical` arriba (para instalar desde ISO)
+      - Chipset: Default
+    - Sistema -> Procesador:
+      - CPUS: 2 (si tu equipo tiene >= 4 cores, pon 2 o 4)
+      - Enable PAE/NX (no me aparece eso)
+    - Pantalla -> Video Memory: 16-64MB (no crítico)
+    - Almacenamiento:
+      - Controlador: IDE o SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar
+    - Red:
+      - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
+    - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git.
+
+3. Instalar Debian (Debian en la VM no es lo mismo que Debian en los contenedores; dentro de cada servicio podemos elegir entre debian o alpine, lo que es independiente del SO de la VM) -> https://www.debian.org/download.es.html
+4. Arrancar la VM e instalar Debian:
+   - Inicia la VM (Start)
+   - Sigue el instalador de Debian:
+     - Seleccionar idioma -> zona horaria Europe/Spain
+     - Participado: Guided - use entire disk
+     - Hostname: debian, inception ... -> es para identificar la máquina dentro de la red local -> debian-inception
+     - Domain name: campo opcional en el SO debian que se usa en redes corporativas... dejarlo vacio o poner local
+     - Root password: blablapassword
+     - Usuario y contraseña: Crea un usuario con login de 42 -> amacarul, passuser
+     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH (esto qué era???)
+     - No instalar software adicional innecesario, se pueden añadir herramientas luego
+    - Finaliza y reinicia. 
+
+6. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
+   - Abrir terminal dentro de debian VM y ejecutar:
+
+         #Actualizar sistema
+         sudo apt update && sudo apt upgrade -y
+
+         #Instalar utilidades básicas
+         sudo apt install -y sudo curl wget git make vim apt-transport-https ca-certificates gnupg lsb-release
+
+  Si añadiste usuario al instalar, deberias poder usar sudo. Si no, usa root para ejecutar los comandos y crea el usuario apropiado.
+  - Instalar Docker y Docker compose:
+
+        #Instalar Docker (paquete docjer.io) y plugin docker-compose
+        sudo apt install -y docker.io docker-compose-plugin
+
+        #Habilitar y arrancar el servicio Docker
+        sudo systemctl enable --now docker
+
+        #Añadir tu usuario al grupo docker
+        sudo usermod -aG docker <login>
+
+        #Nota: es necesario hacer logout/login o reiniciar la VM para aplicar el grupo docker
+
+Después de hacer usermod, sal de la sesión y vuelve a entrar.  
+Verifica:
+
+    docker --version
+    docker compose version
+
 
 ## More info
 Other repos &rarr; [HERE](https://github.com/Forstman1/inception-42)  
