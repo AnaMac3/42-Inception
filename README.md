@@ -8,11 +8,12 @@
 - [How to use](#how-to-use)
 - [Teoría](#teoría)
   - [Docker](#docker)
-  - [Docker image](#docker-image)
+  - [Docker image and Dockerfile](#docker-image-and-dockerfile)
   - [Docker Compose](#docker-compose)
   - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
-  - [Volúmenes - persistencia de datos](#volúmenes-persistencia-de-datos)
+  - [Volúmenes - persistencia de datos](#volúmenes---persistencia-de-datos)
   - [Variables de entorno y secretos](variables-de-entorno-y-secretos)
+  - [NGINX, WordPress and MariaDB](#nginx-wordpress-and-mariadb)
   - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
 - [Paso a paso](#paso-a-paso)
   - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
@@ -24,7 +25,7 @@
 
 ## How to use
 
-- Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VM de 42
+- Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VirtualBox
 - Cómo hacerlo desde diferentes ordenadores:
   - Cosas que meter en github:
     - Makefile
@@ -37,9 +38,6 @@
     - archivo .env si contene contraseñas -> debe estar en .gitignore
     - certificados TLS generados
 
-
-       
-
 - Cada ordenador necesita su propia máquina virtual con Docker instalado. El proyecto es portable (los archivos), pero Docker no se sincroniza entre máquinas.
 - En cada ordenador hay que tener:
   - Una VM
@@ -49,6 +47,8 @@
 
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
+
+  - contraseñas? certificados TLS??
 
 ## Resumen del Subject / Introducción
 El proyecto **Inception** consiste en crear una infraestructura completa usando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.
@@ -98,7 +98,7 @@ Se puede usar:
 - **Alpine**: FROM alpine:3.18
 
 
-## Teoría - Conceptos fundamentales
+## Teoría
 ### Docker
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**. 
 
@@ -126,7 +126,7 @@ Un contenedor, tiene:
 - Archivos de configuración
 Un contenedor es la ejecución **de una imagen Docker**
 
-### Docker image
+### Docker image and Dockerfile
 Una **imagen** es una *plantilla* de un sistema con:
 - Ficheros
 - Dependencias
@@ -163,13 +163,17 @@ Palabras clave de Dockerfile
 | ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
 | CMD | Argumentos por defecto del ENTRYPOINT |
 
+[Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
+
 En *Inception* está prohibido usar imágenes prefabricadas como:
 
       FROM nginx:latest
       FROM mariadb:latest
       FROM wordpress:latest
 
-[Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
+| PID 1 y ENTRYPOINT |
+|-------|
+| En Linux, **PID 1** es el primer proceso que se ejecuta, y es responsable de: <br> - manejar señales <br> - recolección de procesos zombie <br> - iniciar servicios <br> En un contenedor Docker, el proceso que se defina como `ENTRYPOINT` **se convierte en PID 1**. <br> Muchos programas no están pensados para funcionar como PID 1, lo que causa: <br> - contenedores que no se apagan correctamente <br> - procesos zombie <br> - comportamientos inesperados <br> - contenedores que se cierran solos o crashean <br> Por eso está prohibido usar bucles infinitos (trucos para mantener los contenedores vivos). CÓMO SE SOLUCIONA ENTONCES ESTO??? ES NGINX UN PROGRAMA PREPARADO PARA SER PID 1??? |
 
 **Imagen -> contenedor en ejecución -> corre un único servicio**.
 En este proyecto se piden tres servicios principales:
@@ -181,6 +185,24 @@ En este proyecto se piden tres servicios principales:
 | MariaDB | `mariadb` | Database |
 
 Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
+
+**Dockerfile: buenas prácticas:** (IGUAL ESTO SE PUEDE METER EN EL PASO A PASO CUANDO ESTÉ EPXLICANDO CÓMO HACER LOS DOCKERFILES, NO?)
+- Un contenedor solo debe ejecutar un servicio real, no debe ejecutar un bucle para mantenerse vivo
+- No ejecutar daemons dentro del contenedor
+- Usar ENTRYPOINT correctamente
+  Usar:
+
+          ENTRYPOINT ["mysql"]
+  Nunca:
+
+          CMD service myswl start && tail -f /dev/null
+
+- No instalar cosas innecesarias
+- Usar imágenes base claras y versionadas
+- Copiar solo lo necesario
+- Limpiar cachés de paquetes
+
+  
 
 ### Docker Compose
 **Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
@@ -308,6 +330,44 @@ Usar `.env` para:
     - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
     - archivo .env si contene contraseñas -> debe estar en .gitignore
     - certificados TLS generados
+   
+### NGINX, WordPress and MariaDB
+Aunque el foco del proyecto es **Docker y la infraestructura**, es importante entender qué servicios estamos containerizando:
+
+#### NGINX
+**NGINX** es un servidor web muy ligero y rápido. En este proyecto cumple dos funciones:
+1. Servir contenido HTTPS mediante un certificado TLS.
+2. Actuar como reverse proxy, enviando las peticiones `.php` al contenedor de PHP-FPM (WordPress).
+NGINX es más eficiente que Apache para manejar muchas conexiones simultáneas.
+
+| certificado TLS |
+|-----|
+| Un certificado TLS (Transport Layer Security) es un protocolo que cifra la comunicación entre el navegador y tu servidor (HTTPS). Es un archivo que: <br>- identifica al servidor <br> - permite cifrar el tráfico HTTPS <br>- asegura que la comunicación no puede ser leída por terceros |
+
+#### WordPress
+**WordPress** es un CMS (Content Management System) escrito en PHP. Permite crear con facilidad:
+- páginas
+- blogs
+- usuarios
+- plugins
+- temas
+En este proyecto debe ejecutarse con PHP-FPM (no con Apache) porque:
+- NGINX no ejecuta PHP directamente
+- PHP-FPM gestiona procesos PHO como un servicio separado
+
+El flujo es:
+
+Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress -> MariaDB (3306)
+
+#### MariaDB
+**MariaDB** es un sistema de bases de datos SQL (alternativa a MySQL). WordPress lo usa para guardar:
+- posts
+- usuarios
+- contraseñas
+- configuraciones
+- plugins
+- etc
+Los datos deben persisitir en un volumen, para que no se pierdan al destruir contenedores.  
 
 ### Cómo se relacionan todos los conceptos
 1. **Dockerfiles** construyen imágenes para cada servicio
@@ -502,4 +562,5 @@ Verifica:
 ## More info
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
-[Grademe tutorial](https://tuto.grademe.fr/inception/)
+[Grademe tutorial](https://tuto.grademe.fr/inception/)  
+[dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
