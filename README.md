@@ -8,6 +8,12 @@
 - [How to use](#how-to-use)
 - [Teoría](#teoría)
   - [Docker](#docker)
+  - [Docker image](#docker-image)
+  - [Docker Compose](#docker-compose)
+  - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
+  - [Volúmenes - persistencia de datos](#volúmenes-persistencia-de-datos)
+  - [Variables de entorno y secretos](variables-de-entorno-y-secretos)
+  - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
 - [Paso a paso](#paso-a-paso)
   - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
   - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
@@ -120,7 +126,7 @@ Un contenedor, tiene:
 - Archivos de configuración
 Un contenedor es la ejecución **de una imagen Docker**
 
-### Imagen Docker
+### Docker image
 Una **imagen** es una *plantilla* de un sistema con:
 - Ficheros
 - Dependencias
@@ -175,7 +181,6 @@ En este proyecto se piden tres servicios principales:
 | MariaDB | `mariadb` | Database |
 
 Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
-
 
 ### Docker Compose
 **Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
