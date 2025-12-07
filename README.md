@@ -6,7 +6,8 @@
 
 ## Table of Contents
 - [How to use](#how-to-use)
-- [Docker](#docker)
+- [Teoría](#teoría)
+  - [Docker](#docker)
 - [Paso a paso](#paso-a-paso)
   - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
   - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
@@ -30,36 +31,8 @@
     - archivo .env si contene contraseñas -> debe estar en .gitignore
     - certificados TLS generados
 
-  El repositorio debe contener:
 
-        inception/
-        │
-        ├── Makefile
-        ├── .gitignore
-        ├── README.md (opcional)
-        └── srcs/
-            ├── docker-compose.yml
-            └── requirements/
-                ├── nginx/
-                │   ├── Dockerfile
-                │   ├── conf/
-                │   │   └── nginx.conf
-                │   └── tools/
-                │       └── generate_cert.sh
-                │
-                ├── wordpress/
-                │   ├── Dockerfile
-                │   ├── conf/
-                │   │   └── www.conf
-                │   └── tools/
-                │       └── wp_setup.sh
-                │
-                └── mariadb/
-                    ├── Dockerfile
-                    ├── conf/
-                    │   └── my.cnf
-                    └── tools/
-                        └── mariadb_init.sh
+       
 
 - Cada ordenador necesita su propia máquina virtual con Docker instalado. El proyecto es portable (los archivos), pero Docker no se sincroniza entre máquinas.
 - En cada ordenador hay que tener:
@@ -71,26 +44,33 @@
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
 
-## Subject  
-- Hay que hacer el proyecto en una máquina virtual -> Docker Compose
-- cada imagen de Docker tiene que tener el mismo nombre que su servicio correspondiente
-- Cada servicio debe correr en un dedicater container
-- Los contenedores deben construirse desde la penultima versión estable de Alpine o Debian ???
-- Tienes que escribir tu propio Dockerfiles, uno por servicio. Los Dockerfiles debe llamarse en tu docker-compose.yml por tu Makefile
-- Esto significa que debes construir las iamgenes Docker para el proyecto por tu cuenta. Está prohibido subir imagenes de Docker que ya estén hechas de servicios como DockerHub (Alpine/Debian se excluyen de esta norma) -> Cómo se comprueba eso en la evaluación?
-- Hay que set up:
-  - Un contenedor de Docker que contenga NGINX con TLSv1.2 o TLSv1.3 solo
-  - Un contenedor Docker que contenga WordPress con php-fpm (debe ser instalado y configurado) solo, sin nginx
-  - Un contenedor Docker que contenga solo MariaDB, sin nginx
-  - Un volumen que contenga tu database WordPress
-  - Un segundo volumen que contenga tus archivos de website de WordPress
-  - un docker-network que establezca la conexión entre los contenedores
-- Tus contenedores deben reiniciarse automaticamente en caso de crash
+## Resumen del Subject / Introducción
+El proyecto **Inception** consiste en crear una infraestructura completa usando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.
+Hay que configurar:
+- **3 contenedores independientes**:
+  - **NGINX** con TLS 1.2/1.3 (única puerta de entrada al sistema, puerto 443)
+  - **WordPress + PHP-FPM** (sin NGINX)
+  - **MariaDB** (solo base de datos)
+- **2 volúmenes persistentes**:
+  - Uno para la base de datos de MariaDB
+  - Uno para los archivos de WordPress
+- **Una Docker-network** que conecte los tres servicios entre sí.
+  - NGINX se conecta a PHP -> puerto 9000
+  - PHP conecta con MariaDB -> puerto 3306 (esto va aquí???)
+- **Dockerfiles propios** para cada servicio (no se permite usar imágenes preconfiguradas - excepto Alpine o Debian)
+- **Variables de entorno obligatorias**, credenciales fuera del repositorio (usar `.env` y/o Docker secrets)
+- Todos los contenedores deben reiniciarse automáticamente si fallan
+- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.)
+- El dominio debe resolver a tu máquina local: `login.42.fr`
+
+
+ MAS COSAS:
+- Los Dockerfiles debe llamarse en tu docker-compose.yml por tu Makefile
 
 -> leer sobre como trabaja daemons y si es buena idea usarlos !!
--> está prohibido usar host o --link o links. The network line tiene que estar presente en tu docker-compose.yml file. Tus containers no deben iniciarse con un comando que corra en un bucle infinito. Esto se aplica a todo comando que se use como entrypoint, o usado en scripts de entrypoint. Está prohibido: tail -f, bash, sleep infinity, while true
 
--> leer sobre PID 1 y buenas prácticas de Dockerfiles
+
+-> leer sobre PID 1 y buenas prácticas de Dockerfiles 
 
 - En tu database WordPress tiene que haber dos usuarios: uno de ellos ha de ser el administrador, su username no puede contener 'admin', 'Admin', 'administrator, o 'Administrator'
 
@@ -99,114 +79,74 @@
 - para simplificar el proceso, debes configurar tu domain name to point a tu local IP address
 - Este domain name debe ser login.42.fr. usa tu propio login. amacarul.42.fr redirigirá a la dirección IP que apunta a la website de amacarul
 
--> the latest tag is prohibited ??
 -> no tiene que haber contraseñas
-> hay que usar obligatoriamente environment variables
 > se recomienda usar .env file para guardar las variables de entorno y para usar Docker secrets para almacenar infor confidencial
-> tu contenedor NGINX debe ser el unico entry poiny a tu infraestructura, accesible solo via port 443, usando TLSv1.2 o TLSv1.3
-
-
-Ejemplo de diagrama del resultado esperado: 
-- Recuadro grande llamado COmputer HOST que alberga Docker network y DB y WordPress
-- Recuadro de Docker network, contiene:
-  - Container DB, que conecta con la DB que está afuera, y el Container WordPress+PHP (que está dentro del Docker network) a través de 3306 y con el WordPress que está fuera
-  - Container NGINX que conecta con Container WordPress+PHP mediante 9000 y con el WordPress que está fuera
-- Fuera del COmputer HOST está www. www conecta con Container NGINX  a través de 443
--> 443, 3306, 9000: son puertos
--> Container DB, Container WordPress+PHP y Container NGINX son Image docker
--> DB y WordPress son Volume (?)
-
-Ejemplo de la estructura del directorio (`ls -alR` -> muestra archivos, -a incluye ocultos, -l muestra detalles, -R recursivo (subdirectorios))
 
 Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guardarse localmente de varias maneras / en varios archivos y deben ser ignorados por git. Las credenciales almacenadas publicamente suponen el suspenso del proyecto.  
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
-SEPARAR EXPLICACIÓN TEÓRICA DE QUÉ SON LAS COSAS Y LUEGO EL PASO A PASO Y CÓMO HAY QUE CONFIGURAR LAS COSAS DE ESTE PROYECTO EN CONCRETO.
 
-## Docker
+## Base de cada imagen: Alpine o Debian
+Se puede usar:
+- **Debian**: FROM debian:bookworm
+- **Alpine**: FROM alpine:3.18
 
-**Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores** / que permite empaquetar una aplicación y sus dependencias en un contenedor aislado.  
-Un **contenedor** es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.
+
+## Teoría - Conceptos fundamentales
+### Docker
+**Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**. 
+
+Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
+
+**Máquina Virtual vs Contenedor**
+| Virtual Machine | Contenedor Docker |
+|-----------------|-----------|
+| Incluye un sistema operativo completo con su kernel | Comparte el kernel del host |
+| Pesada y lenta en arrancar | Muy ligero y arranca en milisegundos |
+| Cada VM consume mucha RAM/CPU | Cada contenedor usa solo lo imprescindible |
+| Diseñada para aislamiento total | Diseñado para despliegue rápido |
+
 Problemas que resuelve Docker:
 - Dependencias que son incompatibles con tu versión de software
 - Dependencias en versiones diferentes
-- Dependencias que no existen en tu sistema operativo
-- Dependencias que fallan al iniciarse...
-Ventajas de Docker frente a las máquinas virtuales:
-- Capacidad de modelar cada contendor como una imagen que se puede almacenar localmente.
-- No tiene kernel/núcleo (sistema operativo, gráficos, red...); solo tiene la aplicación y sus dependencias.
+- Dependencias incompatibles entre proyectos
+- Necesidad de reproducir entornos exactamente iguales
+- Aislamiento de bases de datos, servidores web, etc.
 
-### Docker Compose
-**Docker Compose** es una herramienta que te permite levantar varios contenedores a la vez junto con sus redes y sus volúmenes / es una herramienta desarrollada para definir y compartir aplicaciones multicontenedor.  
-Con Compose se puede crear un archivo YML para definir servicios e iniciar y detener todo con un solo comando.  
-En vez de ejecutar muchos comandos `docker run`, describimos todo en un archivo:
+Un contenedor, tiene:
+- La aplicación (p.ej. WordPress, NGINX, MariaDB)
+- Sus dependencias
+- Binarios necesarios
+- Archivos de configuración
+Un contenedor es la ejecución **de una imagen Docker**
 
-      docker-compose.yml
+### Imagen Docker
+Una **imagen** es una *plantilla* de un sistema con:
+- Ficheros
+- Dependencias
+- Configuraciones
+- Comandos de arranque
 
-**Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltipels contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
-- `network`: se definen las redes.
-  - red llamada amacarulnet (TIENE QUE LLAMARSE ASÍ?)
-  - controlador de red `bridge`: permite a los contenedores comunicarse entre sí en el mismo host
+Una **imagen**:
+- No se ejecuta
+- No cambia
+- No tiene estado
+Un **contenedor**:
+- Es una instancia de la imagen
+- Se ejecuta
+- Puede modificarse durante su uso
+- Puede morir y recrearse
 
-        networks:
-          amacarulnet:
-              name: amacarulnet
-              driver: bridge
+Una imagen se crea con un **Dockerfile** (archivo que define cómo construir una imagen). 
 
-- `services`: se definen los servicios que ejecutarán los contenedores. Servicios que tneemos: `nginx`, `wordpress`, `mariadb`.
-  - container_name: asigna un nombre específico al contenedor que se crea a partir de este servicio
-  - build: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
-  - image: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
-  - ports: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
-  - volumes: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
-  - restart: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
-  - networks: especifica a qué redes tiene que estar conectado el contenedor.
+Ejemplo de Dockerfile que crea una imagen que al ejecutarse arranca NGINX:
 
-        services:
-          nginx:
-              continer_name: nginx
-              build: ./requeriments/nginx
-              image: nginx
-              ports:
-              - 443:443
-              volumes:
-              - wordpress_data:/var/www/html
-              restart: always
-              networks:
-              - amacarulnet
+      FROM debian:bookworm
+      RUN apt update && apt install -y nginx
+      COPY ./config/default.conf /etc/nginx/conf.d/
+      ENTRYPOINT ["nginx", "-g", "daemon off;"]
 
-...... -> seguir en: https://github.com/gemartin99/Inception?tab=readme-ov-file#1--descargar-imagen-de-la-maquina-virtual-
-
-
-
-
-## Contenedores, Servicios e Imágenes
-- **Cada servicio = un contenedor**: el proyecto pide tres servicios principales:
-  
-| Servicio | Contenedor | Qué contiene |
-|----------|------------|--------------|
-| NGINX | `nginx` | Servidor web con TLS |
-| WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
-| MariaDB | `mariadb` | Database |
-
-Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual.
-
-- **Cada contenedor debe tener su propio Dockerfile**:
-  - **Dockerfile**: archivo principal de tus imágenes Docker.
-  - Ejemplo de estructura:
-
-        srcs/
-          docker-compose.yml
-          requeriments/
-            nginx/
-              Dockerfile
-              conf/
-            wordpress/
-              Dockerfile
-            mariadb/
-              Dockerfile
-
-  - Palabras clave de Dockerfile
+Palabras clave de Dockerfile
  
 | Keyword | Definition |
 |---------|------------|
@@ -215,61 +155,167 @@ Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede 
 | COPY | Copia un archivo. Especificar la ubicación del archivo a copiar desde el directorio que contiene tu Dockerfile y luego especificar dónde se quiere copiar dentro de la máquina virtual.  |
 | EXPOSE | Indica los puertos de red específicos en los que se escucha durante la ejecución. No permite que el host acceda a los puertos del contenedor; expone el puerto especificado y lo hace disponible solo para la comunicación entre contenedores.  |
 | ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
+| CMD | Argumentos por defecto del ENTRYPOINT |
+
+En *Inception* está prohibido usar imágenes prefabricadas como:
+
+      FROM nginx:latest
+      FROM mariadb:latest
+      FROM wordpress:latest
 
 [Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
 
-## Base de cada imagen: Alpine o Debian
-Se puede usar:
-- **Debian**: FROM debian:bookworm
-- **Alpine**: FROM alpine:3.18
+**Imagen -> contenedor en ejecución -> corre un único servicio**.
+En este proyecto se piden tres servicios principales:
+  
+| Servicio | Contenedor | Qué contiene |
+|----------|------------|--------------|
+| NGINX | `nginx` | Servidor web con TLS |
+| WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
+| MariaDB | `mariadb` | Database |
 
-INVESTIGAR CUÁL ME CONVIENE Y POR QUÉ
+Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
 
-No se pueden usar imágenes hechas, excepto Alpine/Debian. Es decir, no se puede hacer:
 
-      FROM wordpress:latest
-      FROM mariadb:latest
+### Docker Compose
+**Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
+- Servicios (qué contenedores hay)
+- Redes (cómo se comunican)
+- Volúmenes (dónde guardan datos persistentes)
+- Variables de entorno
+- Dependencias
+- Reconstrucciones automáticas
+- Puertos expuestos
 
-  Ejemplo aceptado:
+El Makefile ejecuta el `docker-compose.yml`.  
 
-      FROM debian:bookworm
-      RUN apt install mariadb-server
+En el proyecto *Inception* se requieren varios contenedores conectados entre sí:
 
-  **¿Cómo se comprueba esto?**: 
-  - Revisar Dockerfiles
-  - Revisar docker-compose.yml
-  - Ver si el contenedor realmente ejecuta la app instalada a mano
-  - Ver que no haga `docker pull wordpress` o `docker pull mariadb`.
+      Internet -> NGINX -> WORDPRESS -> MARIADB
 
-## Docker network
-Docker crea una red interna que conecta tus contenedores.   
-Debe ser declarada explícitamente (yml):
+Compose los levanta todos juntos:
+
+      docker compose up --build
+
+**Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
+Ejemplo simplificado:
+
+
+        services:
+          nginx:
+            build: ./requirements/nginx
+            ports:
+              - "443:443"
+            volumes:
+              - wordpress_data:/var/www/html
+            networks:
+              - inception
+        
+          wordpress:
+            build: ./requirements/wordpress
+            networks:
+              - inception
+        
+          mariadb:
+            build: ./requirements/mariadb
+            volumes:
+              - db_data:/var/lib/mysql
+            networks:
+              - inception
+        
+        volumes:
+          wordpress_data:
+          db_data:
+        
+        networks:
+          inception:
+
+
+- `services`: se definen los servicios que ejecutarán los contenedores. Servicios que tenemos: `nginx`, `wordpress`, `mariadb`.
+  - container_name: asigna un nombre específico al contenedor que se crea a partir de este servicio
+  - build: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
+  - image: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
+  - ports: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
+  - volumes: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
+  - restart: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
+  - networks: especifica a qué redes tiene que estar conectado el contenedor.
+  - red llamada amacarulnet (TIENE QUE LLAMARSE ASÍ?)
+  - controlador de red `bridge`: permite a los contenedores comunicarse entre sí en el mismo host
+
+
+...... -> seguir en: https://github.com/gemartin99/Inception?tab=readme-ov-file#1--descargar-imagen-de-la-maquina-virtual-
+
+
+### Docker Network - cómo se comunican los contenedores
+Los contenedores están aislados entre sí.  
+Para comunicarse, deben estar en la misma red Docker:
 
       networks:
-        inception:
+          inception:
+            driver: bridge
 
-Esto permite que los contenedores se busquen por nombre:
-- NGINX se conecta a PHP -> puerto 9000
-- PHP conecta con MariaDB -> puerto 3306
+Esto permite:
+- NGINX -> PHP-FPM por el puerto 9000
+- PHP-FPM -> MariaDB por el puerto 3306
 
-## Volúmenes
+Los contenedores se buscan por su nombre de servicio:
 
-El proyecto pide dos volúmenes:
-- `mariadb`: contiene base de datos
-- `wordpress`: contiene archivos de WordPress
+    fastcgi_pass wordpress:9000;
 
-Deben estar montados en:
+????
 
-      /hone/<login>/data/wordpress
-      /home/<login>/data/mariadb
+### Volúmenes - persistencia de datos
+Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
 
-## TLS (HTTPS)
-Solo se permite TLSv1.2 y TLSv1.3.  
-NGINX debe exponer solo el puerto 443.
+      volumes:
+          wordpress_data:
+          mariadb_data:
 
+*Inception* exige que estén montados en:
 
-## Paso a paso
-### Virtual Machine: instalación y creación de una VM
+        /home/<login>/data/wordpress
+        /home/<login>/data/mariadb
+
+Sirven para:
+- con MariaDB -> persistir la base de datos
+- con WordPress -> guardar plugins, temas, uploads
+
+Si destruyes el contenedor:
+
+      docker compose down
+      docker compose up --build
+
+Tus datos siguen ahí. 
+
+### Variables de entorno y secretos
+Nunca se deben poner contraseñas en el repositorio.
+Usar `.env` para:
+
+    ....
+
+⚠ Cosas que meter en github:
+    - Makefile
+    - docker-compose.yml
+    - Dockerfiles
+    - scripts
+    - Configuraciones (nginx.conf, www.conf, etc)
+  - Cosas que no deben subirse a github:
+    - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
+    - archivo .env si contene contraseñas -> debe estar en .gitignore
+    - certificados TLS generados
+
+### Cómo se relacionan todos los conceptos
+1. **Dockerfiles** construyen imágenes para cada servicio
+2. **Compose** define cómo se conectan: redes, volúmenes, puertos
+3. **Compose levanta los contenedores** en el orden necesario
+4. **NGINX** recibe tráfico HTTPS y lo pasa a PHP-FPM (WordPress)
+5. **WordPress** consulta la base de datos en MariaDB
+6. **Los volúmenes** garantizan que WordPress y MariaDB persistan datos
+7. **Las varaibles de entorno** configuran credenciales y dominio
+8. El sistema funciona como una infraestructura real
+
+## Guía paso a paso
+### Preparar la Virtual Machine
 1. Descargar [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 2. Crear la VM en VirtualBox:
    - Abre VirtualBox -> clic en **Nueva**
@@ -303,7 +349,7 @@ NGINX debe exponer solo el puerto 443.
      - Seleccionar idioma -> zona horaria Europe/Spain
      - Participado: Guided - use entire disk
      - Hostname: debian, inception ... -> es para identificar la máquina dentro de la red local -> debian-inception
-     - Domain name: campo opcional en el SO debian que se usa en redes corporativas... dejarlo vacio o poner local
+     - Domain name: `login.42.fr` no??
      - Root password: blablapassword
      - Usuario y contraseña: Crea un usuario con login de 42 -> amacarul, passuser
      - Particionado: guided - use entire disk -> el instalador se crea automaticamente el en disco virtual inception.vdi -> /swap
@@ -319,8 +365,7 @@ NGINX debe exponer solo el puerto 443.
    - No instalar software adicional innecesario, se pueden añadir herramientas lueg
    - Finaliza y reinicia. 
 
-### Instalar Docker y Docker Compose
-6. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
+5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
    - Abrir terminal dentro de debian VM y ejecutar:
 
          #Actualizar sistema
@@ -349,9 +394,7 @@ Verifica:
     docker --version
     docker compose version
 
-
-### Configurar carpetas de datos (volúmenes enlazados)
-7. Crea las carpetas del host que luego montarás como volúmenes
+6. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
@@ -360,10 +403,8 @@ Verifica:
        sudo chown -R <login>:<login> /home/<login>/data
 
    ESTAS CARPETAS HAY QUE CREARLAS DÓNDE? OSEA QUIERO QUE SEAN ACCESIBLES DESDE EL HOST, TAMBIÉN, NO? SON LAS COSAS QUE HE DE SUBIR AL REPOSITORIO.... Y LA ESTRUCTURA DE DATOS QUE TENGO NO HAY NINGUNA CARPETA DATA
-
-
-## Red y cómo apuntar el dominio local
-8. Averiguar IP de la VM (si usamos bridged):
+ 
+8. Red y cómo apuntar el dominio local: Averiguar IP de la VM (si usamos bridged):
 
        ip a show
        # ó
@@ -375,21 +416,83 @@ Verifica:
 
    - Con esto, cuando desde tu PC accedas a https://amacarul.42.fr se redigirá a la VM.
   
-## Firewall (recomendable)
-9. Si usas `ufw` o `iptables`, abre puerto 443
+9. Firewall (recomendable): Si usas `ufw` o `iptables`, abre puerto 443
 
         sudo apt install -y ufw
         sudo ufw allow OpenSSH
         sudo ufw allow 443/tcp
         sudo ufw enable
 
-## Clonar tu repo y preparar proyecto
-10. Clona el repo donde pondrás los Dockefiles y docker-compose.
+## Crear estructura del proyecto
+           
+           inception/
+                  │
+                  ├── Makefile
+                  ├── .gitignore
+                  ├── README.md (opcional)
+                  └── srcs/
+                      ├── docker-compose.yml
+                      └── requirements/
+                          ├── nginx/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │   │   └── nginx.conf
+                          │   └── tools/
+                          │       └── generate_cert.sh
+                          │
+                          ├── wordpress/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │   │   └── www.conf
+                          │   └── tools/
+                          │       └── wp_setup.sh
+                          │
+                          └── mariadb/
+                              ├── Dockerfile
+                              ├── conf/
+                              │   └── my.cnf
+                              └── tools/
+                                  └── mariadb_init.sh
 
-        cd /home/<login>
-        git clone <login> inception
-        cd inception
-        #Aquí irán srcs/, Makefile...
+## Construcción de cada imagen
+1. NGINX
+   - Dockerfile
+   - Configuración TLS
+   - Exposición del puerto 443
+   - Configuración de fastcgi_pass
+   - Scripts necesarios
+2. WordPress + PHP-FOM
+   - Dockerfile
+   - Instalación manual de PHP, PHP-FPM
+   - Descarga de WordPress
+   - Configuración dinámica con variables de entorno
+   - Script de setup
+3. MariaDB
+   - Dockerfile
+   - Instalación de la base de datos
+   - Inicialización de usuarios y permisos
+   - Configuración persistente del volúmen
+
+## Configuración de la red
+- Creación de red Docker
+- Registros en docker-compose
+
+## Configuración de volúmenes
+- Mapeo de `/home/<login>/data/...
+- Permisos y usuario correcto
+
+## COnfiguración del dominio
+- `/etc/hosts`-> `login.42.fr`
+
+## Pruebas del sistema
+- Comprobación de que todos los contenedores arrancan
+- Conexión entre servicios
+- Acceso HTTPS
+- Persistencia de datos
+- Revisión de logs
+
+## Limpieza y validación final
+
 
 ## More info
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
