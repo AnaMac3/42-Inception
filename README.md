@@ -6,6 +6,9 @@
 
 ## Table of Contents
 - [How to use](#how-to-use)
+- [Docker](#docker)
+- [Paso a paso](#paso-a-paso)
+  - [Virtual Machine](#virtual-machine)
 - [Fixed-point numbers](#fixed-point-numbers)
 - [More info](#more-info)
 
@@ -224,7 +227,7 @@ NGINX debe exponer solo el puerto 443.
 
 
 ## Paso a paso
-### Virtual Machine
+### Virtual Machine: instalación y configuración
 1. Descargar [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 2. Crear la VM en VirtualBox:
    - Abre VirtualBox -> clic en **Nueva**
@@ -265,6 +268,7 @@ NGINX debe exponer solo el puerto 443.
      - No instalar software adicional innecesario, se pueden añadir herramientas luego
     - Finaliza y reinicia. 
 
+### Instalar Docker y Docker Compose
 6. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
    - Abrir terminal dentro de debian VM y ejecutar:
 
@@ -294,6 +298,8 @@ Verifica:
     docker --version
     docker compose version
 
+
+### Configurar carpetas de datos (volúmenes enlazados)
 
 ## More info
 Other repos &rarr; [HERE](https://github.com/Forstman1/inception-42)  
