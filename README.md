@@ -92,68 +92,60 @@ Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guar
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
 
-## Base de cada imagen: Alpine o Debian
-Se puede usar:
-- **Debian**: FROM debian:bookworm
-- **Alpine**: FROM alpine:3.18
-
-
 ## Teoría
-### Docker
-**Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**. 
+### Docker: concepto y propósito
+**Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
 
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
 
-**Máquina Virtual vs Contenedor**
+#### Contenedor vs Máquina Virtual
 | Virtual Machine | Contenedor Docker |
 |-----------------|-----------|
 | Incluye un sistema operativo completo con su kernel | Comparte el kernel del host |
 | Pesada y lenta en arrancar | Muy ligero y arranca en milisegundos |
 | Cada VM consume mucha RAM/CPU | Cada contenedor usa solo lo imprescindible |
-| Diseñada para aislamiento total | Diseñado para despliegue rápido |
+| Diseñada para aislamiento total | Diseñado para despliegue rápido ; aislamiento de procesos y red, pero comparte kernel |
 
-Problemas que resuelve Docker:
+**Problemas que resuelve Docker:**
 - Dependencias que son incompatibles con tu versión de software
 - Dependencias en versiones diferentes
 - Dependencias incompatibles entre proyectos
 - Necesidad de reproducir entornos exactamente iguales
 - Aislamiento de bases de datos, servidores web, etc.
 
-Un contenedor, tiene:
-- La aplicación (p.ej. WordPress, NGINX, MariaDB)
-- Sus dependencias
-- Binarios necesarios
+#### Qué contiene un contenedor
+- La aplicación (p.ej. WordPress, NGINX, MariaDB...)
+- Sus dependencias (librerías, binarios
 - Archivos de configuración
-Un contenedor es la ejecución **de una imagen Docker**
+- El entorno de ejecución mínimo necesario
+Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema operativo ni una máquina virtual.
 
-### Docker image and Dockerfile
-Una **imagen** es una *plantilla* de un sistema con:
-- Ficheros
+### Docker Images and Dockerfile
+#### Imágenes
+Una **imagen Docker** es una **plantilla inmutable** de un sistema que contiene:
+- Archivos de la aplicación
 - Dependencias
 - Configuraciones
 - Comandos de arranque
 
-Una **imagen**:
-- No se ejecuta
-- No cambia
-- No tiene estado
-Un **contenedor**:
-- Es una instancia de la imagen
-- Se ejecuta
-- Puede modificarse durante su uso
-- Puede morir y recrearse
+**Diferencias entre imagen y contenedor**
+| Imagen | Contenedor |
+|--------|------------|
+| Plantilla | Instancia ejecutable de la imagen |
+| Inmutable | Puede modificarse durante su ejecución |
+| Sin estado | Con estado temporal (se pierde al destruirse) |
 
-Una imagen se crea con un **Dockerfile** (archivo que define cómo construir una imagen). 
+#### Dockerfile
+Un **Dockerfile** es archivo que define cómo construir una imagen de Docker. 
 
-Ejemplo de Dockerfile que crea una imagen que al ejecutarse arranca NGINX:
+Ejemplo simplificado para NGINX:
 
       FROM debian:bookworm
       RUN apt update && apt install -y nginx
       COPY ./config/default.conf /etc/nginx/conf.d/
       ENTRYPOINT ["nginx", "-g", "daemon off;"]
 
-Palabras clave de Dockerfile
- 
+**Instrucciones principales de Dockerfile**
 | Keyword | Definition |
 |---------|------------|
 | FROM | Indica a Docker en qué sistema operativo debe ejecutarse tu máquina virtual. Serán `debian:buster?bookworm?` para Debian o `alpine:x:xx` para Linux. |
@@ -165,15 +157,40 @@ Palabras clave de Dockerfile
 
 [Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
 
-En *Inception* está prohibido usar imágenes prefabricadas como:
+**Buenas prácticas:**
+- Un contenedor debe ejecutar **un solo servicio**
+- No ejecutar daemons ni bucles infinitos para mantener el contenedor vivo
+- Usar imágenes base ligeras y versionadas
+- Limpiar cachés de paquetes
+- Usar ENTRYPOINT correctamente
+  Usar:
 
-      FROM nginx:latest
-      FROM mariadb:latest
-      FROM wordpress:latest
+          ENTRYPOINT ["mysql"]
+  Nunca:
 
-| PID 1 y ENTRYPOINT |
-|-------|
-| En Linux, **PID 1** es el primer proceso que se ejecuta, y es responsable de: <br> - manejar señales <br> - recolección de procesos zombie <br> - iniciar servicios <br> En un contenedor Docker, el proceso que se defina como `ENTRYPOINT` **se convierte en PID 1**. <br> Muchos programas no están pensados para funcionar como PID 1, lo que causa: <br> - contenedores que no se apagan correctamente <br> - procesos zombie <br> - comportamientos inesperados <br> - contenedores que se cierran solos o crashean <br> Por eso está prohibido usar bucles infinitos (trucos para mantener los contenedores vivos). CÓMO SE SOLUCIONA ENTONCES ESTO??? ES NGINX UN PROGRAMA PREPARADO PARA SER PID 1??? |
+          CMD service myswl start && tail -f /dev/null
+  
+#### PID1 y ENTRYPOINT
+- En Linux, **PID1** es el primer proceso que se ejecuta; gestiona señales y zombies.
+- En Docker, el proceso definido como ENTRYPOINT se convierte en PID1.
+- Algunos programas necesitan ajustes para funcionar correctamente como PID1, lo que causa:
+  - Contenedores que no se apagan correctamente
+  - Procesos zombie
+  - Comportamientos inesperados
+  - Contenedores que se cierran solos o crashean
+  Por eso está prohibido en este ejercicio usar bucles infinitos. NGINX sí está preparado para ejecutarse directamente como PID1, por eso se usa `daemon off`. -> YA VERÉ QUÉ PASA CON ESTO
+
+
+
+ /*En este proyecto, como base de cada imagen, se puede usar:
+          - **Debian**: FROM debian:bookworm
+          - **Alpine**: FROM alpine:3.18
+          - 
+          En *Inception* está prohibido usar imágenes prefabricadas como:
+          
+                FROM nginx:latest
+                FROM mariadb:latest
+                FROM wordpress:latest*/
 
 **Imagen -> contenedor en ejecución -> corre un único servicio**.
 En este proyecto se piden tres servicios principales:
@@ -186,21 +203,6 @@ En este proyecto se piden tres servicios principales:
 
 Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
 
-**Dockerfile: buenas prácticas:** (IGUAL ESTO SE PUEDE METER EN EL PASO A PASO CUANDO ESTÉ EPXLICANDO CÓMO HACER LOS DOCKERFILES, NO?)
-- Un contenedor solo debe ejecutar un servicio real, no debe ejecutar un bucle para mantenerse vivo
-- No ejecutar daemons dentro del contenedor
-- Usar ENTRYPOINT correctamente
-  Usar:
-
-          ENTRYPOINT ["mysql"]
-  Nunca:
-
-          CMD service myswl start && tail -f /dev/null
-
-- No instalar cosas innecesarias
-- Usar imágenes base claras y versionadas
-- Copiar solo lo necesario
-- Limpiar cachés de paquetes
 
   
 
@@ -392,16 +394,18 @@ Cómo funciona Docker engine:
 
 
 ## Guía paso a paso
+
 ### Preparar la Virtual Machine
 1. Este proyecto se hace en la VM [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
-2. Instalar [Debian](https://www.debian.org/download.es.html)
+   -> SE GUARDA EN EL SGOINFREE??
+3. Instalar [Debian](https://www.debian.org/download.es.html)
    - Debian en la VM no es lo mismo que Debian en los contenedores; dentro de cada servicio podemos elegir entre debian o alpine, lo que es independiente del SO de la VM)
    - La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
    - ¿Qué hace la ISO en la VM?
      - Arranca la VD desde la ISO, igual que si arrancaras un PC desde un DVD
      - Inicia el instalador de Debian, que te guía para instalar el SO dentro del disco virtual de la VM
      - Permite particionarl el disco virtual, seleccionar el entorno de escritorio, instalar paquetes básicos, configurar red, usuarios, etc
-3. Crear la VM en VirtualBox:
+4. Crear la VM en VirtualBox:
    - Abre VirtualBox -> clic en **Nueva**
      - Name: inception
      - Folder: sgoinfre (??)
@@ -418,7 +422,7 @@ Cómo funciona Docker engine:
       - Chipset: Default
     - Sistema -> Procesador:
       - CPUS: 2 (si tu equipo tiene >= 4 cores, pon 2 o 4)
-      - Enable PAE/NX
+      - Enable PAE/NX, qué hace esto??
     - Pantalla -> Video Memory: 16-64MB (no crítico)
     - Almacenamiento:
       - Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
@@ -428,7 +432,7 @@ Cómo funciona Docker engine:
 4. Arrancar la VM e instalar Debian:
    - Inicia la VM (Start)
    - Sigue el instalador de Debian:
-     - Seleccionar idioma -> zona horaria Europe/Spain
+     - Seleccionar idioma, zona horaria Europe/Spain, teclado
      - Participado: Guided - use entire disk
      - Hostname: debian, inception ... -> es para identificar la máquina dentro de la red local -> debian-inception
      - Domain name: `login.42.fr` no??
@@ -445,6 +449,8 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
 |-------------------|
 |**Cambiar de modo gráfico a modo texto**: Ctrl+Alt+F3 ... para volver a gráfico: Ctrl+Alt+F1 ; desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
 |**Conectarse a la VM desde host con SSH**:Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: ssh <login>@<IP_VM>; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
+| **Cambiar de usuario a root:** su - ; y ejecutar lo que quiera. No he hecho sudo, no se si hace falta |
+| **Cambiar de root a usuario:** su - login |
      
 
 5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
