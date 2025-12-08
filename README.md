@@ -447,8 +447,8 @@ Cómo funciona Docker engine:
 METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES MEJOR UNA TABLA O QUÉ
 | Más cosas de la VM |
 |-------------------|
-|**Cambiar de modo gráfico a modo texto**: Ctrl+Alt+F3 ... para volver a gráfico: Ctrl+Alt+F1 ; desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
-|**Conectarse a la VM desde host con SSH**:Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: ssh <login>@<IP_VM>; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
+|**Cambiar de modo gráfico a modo texto**: desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
+|**Conectarse a la VM desde host con SSH**: Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: `ssh <login>@<IP_VM>`; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
 | **Cambiar de usuario a root:** su - ; y ejecutar lo que quiera. No he hecho sudo, no se si hace falta |
 | **Cambiar de root a usuario:** su - login |
 | **Reiniciar máquina virtual**: reboot |
@@ -470,7 +470,10 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
         #Nota: es necesario hacer logout/login o reiniciar la VM para aplicar el grupo docker
 
         #Comprobar que has añadido el usuario a docker correctamente
-        groups <login> 
+        groups <login>
+
+        #build-essential incluye make, gcc y otras herramientas de compilación importantes
+        sudo apt install build-essential
 
 Después de hacer usermod, sal de la sesión y vuelve a entrar.  
 Verifica:
@@ -478,38 +481,7 @@ Verifica:
     docker --version
     docker compose version
 
-6. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
-
-       mkdir -p /home/<login>/data/wordpress
-       mkdir -p /home/<login>/data/mariadb
-
-       #Ajustar permisos para que Docker pueda escribir
-       sudo chown -R <login>:<login> /home/<login>/data
- 
-8. Red y cómo apuntar el dominio local - configurar el /etc/hosts en tu máquina host (tu PC): !!!! CREO QUE ESTO DE LA CONEXIÓN HAY QUE HACERLO DE MANERA DIFERENTE, CON NGINX PROBABLEMENTE!!
-   - Averiguar IP de la VM (si usamos bridged): NOS HEMOS QUEDADO AQUI!!
-
-       ip a show
-       #ó
-       hostname -I
-
-   - En tu máquina host añade el /etc/hosts -> Decirle al PC que cuando escribas <login>.42.fr en el navegador, vaya a la IP de la VM, en lugar de buscar en internet -> PERO NO PUEDO CAMBIAR ESE ARCHIVO EN EL HOST! COMO LO HAGO??
-     
-            nano /etc/hosts
-             
-  - Añadir linea al final, usando la IP de la VM y tu login de 42:
-     <IP_VM> <login>.42.fr
-
-   - Con esto, cuando desde tu PC accedas a https://login.42.fr se redigirá a la VM.
-  
-10. Firewall (recomendable): Si usas `ufw` o `iptables`, abre puerto 443
-
-        sudo apt install -y ufw
-        sudo ufw allow OpenSSH
-        sudo ufw allow 443/tcp
-        sudo ufw enable
-
-## Crear estructura del proyecto
+### Crear estructura del proyecto
            
            inception/
                   │
@@ -539,6 +511,19 @@ Verifica:
                               │   └── my.cnf
                               └── tools/
                                   └── mariadb_init.sh
+
+6. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
+
+       mkdir -p /home/<login>/data/wordpress
+       mkdir -p /home/<login>/data/mariadb
+
+       #Ajustar permisos para que Docker pueda escribir
+       sudo chown -R <login>:<login> /home/<login>/data
+
+#### Cómo compartir carpetas entre la VM y el host
+- Crear estructura de directorios en la VM (`tree folder` para ver la estructura)
+- Trabaja dentro de la VM
+- Copiar proyecto en host: `src -r amacarul@IP_VM:/home/amacarul/inception /ruta/en/host
 
 ## Construcción de cada imagen
 1. NGINX
