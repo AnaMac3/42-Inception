@@ -15,7 +15,7 @@
   - [Variables de entorno y secretos](variables-de-entorno-y-secretos)
   - [NGINX, WordPress and MariaDB](#nginx-wordpress-and-mariadb)
   - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
-- [Paso a paso](#paso-a-paso)
+- [Guía paso a paso](#guía-paso-a-paso)
   - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
   - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
 - [Fixed-point numbers](#fixed-point-numbers)
@@ -382,18 +382,32 @@ Los datos deben persisitir en un volumen, para que no se pierdan al destruir con
 
 ## Guía paso a paso
 ### Preparar la Virtual Machine
-1. Descargar [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
-2. Crear la VM en VirtualBox:
+1. Este proyecto se hace en la VM [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
+2. Instalar [Debian](https://www.debian.org/download.es.html)
+   - Debian en la VM no es lo mismo que Debian en los contenedores; dentro de cada servicio podemos elegir entre debian o alpine, lo que es independiente del SO de la VM)
+   - La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
+   - ¿Qué hace la ISO en la VM?
+     - Arranca la VD desde la ISO, igual que si arrancaras un PC desde un DVD
+     - Inicia el instalador de Debian, que te guía para instalar el SO dentro del disco virtual de la VM
+     - Permite particionarl el disco virtual, seleccionar el entorno de escritorio, instalar paquetes básicos, configurar red, usuarios, etc
+3. Crear la VM en VirtualBox:
    - Abre VirtualBox -> clic en **Nueva**
      - Name: inception
-     - Folder: 42-Inception
-     - ISO Image: ?
+     - Folder: sgoinfre (??)
+     - ISO Image: el archivo de .iso de debian
+     - Username: amacarul
+     - Password: blablagg
+     - Hostname: inception
+     - Domain Name: amacarul.42.fr ???
+       /*
      - OS: Linux
      - OS Distribution: Debian
      - OS Version: Debian (64-bit)
+     */
      - Memoria RAM: 2048 minimo, 4096 recomendado
-     - Number oc CPU: 1??
+     - Number of CPU: 2
      - Disk Size: 20 GB minimo
+       /*
   - Ajustes recomendados antes de arrancar la VM: **Configuración**
     - Sistema -> Placa Base:
       - Orden de arranque: dejar `Optical` arriba (para instalar desde ISO)
@@ -407,8 +421,6 @@ Los datos deben persisitir en un volumen, para que no se pierdan al destruir con
     - Red:
       - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
     - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git.
-
-3. Instalar Debian (Debian en la VM no es lo mismo que Debian en los contenedores; dentro de cada servicio podemos elegir entre debian o alpine, lo que es independiente del SO de la VM) -> https://www.debian.org/download.es.html
 4. Arrancar la VM e instalar Debian:
    - Inicia la VM (Start)
    - Sigue el instalador de Debian:
