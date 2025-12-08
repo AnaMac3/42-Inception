@@ -451,22 +451,15 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
 |**Conectarse a la VM desde host con SSH**:Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: ssh <login>@<IP_VM>; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
 | **Cambiar de usuario a root:** su - ; y ejecutar lo que quiera. No he hecho sudo, no se si hace falta |
 | **Cambiar de root a usuario:** su - login |
+| **Reiniciar máquina virtual**: reboot |
      
 
 5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
-   - Abrir terminal dentro de debian VM y ejecutar:
-
-         #Actualizar sistema
-         sudo apt update && sudo apt upgrade -y
-
-         #Instalar utilidades básicas
-         sudo apt install -y sudo curl wget git make vim apt-transport-https ca-certificates gnupg lsb-release
-
   Si añadiste usuario al instalar, deberias poder usar sudo. Si no, usa root para ejecutar los comandos y crea el usuario apropiado.
   - Instalar Docker y Docker compose:
 
         #Instalar Docker (paquete docjer.io) y plugin docker-compose
-        sudo apt install -y docker.io docker-compose-plugin
+        sudo apt install -y docker.io docker-compose
 
         #Habilitar y arrancar el servicio Docker
         sudo systemctl enable --now docker
@@ -475,6 +468,9 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
         sudo usermod -aG docker <login>
 
         #Nota: es necesario hacer logout/login o reiniciar la VM para aplicar el grupo docker
+
+        #Comprobar que has añadido el usuario a docker correctamente
+        groups <login> 
 
 Después de hacer usermod, sal de la sesión y vuelve a entrar.  
 Verifica:
@@ -489,22 +485,24 @@ Verifica:
 
        #Ajustar permisos para que Docker pueda escribir
        sudo chown -R <login>:<login> /home/<login>/data
-
-   ESTAS CARPETAS HAY QUE CREARLAS DÓNDE? OSEA QUIERO QUE SEAN ACCESIBLES DESDE EL HOST, TAMBIÉN, NO? SON LAS COSAS QUE HE DE SUBIR AL REPOSITORIO.... Y LA ESTRUCTURA DE DATOS QUE TENGO NO HAY NINGUNA CARPETA DATA
  
-8. Red y cómo apuntar el dominio local: Averiguar IP de la VM (si usamos bridged):
+8. Red y cómo apuntar el dominio local - configurar el /etc/hosts en tu máquina host (tu PC): !!!! CREO QUE ESTO DE LA CONEXIÓN HAY QUE HACERLO DE MANERA DIFERENTE, CON NGINX PROBABLEMENTE!!
+   - Averiguar IP de la VM (si usamos bridged): NOS HEMOS QUEDADO AQUI!!
 
        ip a show
-       # ó
+       #ó
        hostname -I
 
-   - En tu máquina host añade el /etc/hosts
-  
-           <IP_VM> <login>.42.fr
+   - En tu máquina host añade el /etc/hosts -> Decirle al PC que cuando escribas <login>.42.fr en el navegador, vaya a la IP de la VM, en lugar de buscar en internet -> PERO NO PUEDO CAMBIAR ESE ARCHIVO EN EL HOST! COMO LO HAGO??
+     
+            nano /etc/hosts
+             
+  - Añadir linea al final, usando la IP de la VM y tu login de 42:
+     <IP_VM> <login>.42.fr
 
-   - Con esto, cuando desde tu PC accedas a https://amacarul.42.fr se redigirá a la VM.
+   - Con esto, cuando desde tu PC accedas a https://login.42.fr se redigirá a la VM.
   
-9. Firewall (recomendable): Si usas `ufw` o `iptables`, abre puerto 443
+10. Firewall (recomendable): Si usas `ufw` o `iptables`, abre puerto 443
 
         sudo apt install -y ufw
         sudo ufw allow OpenSSH
