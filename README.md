@@ -220,10 +220,11 @@ En el proyecto *Inception* se requieren varios contenedores conectados entre sí
 
       Internet -> NGINX -> WORDPRESS -> MARIADB
 
-Compose los levanta todos juntos:
+Compose los levanta todos juntos (ESTO IRÁ EN EL MAKEFILE????):
 
       docker compose up --build
 
+CREO QUE PARTE DE ESTE PUNTO DEBERÍA IR EN EL "PASO A PASO" , NO EN LA TEORIA...  
 **Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
 Ejemplo simplificado:
 
