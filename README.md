@@ -405,20 +405,13 @@ Cómo funciona Docker engine:
    - Abre VirtualBox -> clic en **Nueva**
      - Name: inception
      - Folder: sgoinfre (??)
-     - ISO Image: el archivo de .iso de debian
-     - Username: amacarul
-     - Password: blablagg
-     - Hostname: inception
-     - Domain Name: amacarul.42.fr ???
-       /*
+     - ISO Image: --
      - OS: Linux
      - OS Distribution: Debian
      - OS Version: Debian (64-bit)
-     */
      - Memoria RAM: 2048 minimo, 4096 recomendado
-     - Number of CPU: 2
-     - Disk Size: 20 GB minimo
-       /*
+     - Number of CPU: 2 por qué??
+
   - Ajustes recomendados antes de arrancar la VM: **Configuración**
     - Sistema -> Placa Base:
       - Orden de arranque: dejar `Optical` arriba (para instalar desde ISO)
@@ -431,7 +424,7 @@ Cómo funciona Docker engine:
       - Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
     - Red:
       - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
-    - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git.
+    - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git. ??¿?¿?
 4. Arrancar la VM e instalar Debian:
    - Inicia la VM (Start)
    - Sigue el instalador de Debian:
@@ -442,17 +435,17 @@ Cómo funciona Docker engine:
      - Root password: blablapassword
      - Usuario y contraseña: Crea un usuario con login de 42 -> amacarul, passuser
      - Particionado: guided - use entire disk -> el instalador se crea automaticamente el en disco virtual inception.vdi -> /swap
-     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH -> Sí -> permite conectarte a la vm desde tu host usando `ssh`, facilita trabajar en la vm sin abrir interfaz gráfica todo el tiempo. Acceder a la máquina virtual via SSH
-       - Arrancar la VM
-       - Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`
-       - Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH
-       - En tu host:
-      
-             ssh <login>@<IP_VM>
-  
-       - Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM
+     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH -> Sí -> permite conectarte a la vm desde tu host usando `ssh`, facilita trabajar en la vm sin abrir interfaz gráfica todo el tiempo.
+     - NO SELECCIONAR LO DE GNOME! ESO ES LA INTERFAZ GRÁFICA, NO LA QUIERO
    - No instalar software adicional innecesario, se pueden añadir herramientas lueg
-   - Finaliza y reinicia. 
+   - Finaliza y reinicia.
+
+METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES MEJOR UNA TABLA O QUÉ
+| Más cosas de la VM |
+|-------------------|
+|**Cambiar de modo gráfico a modo texto**: Ctrl+Alt+F3 ... para volver a gráfico: Ctrl+Alt+F1 ; desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
+|**Conectarse a la VM desde host con SSH**:Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: ssh <login>@<IP_VM>; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
+     
 
 5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
    - Abrir terminal dentro de debian VM y ejecutar:
