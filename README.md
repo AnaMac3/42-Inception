@@ -482,7 +482,9 @@ Verifica:
     docker compose version
 
 ### Crear estructura del proyecto
-  6. Crear estructura del proyecto en local         
+  6. Crear estructura del proyecto en local
+
+   
            inception/
                   │
                   ├── Makefile
