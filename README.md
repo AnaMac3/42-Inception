@@ -371,6 +371,7 @@ Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress -> MariaDB (3306)
 Los datos deben persisitir en un volumen, para que no se pierdan al destruir contenedores.  
 
 ### Cómo se relacionan todos los conceptos
+
 1. **Dockerfiles** construyen imágenes para cada servicio
 2. **Compose** define cómo se conectan: redes, volúmenes, puertos
 3. **Compose levanta los contenedores** en el orden necesario
@@ -379,6 +380,16 @@ Los datos deben persisitir en un volumen, para que no se pierdan al destruir con
 6. **Los volúmenes** garantizan que WordPress y MariaDB persistan datos
 7. **Las varaibles de entorno** configuran credenciales y dominio
 8. El sistema funciona como una infraestructura real
+
+-> Docker Engine??  
+Docker engine es el componente base de Docker. Es lo que empaqueta tu aplicación y sus dependencias en un solo paquete, llamado container ???. El Docker Engine incluye el Docker **daemon** que es un proceso background que gestiona los containers de Docker y el cliente de Docker, que es la herramienta de linea de comandos que te permite interactuar con docker daemon.   
+Cómo funciona Docker engine:
+- Escribes un Dockerfile que contiene las instrucciones para construir una Docker image. La Docker image es es un paquete ejecutable que contiene todo o necesario para correr una parte de software??
+- Usas el cliente Docker para construir la imagen Docker by running `docker build` command y especificicando la ruta del Dockerfile. Docker daemon lee las instrucciones en el Dockerfile y construye la imagen.
+- Cuando la imagen ya está construida, puedes usar el Docker client para correr la imagen como un container usando `docker run`. El Docker daemon crea un contenedor para la imagen y ejecuta la app dentro del container
+- Docker engine proporciona un environment seguro y aislado para ejecutar la app en el y también gestiona recursos como el CPY, memoria y almacenamiento para el contenedor
+- Puedes usar Docker client para ver, parar y gestionar containers en ejecución en tu sistema. También peudes usar docker client para pushear la iamgen docker a un registro como docjer Hub
+
 
 ## Guía paso a paso
 ### Preparar la Virtual Machine
