@@ -482,7 +482,7 @@ Verifica:
     docker compose version
 
 ### Crear estructura del proyecto
-           
+  6. Crear estructura del proyecto en local         
            inception/
                   │
                   ├── Makefile
@@ -512,7 +512,9 @@ Verifica:
                               └── tools/
                                   └── mariadb_init.sh
 
-6. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
+
+     
+7. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
@@ -521,9 +523,28 @@ Verifica:
        sudo chown -R <login>:<login> /home/<login>/data
 
 #### Cómo compartir carpetas entre la VM y el host
-- Crear estructura de directorios en la VM (`tree folder` para ver la estructura)
-- Trabaja dentro de la VM
-- Copiar proyecto en host: `src -r amacarul@IP_VM:/home/amacarul/inception /ruta/en/host
+8. Compartir carpeta que está en host (local) en la Virtual Machine:
+   - Vm -> Settings -> Shared Folders -> Añadir carpeta
+   - Folder path: ubicación en local
+   - Folder name: nombre que le vamos a dar
+   - Mount point: /home/amacarul/inception
+   - Marcar auto-mont y make permanent
+   - Luego, en terminal de la vm:
+
+
+             sudo mkdir -p /home/amacarul/inception
+             sudo mount -t vboxsf -o uid=$(id -u),gid=$(id -g) inception /home/amacarul/inception
+     
+   - Tu user tiene que estar en el grupo vboxsf ->
+   
+           sudo groupadd vboxsf
+           sudo usermod -aG vboxsf $USER
+
+   
+   - Y así ya te aparece en esa nueva carpeta lo que hay en tu carpeta host
+   - Ahora, cualquier cambio dentro de la vm se refleja directamente en el host
+  
+  ESTOY POR AQUÍ! ESTRUCTURA CREADA, CARPETAS COMPARTIDAS....
 
 ## Construcción de cada imagen
 1. NGINX
@@ -552,7 +573,7 @@ Verifica:
 - Mapeo de `/home/<login>/data/...
 - Permisos y usuario correcto
 
-## COnfiguración del dominio
+## Configuración del dominio
 - `/etc/hosts`-> `login.42.fr`
 
 ## Pruebas del sistema
