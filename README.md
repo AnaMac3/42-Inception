@@ -25,34 +25,6 @@
 
 ## Description
 
-## Instructions
-
-- Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VirtualBox
-- Cómo hacerlo desde diferentes ordenadores:
-  - Cosas que meter en github:
-    - Makefile
-    - docker-compose.yml
-    - Dockerfiles
-    - scripts
-    - Configuraciones (nginx.conf, www.conf, etc)
-  - Cosas que no deben subirse a github:
-    - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
-    - archivo .env si contene contraseñas -> debe estar en .gitignore
-    - certificados TLS generados
-
-- Cada ordenador necesita su propia máquina virtual con Docker instalado. El proyecto es portable (los archivos), pero Docker no se sincroniza entre máquinas.
-- En cada ordenador hay que tener:
-  - Una VM
-  - Docker Engine
-  - Docker Compose
-  - carpetas de volúmenes:
-
-        /home/<login>/data/mariadb
-        /home/<login>/data/wordpress
-
-  - contraseñas? certificados TLS??
-
-## Resumen del Subject / Introducción
 El proyecto **Inception** consiste en crear una infraestructura completa usando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.
 Hay que configurar:
 - **3 contenedores independientes**:
@@ -93,6 +65,33 @@ Hay que configurar:
 Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guardarse localmente de varias maneras / en varios archivos y deben ser ignorados por git. Las credenciales almacenadas publicamente suponen el suspenso del proyecto.  
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
+
+## Instructions
+
+- Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VirtualBox
+- Cómo hacerlo desde diferentes ordenadores:
+  - Cosas que meter en github:
+    - Makefile
+    - docker-compose.yml
+    - Dockerfiles
+    - scripts
+    - Configuraciones (nginx.conf, www.conf, etc)
+  - Cosas que no deben subirse a github:
+    - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
+    - archivo .env si contene contraseñas -> debe estar en .gitignore
+    - certificados TLS generados
+
+- Cada ordenador necesita su propia máquina virtual con Docker instalado. El proyecto es portable (los archivos), pero Docker no se sincroniza entre máquinas.
+- En cada ordenador hay que tener:
+  - Una VM
+  - Docker Engine
+  - Docker Compose
+  - carpetas de volúmenes:
+
+        /home/<login>/data/mariadb
+        /home/<login>/data/wordpress
+
+  - contraseñas? certificados TLS??
 
 ## Project description
 ### Docker: concepto y propósito
