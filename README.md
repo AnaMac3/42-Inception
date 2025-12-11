@@ -5,8 +5,9 @@
 - Docker technology
 
 ## Table of Contents
-- [How to use](#how-to-use)
-- [Teoría](#teoría)
+- [Description](#description)
+- [Instructions](#instructions)
+- [Project description](#project-description)
   - [Docker](#docker)
   - [Docker image and Dockerfile](#docker-image-and-dockerfile)
   - [Docker Compose](#docker-compose)
@@ -18,12 +19,13 @@
 - [Guía paso a paso](#guía-paso-a-paso)
   - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
   - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
-- [Fixed-point numbers](#fixed-point-numbers)
-- [More info](#more-info)
+- [Resources](#resources)
 
 ----------------------------------------
 
-## How to use
+## Description
+
+## Instructions
 
 - Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VirtualBox
 - Cómo hacerlo desde diferentes ordenadores:
@@ -92,7 +94,7 @@ Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guar
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
 
-## Teoría
+## Project description
 ### Docker: concepto y propósito
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
 
@@ -588,7 +590,7 @@ Verifica:
 ## Limpieza y validación final
 
 
-## More info
+## Resources
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
 [Grademe tutorial](https://tuto.grademe.fr/inception/)  
