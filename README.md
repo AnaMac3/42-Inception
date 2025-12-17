@@ -19,9 +19,9 @@
 - [Guía paso a paso](#guía-paso-a-paso)
   - [Preparar la Virtual Machine](#preparar-la-virtual-machine)
     - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
-  - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
     - [Cómo compartir carpetas entre la VM y el host](cómo-compartir-carpetas-entre-la-VM-y-el-host)
-  - 
+  - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
+  - [Archivo .env](#archivo-.env)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -486,54 +486,8 @@ Verifica:
     docker --version
     docker compose version
 
-### Crear estructura del proyecto
-  6. Crear estructura del proyecto en local
-   
-           inception/
-                  │
-                  ├── Makefile
-                  ├── .gitignore
-                  ├── README.md (opcional)
-                  └── srcs/
-                      ├── .env
-                      ├── docker-compose.yml
-                      └── requirements/
-                          ├── nginx/
-                          │   ├── Dockerfile
-                          │   ├── conf/
-                          │   │   └── nginx.conf
-                          │   └── tools/
-                          │       └── generate_cert.sh
-                          │
-                          ├── wordpress/
-                          │   ├── Dockerfile
-                          │   ├── conf/
-                          │   │   └── www.conf
-                          │   └── tools/
-                          │       └── wp_setup.sh
-                          │
-                          └── mariadb/
-                              ├── Dockerfile
-                              ├── conf/
-                              │   └── my.cnf
-                              └── tools/
-                                  └── mariadb_init.sh
-
-QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
-Archivos que no han de subirse a github, ni compartirse:
-- `.env`: contiene contraseñas y datos sensibles
-     
-7. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
-
-       mkdir -p /home/<login>/data/wordpress
-       mkdir -p /home/<login>/data/mariadb
-
-       #Ajustar permisos para que Docker pueda escribir
-       sudo chown -R <login>:<login> /home/<login>/data
-
-
 #### Cómo compartir carpetas entre la VM y el host
-8. Compartir carpeta que está en host (local) en la Virtual Machine:
+6. Compartir carpeta que está en host (local) en la Virtual Machine:
    - Vm -> Settings -> Shared Folders -> Añadir carpeta
    - Folder path: ubicación en local
    - Folder name: nombre que le vamos a dar
@@ -586,6 +540,52 @@ Archivos que no han de subirse a github, ni compartirse:
             lsmod | gep vbox
 
         Si aparece `vbpxsf` las shared folders deberían funcionar.
+
+### Crear estructura del proyecto
+  7. Crear estructura del proyecto en local
+   
+           inception/
+                  │
+                  ├── Makefile
+                  ├── .gitignore
+                  ├── README.md (opcional)
+                  └── srcs/
+                      ├── .env
+                      ├── docker-compose.yml
+                      └── requirements/
+                          ├── nginx/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │   │   └── nginx.conf
+                          │   └── tools/
+                          │       └── generate_cert.sh
+                          │
+                          ├── wordpress/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │   │   └── www.conf
+                          │   └── tools/
+                          │       └── wp_setup.sh
+                          │
+                          └── mariadb/
+                              ├── Dockerfile
+                              ├── conf/
+                              │   └── my.cnf
+                              └── tools/
+                                  └── mariadb_init.sh
+
+QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
+Archivos que no han de subirse a github, ni compartirse:
+- `.env`: contiene contraseñas y datos sensibles
+     
+8. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
+
+       mkdir -p /home/<login>/data/wordpress
+       mkdir -p /home/<login>/data/mariadb
+
+       #Ajustar permisos para que Docker pueda escribir
+       sudo chown -R <login>:<login> /home/<login>/data
+
         
 ## Archivo .env
 El archivo `.env` contiene las variables de entorno. No es código, no se ejecuta, solo define valores.  
@@ -596,7 +596,6 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
 - La configuración tiene que ser dinámica
 - Para poder cambiar valores sin tocar el código.
 - ESTE ARCHIVO NO HA DE SUBIRSE A NINGÚN SITIO!!
-
 
       DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
 
