@@ -445,10 +445,11 @@ Cómo funciona Docker engine:
      - Particionado: guided - use entire disk -> el instalador se crea automaticamente el en disco virtual inception.vdi -> /swap
      - Instala el sistema base y el paquete SSH server si quieres acceder por SHH -> Sí -> permite conectarte a la vm desde tu host usando `ssh`, facilita trabajar en la vm sin abrir interfaz gráfica todo el tiempo.
      - NO SELECCIONAR LO DE GNOME! ESO ES LA INTERFAZ GRÁFICA, NO LA QUIERO
-   - No instalar software adicional innecesario, se pueden añadir herramientas lueg
+   - No instalar software adicional innecesario, se pueden añadir herramientas luego
    - Finaliza y reinicia.
 
 METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES MEJOR UNA TABLA O QUÉ
+
 | Más cosas de la VM |
 |-------------------|
 |**Cambiar de modo gráfico a modo texto**: desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
@@ -457,7 +458,7 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
 | **Cambiar de root a usuario:** su - login |
 | **Reiniciar máquina virtual**: reboot |
      
-### Instalar Docker y Docker Compose
+#### Instalar Docker y Docker Compose
 5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
   Si añadiste usuario al instalar, deberias poder usar sudo. Si no, usa root para ejecutar los comandos y crea el usuario apropiado.
   - Instalar Docker y Docker compose:
@@ -487,7 +488,6 @@ Verifica:
 
 ### Crear estructura del proyecto
   6. Crear estructura del proyecto en local
-
    
            inception/
                   │
@@ -527,6 +527,7 @@ QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
 
        #Ajustar permisos para que Docker pueda escribir
        sudo chown -R <login>:<login> /home/<login>/data
+
 
 #### Cómo compartir carpetas entre la VM y el host
 8. Compartir carpeta que está en host (local) en la Virtual Machine:
@@ -583,6 +584,14 @@ QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
 
         Si aparece `vbpxsf` las shared folders deberían funcionar.
         
+## Archivo .env
+El archivo `.env` contiene las variables de entorno. No es código, no se ejecuta, solo define valores.  
+Docker y docker compose leen este archivo y lo cargan como variables de entorno.  
+Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los containers, en scripts y en configuraciones.  
+¿Por qué se usa `.env` en Inception?  
+- Porque no hay qu hardcodear contraseñas
+- La configuración tiene que ser dinámica
+- Para poder cambiar valores sin tocar el código.
 
 ## Construcción de cada imagen
 1. NGINX
