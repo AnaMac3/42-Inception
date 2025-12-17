@@ -495,6 +495,7 @@ Verifica:
                   ├── .gitignore
                   ├── README.md (opcional)
                   └── srcs/
+                      ├── .env
                       ├── docker-compose.yml
                       └── requirements/
                           ├── nginx/
@@ -519,6 +520,8 @@ Verifica:
                                   └── mariadb_init.sh
 
 QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
+Archivos que no han de subirse a github, ni compartirse:
+- `.env`: contiene contraseñas y datos sensibles
      
 7. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
@@ -592,6 +595,25 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
 - Porque no hay qu hardcodear contraseñas
 - La configuración tiene que ser dinámica
 - Para poder cambiar valores sin tocar el código.
+- ESTE ARCHIVO NO HA DE SUBIRSE A NINGÚN SITIO!!
+
+
+      DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
+
+      MYSQL_HOSTNAME=mariadb
+      MYSQL_DATABASE= #nombre de la db que mariadb va a crear
+      MYSQL_USER=amacarul
+      MYSQL_PASSWORD=passuser
+      MYSQL_ROOT_USER=root
+      MYSQL_ROOT_PASSWORD=blablapassword
+      
+      WORDPRESS_TITLE=Inception #titulo del sitio wordpress
+      WORDPRESS_ADMIN_USER= #creo que no puede ser admin
+      WORDPRESS_ADMIN_PASSWORD=
+      WORDPRESS_ADMIN_EMAIL= #creo que no puede ser admin
+      WORDPRESS_USER=
+      WORDPRESS_USER_EMAIL=
+      WORDPRESS_USER_PASSWORD=
 
 ## Construcción de cada imagen
 1. NGINX
