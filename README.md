@@ -17,8 +17,11 @@
   - [NGINX, WordPress and MariaDB](#nginx-wordpress-and-mariadb)
   - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
 - [Guía paso a paso](#guía-paso-a-paso)
-  - [Virtual Machine: instalación y creación de una VM](#virtual-machine-instalación-y-creación-de-una-vm)
-  - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
+  - [Preparar la Virtual Machine](#preparar-la-virtual-machine)
+    - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
+  - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
+    - [Cómo compartir carpetas entre la VM y el host](cómo-compartir-carpetas-entre-la-VM-y-el-host)
+  - 
 - [Resources](#resources)
 
 ----------------------------------------
@@ -454,7 +457,7 @@ METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES ME
 | **Cambiar de root a usuario:** su - login |
 | **Reiniciar máquina virtual**: reboot |
      
-
+### Instalar Docker y Docker Compose
 5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
   Si añadiste usuario al instalar, deberias poder usar sudo. Si no, usa root para ejecutar los comandos y crea el usuario apropiado.
   - Instalar Docker y Docker compose:
@@ -515,7 +518,7 @@ Verifica:
                               └── tools/
                                   └── mariadb_init.sh
 
-
+QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
      
 7. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
@@ -532,7 +535,7 @@ Verifica:
    - Folder name: nombre que le vamos a dar
    - Mount point: /home/amacarul/inception
    - Marcar auto-mont y make permanent
-   - Luego, en terminal de la vm:
+   - Luego, en terminal de la VM:
 
 
              sudo mkdir -p /home/amacarul/inception
@@ -547,7 +550,39 @@ Verifica:
    - Y así ya te aparece en esa nueva carpeta lo que hay en tu carpeta host
    - Ahora, cualquier cambio dentro de la vm se refleja directamente en el host
   
-  ESTOY POR AQUÍ! ESTRUCTURA CREADA, CARPETAS COMPARTIDAS....
+  - Insertar CD de Guest Additions :
+      - En la ventana de la VM -> menú superior -> Devices -> Insert Guest Aditions CD image
+      - En terminal de la VM:
+
+              sudo apt update
+              sudo apt install -y build-essential dkms linux-headers-$(uname -r)
+    
+      - Montar el disco:
+   
+              sudo mkdir -p /mnt/cdrom
+              sudo mount /dev/cdrom /mnt/cdrom
+
+      - Comprobar:
+   
+            ls /mnt/cdrom
+
+        Debería estar `VBoxLinuxAdditons.run`
+
+
+      - Ejecutar el instalador
+   
+            sudo /mnt/cdrom/VBoxLinuxAdditions.run
+
+      - Reiniciar VM
+   
+              sudo reboot
+
+      - Comprobación tras reiniciar:
+   
+            lsmod | gep vbox
+
+        Si aparece `vbpxsf` las shared folders deberían funcionar.
+        
 
 ## Construcción de cada imagen
 1. NGINX
