@@ -432,7 +432,7 @@ Cómo funciona Docker engine:
       - Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
     - Red:
       - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
-    - Carpetas compartidas (opcional): puedes configurar una carpeta compartida si quieres transferir archivos desde tu host sin usar scp/git. ??¿?¿?
+    - Carpetas compartidas (opcional) -> lo configuramos más adelante
 4. Arrancar la VM e instalar Debian:
    - Inicia la VM (Start)
    - Sigue el instalador de Debian:
