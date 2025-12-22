@@ -9,12 +9,21 @@
 - [Instructions](#instructions)
 - [Project description](#project-description)
   - [Docker](#docker)
+    - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
   - [Docker image and Dockerfile](#docker-image-and-dockerfile)
+    - [Images](#images)
+    - [Dockerfile](#dockerfile)
   - [Docker Compose](#docker-compose)
+  - [Volúmenes - Persistencia de datos](#volúmenes---persistencia-de-datos)
+    - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
-  - [Volúmenes - persistencia de datos](#volúmenes---persistencia-de-datos)
-  - [Variables de entorno y secretos](variables-de-entorno-y-secretos)
+    - [Docker Network vs Host Network](#docker-network-vs-host-network)
+  - [Variables de entorno y secretos](#variables-de-entorno-y-secretos)
+    - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
   - [NGINX, WordPress and MariaDB](#nginx-wordpress-and-mariadb)
+    - [NGINX](#nginx)
+    - [WordPress](#wordpress)
+    - [MariaDB](#mariadb)
   - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
 - [Guía paso a paso](#guía-paso-a-paso)
   - [Preparar la Virtual Machine](#preparar-la-virtual-machine)
@@ -97,10 +106,24 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
   - contraseñas? certificados TLS??
 
 ## Project description
-### Docker: concepto y propósito
+### Docker
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
 
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
+
+**Problemas que resuelve Docker:**
+- Dependencias que son incompatibles con tu versión de software
+- Dependencias en versiones diferentes
+- Dependencias incompatibles entre proyectos
+- Necesidad de reproducir entornos exactamente iguales
+- Aislamiento de bases de datos, servidores web, etc.
+
+**Qué contiene un contenedor**
+- La aplicación (p.ej. WordPress, NGINX, MariaDB...)
+- Sus dependencias (librerías, binarios)
+- Archivos de configuración
+- El entorno de ejecución mínimo necesario
+Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema operativo ni una máquina virtual.
 
 #### Contenedor vs Máquina Virtual
 | Virtual Machine | Contenedor Docker |
@@ -110,22 +133,8 @@ Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-s
 | Cada VM consume mucha RAM/CPU | Cada contenedor usa solo lo imprescindible |
 | Diseñada para aislamiento total | Diseñado para despliegue rápido ; aislamiento de procesos y red, pero comparte kernel |
 
-**Problemas que resuelve Docker:**
-- Dependencias que son incompatibles con tu versión de software
-- Dependencias en versiones diferentes
-- Dependencias incompatibles entre proyectos
-- Necesidad de reproducir entornos exactamente iguales
-- Aislamiento de bases de datos, servidores web, etc.
-
-#### Qué contiene un contenedor
-- La aplicación (p.ej. WordPress, NGINX, MariaDB...)
-- Sus dependencias (librerías, binarios
-- Archivos de configuración
-- El entorno de ejecución mínimo necesario
-Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema operativo ni una máquina virtual.
-
 ### Docker Images and Dockerfile
-#### Imágenes
+#### Images
 Una **imagen Docker** es una **plantilla inmutable** de un sistema que contiene:
 - Archivos de la aplicación
 - Dependencias
@@ -184,8 +193,6 @@ Ejemplo simplificado para NGINX:
   - Contenedores que se cierran solos o crashean
   Por eso está prohibido en este ejercicio usar bucles infinitos. NGINX sí está preparado para ejecutarse directamente como PID1, por eso se usa `daemon off`. -> YA VERÉ QUÉ PASA CON ESTO
 
-
-
  /*En este proyecto, como base de cada imagen, se puede usar:
           - **Debian**: FROM debian:bookworm
           - **Alpine**: FROM alpine:3.18
@@ -206,9 +213,6 @@ En este proyecto se piden tres servicios principales:
 | MariaDB | `mariadb` | Database |
 
 Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
-
-
-  
 
 ### Docker Compose
 **Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
@@ -367,6 +371,8 @@ Los contenedores se buscan por su nombre de servicio:
 
 ????
 
+#### Docker Network vs Host Network
+
 ### Variables de entorno y secretos
 Nunca se deben poner contraseñas en el repositorio.
 Usar `.env` para:
@@ -383,6 +389,8 @@ Usar `.env` para:
     - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
     - archivo .env si contene contraseñas -> debe estar en .gitignore
     - certificados TLS generados
+   
+#### Secrets vs Environment Variables
    
 ### NGINX, WordPress and MariaDB
 Aunque el foco del proyecto es **Docker y la infraestructura**, es importante entender qué servicios estamos containerizando:
