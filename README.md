@@ -183,6 +183,8 @@ Ejemplo simplificado para NGINX:
   Nunca:
 
           CMD service myswl start && tail -f /dev/null
+
+**Debian vs Alpine**: explicar por qué uso debian en vez de alpine: porque es más fácil para empezar... y por qué más?
   
 #### PID1 y ENTRYPOINT
 - En Linux, **PID1** es el primer proceso que se ejecuta; gestiona señales y zombies.
