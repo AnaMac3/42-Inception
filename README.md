@@ -759,8 +759,8 @@ Si no hay errores, seguimos.
 
      En otra terminal:
 
-         docker ps
-         docker logs mariadb
+         docker ps #muestra los contenedores que están corriendo
+         docker logs mariadb #muestra logs existentes
 
      Ahí tienes que ver:
      - inicialización la primera vez
