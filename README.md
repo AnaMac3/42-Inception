@@ -10,7 +10,7 @@
 - [Project description](#project-description)
   - [Docker](#docker)
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
-  - [Docker image and Dockerfile](#docker-image-and-dockerfile)
+  - [Docker images and Dockerfile](#docker-image-and-dockerfile)
     - [Images](#images)
     - [Dockerfile](#dockerfile)
   - [Docker Compose](#docker-compose)
