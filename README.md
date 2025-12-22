@@ -30,7 +30,7 @@
     - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
     - [Cómo compartir carpetas entre la VM y el host](cómo-compartir-carpetas-entre-la-VM-y-el-host)
   - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
-  - [Archivo .env](#archivo-.env)
+  - [Archivo .env](#archivo-env)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -125,7 +125,7 @@ Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-s
 - El entorno de ejecución mínimo necesario
 Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema operativo ni una máquina virtual.
 
-#### Contenedor vs Máquina Virtual
+#### Virtual Machine vs Docker
 | Virtual Machine | Contenedor Docker |
 |-----------------|-----------|
 | Incluye un sistema operativo completo con su kernel | Comparte el kernel del host |
@@ -641,7 +641,7 @@ Archivos que no han de subirse a github, ni compartirse:
        sudo chown -R <login>:<login> /home/<login>/data
 
         
-## Archivo .env
+### Archivo .env
 El archivo `.env` contiene las variables de entorno. No es código, no se ejecuta, solo define valores.  
 Docker y docker compose leen este archivo y lo cargan como variables de entorno.  
 Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los containers, en scripts y en configuraciones.  
