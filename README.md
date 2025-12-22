@@ -652,22 +652,22 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
 - Para poder cambiar valores sin tocar el código.
 - ESTE ARCHIVO NO HA DE SUBIRSE A NINGÚN SITIO!!
 
-      DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
+     DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
 
-      MYSQL_HOSTNAME=mariadb
-      MYSQL_DATABASE=database #nombre de la db que mariadb va a crear
-      MYSQL_USER=amacarul
-      MYSQL_PASSWORD=passusersql
-      MYSQL_ROOT_USER=root
-      MYSQL_ROOT_PASSWORD=blablapasswordsql
-      
-      WORDPRESS_TITLE=Inception #titulo del sitio wordpress
-      WORDPRESS_ADMIN_USER=boss #creo que no puede ser admin
-      WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
-      WORDPRESS_ADMIN_EMAIL= #creo que no puede ser admin
-      WORDPRESS_USER=
-      WORDPRESS_USER_EMAIL=
-      WORDPRESS_USER_PASSWORD=
+    MYSQL_HOSTNAME=mariadb
+    MYSQL_DATABASE=database
+    MYSQL_USER=amacarul
+    MYSQL_PASSWORD=passusersql
+    MYSQL_ROOT_USER=root
+    MYSQL_ROOT_PASSWORD=blablapasswordsql
+    
+    WORDPRESS_TITLE=Inception #título del sitio wordpress
+    WORDPRESS_ADMIN_USER=boss
+    WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
+    WORDPRESS_ADMIN_EMAIL= #??
+    WORDPRESS_USER=amacarul?
+    WORDPRESS_USER_EMAIL= #??
+    WORDPRESS_USER_PASSWORD=
 
 ## Definir `docker-compose.yml` (servicios, redes, volúmenes y dependencias)
 El archivo `docker-compose.yml` es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
@@ -681,20 +681,21 @@ El archivo `docker-compose.yml` es un archivo de configuración utilizado para d
   - ports (solo nginx)
  
 
-            services:
-              ngnix:
-                build: ./requeriments/nginx
-                container_name: nginx
+            services: #define los contenedores que van a existir
+              nginx:
+                build: ./requeriments/nginx #docker construye la imagen usando el dockerfile en este directorio -> no usa imágenes prehechas
+                container_name: nginx #construye el contenedor con ese nombre en vez de con nombres aleatorios
+                env_file: #carga todas las variables de .env
+                  - .env
                 ports:
-                  - "443:443"
+                  - "443:443" #VM escucha en 443:443, redirige a 443 el contenido nginx, único servicio expuesto al exterior
                 volumes:
-                  - wordpress_data: /var/www/html
-                depends_on:
+                  - /home/amacarul/data/wordpress:/var/www/html #donde wordpress se instala, guarda themes, uploads... NGINX necesita leer estos archivos; wordpress y NGINX comparten volumen
+                depends_on: #dependencias: arranca wordpress antes
                   - wordpress
                 networks:
-                  - inception
-                restart:
-                  - always
+                  - inception #crea una red privada docker
+                restart: always
             
               wordpress:
                 build: ./requeriments/wordpress
@@ -702,8 +703,8 @@ El archivo `docker-compose.yml` es un archivo de configuración utilizado para d
                 env_file:
                   - .env
                 volumes:
-                  - wordpress_data: /var/www/html #esto es la ruta a dónde??
-                depends_on:
+                  - /home/amacarul/data/wordpress:/var/www/html
+                depends_on: #arranca mariadb antes
                   - mariadb
                 networks:
                   - inception
@@ -715,19 +716,14 @@ El archivo `docker-compose.yml` es un archivo de configuración utilizado para d
                 env_file:
                   - .env
                 volumes:
-                  - db_data: /var/www/html #esto es la ruta a dónde?
+                  - /home/amacarul/data/mariadb:/var/lib/mysql #donde mariadb guarda db, tablas, users. Si se borra el contenedor, si no hay volumen, se pierde la base de datos. COn volumen, la base de datos persiste.
                 networks:
                   - inception
                 restart: always
             
-              volumes:
-                wordpress_data:
-                db_data:
-            
-              networks:
-                inception:
-                  driver: bridge
-
+            networks:
+              inception:
+                driver: bridge
 
 Tras configurar el archivo `docker-compose.yml`, ejecutar:
 
