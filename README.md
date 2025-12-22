@@ -600,38 +600,97 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
       DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
 
       MYSQL_HOSTNAME=mariadb
-      MYSQL_DATABASE= #nombre de la db que mariadb va a crear
+      MYSQL_DATABASE=database #nombre de la db que mariadb va a crear
       MYSQL_USER=amacarul
-      MYSQL_PASSWORD=passuser
+      MYSQL_PASSWORD=passusersql
       MYSQL_ROOT_USER=root
-      MYSQL_ROOT_PASSWORD=blablapassword
+      MYSQL_ROOT_PASSWORD=blablapasswordsql
       
       WORDPRESS_TITLE=Inception #titulo del sitio wordpress
-      WORDPRESS_ADMIN_USER= #creo que no puede ser admin
-      WORDPRESS_ADMIN_PASSWORD=
+      WORDPRESS_ADMIN_USER=boss #creo que no puede ser admin
+      WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
       WORDPRESS_ADMIN_EMAIL= #creo que no puede ser admin
       WORDPRESS_USER=
       WORDPRESS_USER_EMAIL=
       WORDPRESS_USER_PASSWORD=
 
+## Definir `docker-compose.yml` (servicios, redes, volúmenes y dependencias)
+El archivo `docker-compose.yml` es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
+- definir qué servicios existen
+- Para cada servicio:
+  - build (ruta al Dockerfile)
+  - env_file
+  - volumes
+  - networks
+  - depends_on
+  - ports (solo nginx)
+ 
+
+            services:
+              ngnix:
+                build: ./requeriments/nginx
+                container_name: nginx
+                ports:
+                  - "443:443"
+                volumes:
+                  - wordpress_data: /var/www/html
+                depends_on:
+                  - wordpress
+                networks:
+                  - inception
+                restart:
+                  - always
+            
+              wordpress:
+                build: ./requeriments/wordpress
+                container_name: wordpress
+                env_file:
+                  - .env
+                volumes:
+                  - wordpress_data: /var/www/html #esto es la ruta a dónde??
+                depends_on:
+                  - mariadb
+                networks:
+                  - inception
+                restart: always
+            
+              mariadb:
+                build: ./requeriments/mariadb
+                container_name: mariadb
+                env_file:
+                  - .env
+                volumes:
+                  - db_data: /var/www/html #esto es la ruta a dónde?
+                networks:
+                  - inception
+                restart: always
+            
+              volumes:
+                wordpress_data:
+                db_data:
+            
+              networks:
+                inception:
+                  driver: bridge
+
 ## Construcción de cada imagen
-1. NGINX
+1. MariaDB
    - Dockerfile
-   - Configuración TLS
-   - Exposición del puerto 443
-   - Configuración de fastcgi_pass
-   - Scripts necesarios
+   - Instalación de la base de datos
+   - Inicialización de usuarios y permisos
+   - Configuración persistente del volúmen
 2. WordPress + PHP-FOM
    - Dockerfile
    - Instalación manual de PHP, PHP-FPM
    - Descarga de WordPress
    - Configuración dinámica con variables de entorno
    - Script de setup
-3. MariaDB
+3. NGINX
    - Dockerfile
-   - Instalación de la base de datos
-   - Inicialización de usuarios y permisos
-   - Configuración persistente del volúmen
+   - Configuración TLS
+   - Exposición del puerto 443
+   - Configuración de fastcgi_pass
+   - Scripts necesarios
 
 ## Configuración de la red
 - Creación de red Docker
