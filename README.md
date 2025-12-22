@@ -736,9 +736,38 @@ Si no hay errores, seguimos.
 ## Construcción de cada imagen
 1. MariaDB
    - Dockerfile
+     - Tiene que construir la imagen
+     - Instalar mariadb-server / mysql
+     - Copiar la configuración personalizada, sobreescribiendo la config por defecto de mariadb (para que tenga acceso por red docker)
+     - Copiar el script de arranque en el directorio que toca
+     - Dar permisos para ejecutar ese script
+     - Documentar que escucha en 3306
+     - Definir el entrypoint (qué se ejecuta cuando arranca el contenedor), reemplaza pid1
+   - setup.sh
+     - arranca mariadb
+     - inicializa DB y usuarios si no existen
+     - deja mysql corriendo
    - Instalación de la base de datos
    - Inicialización de usuarios y permisos
    - Configuración persistente del volúmen
+  
+     --> archivos Dockerfile, setup.sh y my.conf de mariadb hechos.
+     --> Cómo probar solo mariadb: desde srcs
+
+         docker compose build mariadb
+         docker compose up mariadb
+
+     En otra terminal:
+
+         docker ps
+         docker logs mariadb
+
+     Ahí tienes que ver:
+     - inicialización la primera vez
+     - solo arranque las siguientes
+
+¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!"
+      
 2. WordPress + PHP-FOM
    - Dockerfile
    - Instalación manual de PHP, PHP-FPM
