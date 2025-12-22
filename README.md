@@ -279,26 +279,7 @@ Ejemplo simplificado:
 
 ...... -> seguir en: https://github.com/gemartin99/Inception?tab=readme-ov-file#1--descargar-imagen-de-la-maquina-virtual-
 
-
-### Docker Network - cómo se comunican los contenedores
-Los contenedores están aislados entre sí.  
-Para comunicarse, deben estar en la misma red Docker:
-
-      networks:
-          inception:
-            driver: bridge
-
-Esto permite:
-- NGINX -> PHP-FPM por el puerto 9000
-- PHP-FPM -> MariaDB por el puerto 3306
-
-Los contenedores se buscan por su nombre de servicio:
-
-    fastcgi_pass wordpress:9000;
-
-????
-
-### Volúmenes - persistencia de datos
+### Volúmenes - Persistencia de datos
 Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
 
       volumes:
@@ -320,6 +301,71 @@ Si destruyes el contenedor:
       docker compose up --build
 
 Tus datos siguen ahí. 
+
+#### Docker Volumes vs Bind Mounts
+Los contenedores son efímeros: si borras un contenedor, se vorra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
+Para evitarlo, Docker permite la **persistencia de datos fuera del contenedor** de dos maneras diferentes:
+- Docker volumes
+- Bind mounts
+
+##### Docker Volumes
+Son espacios de almacenamiento creados y gestionados por Docker, independientes del contenedor. Docker decide dónde vive el host.
+Ejemplo:
+
+        services:
+          mariadb:
+            volumes:
+              - db_data:/var/lib/mysql
+
+        volumes:
+          wordpress_data:
+          db_data:
+
+Normalmente se guardan en `var/lib/docker/volumes/db_data/_data`. Esta es una ruta que no controlas tú.  
+Ventajas:
+- Son fáciles de usar
+- Más seguros (Docker controla permisos)
+- Portables
+- Recomendados en producción real
+
+Desventajas:
+- No sabes exactamente dónde están
+- El subject exige una ruta concreta
+- No puedes demostrar fácilmente la persistencia en `/home/login/data`
+
+##### Bind Mounts
+Montajes directos del host. Un bind mount conecta una carpeta del host con una carpeta del contenedor.  
+Ejemplo: 
+
+        /home/login/data/mariadb:/var/lib/mysql
+
+Los datos se guardan donde tú decides.  
+Puedes hacer `ls /home/login/data/mariadb` y ver los archivos de la database.  
+Ventajas:
+- Control absoluto de la ruta
+- Fácil de inspeccionar
+Desventajas:
+- Más fácil romper permisos
+- Menos portable
+- El host "interfiere" más
+
+### Docker Network - cómo se comunican los contenedores
+Los contenedores están aislados entre sí.  
+Para comunicarse, deben estar en la misma red Docker:
+
+      networks:
+          inception:
+            driver: bridge
+
+Esto permite:
+- NGINX -> PHP-FPM por el puerto 9000
+- PHP-FPM -> MariaDB por el puerto 3306
+
+Los contenedores se buscan por su nombre de servicio:
+
+    fastcgi_pass wordpress:9000;
+
+????
 
 ### Variables de entorno y secretos
 Nunca se deben poner contraseñas en el repositorio.
@@ -672,6 +718,13 @@ El archivo `docker-compose.yml` es un archivo de configuración utilizado para d
               networks:
                 inception:
                   driver: bridge
+
+
+Tras configurar el archivo `docker-compose.yml`, ejecutar:
+
+      docker compose config
+
+Si no hay errores, seguimos.
 
 ## Construcción de cada imagen
 1. MariaDB
