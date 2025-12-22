@@ -31,6 +31,7 @@
     - [Cómo compartir carpetas entre la VM y el host](cómo-compartir-carpetas-entre-la-VM-y-el-host)
   - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
   - [Archivo .env](#archivo-env)
+  - [Definir docker-compose.yml (servicios, redes, volúmenes y dependencias)](#definir-docker-compose.yml-(servicios-redes-volúmenes-y-dependencias))
 - [Resources](#resources)
 
 ----------------------------------------
