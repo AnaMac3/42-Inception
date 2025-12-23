@@ -1,17 +1,17 @@
-services: #define los contenedores que van a existir
+services:
   nginx:
-    build: ./requeriments/nginx #docker construye la imagen usando el dockerfile en este directorio -> no usa imágenes prehechas
-    container_name: nginx #construye el contenedor con ese nombre en vez de con nombres aleatorios
-    env_file: #carga todas las variables de .env
+    build: ./requeriments/nginx
+    container_name: nginx
+    env_file:
       - .env
     ports:
-      - "443:443" #VM escucha en 443:443, redirige a 443 el contenido nginx, único servicio expuesto al exterior
+      - "443:443"
     volumes:
-      - /home/amacarul/data/wordpress:/var/www/html #donde wordpress se instala, guarda themes, uploads... NGINX necesita leer estos archivos; wordpress y NGINX comparten volumen
-    depends_on: #dependencias: arranca wordpress antes
+      - /home/amacarul/data/wordpress:/var/www/html
+    depends_on:
       - wordpress
     networks: 
-      - inception #crea una red privada docker
+      - inceptionnet
     restart: always
 
   wordpress:
@@ -21,10 +21,10 @@ services: #define los contenedores que van a existir
       - .env
     volumes:
       - /home/amacarul/data/wordpress:/var/www/html
-    depends_on: #arranca mariadb antes
+    depends_on:
       - mariadb
     networks:
-      - inception
+      - inceptionnet
     restart: always
 
   mariadb:
@@ -33,11 +33,11 @@ services: #define los contenedores que van a existir
     env_file:
       - .env
     volumes:
-      - /home/amacarul/data/mariadb:/var/lib/mysql #donde mariadb guarda db, tablas, users. Si se borra el contenedor, si no hay volumen, se pierde la base de datos. COn volumen, la base de datos persiste.
+      - /home/amacarul/data/mariadb:/var/lib/mysql
     networks:
-      - inception
+      - inceptionnet
     restart: always
 
 networks:
-  inception:
+  inceptionnet:
     driver: bridge

@@ -2,9 +2,9 @@
 FROM debian:bookworm 
 
 # descarga lista de paquetes
-RUN apt-get update
-# instala mysql, clientes y scripts de inicialización 
-RUN apt-get install -y mariadb-server
+RUN apt-get update && \
+# instala mysql, clientes y scripts de inicialización
+apt-get install -y mariadb-server
 # borra cache de apt, reduce tamaño de imagen, buena práctica docker
 RUN rm -rf /var/lib/apt/lists/*
 

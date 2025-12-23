@@ -14,7 +14,8 @@ if [ ! -d "$DATADIR" ]; then
 
        mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
-       /usr/bin/mysqld_safe &
+       /usr/bin/mysqld_safe --datadir=/var/lib/mysql &
+       pid ="$!"
 
        sleep 5
 
@@ -26,8 +27,8 @@ ALTER USER '${MYSQL_ROOT_USER}'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD
 FLUSH PRIVILEGES;
 EOF
 
-	mysqladmin shutdown
+	kill "$pid"
 fi
 
 echo "Starting MariaDB..."
-exec /usr/bin/mysqld_safe
+exec /usr/bin/mysqld_safe --datadir=/var/lib/mysql
