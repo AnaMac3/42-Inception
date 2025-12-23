@@ -184,17 +184,16 @@ Ejemplo simplificado para NGINX:
 
           CMD service myswl start && tail -f /dev/null
 
-**Debian vs Alpine**: explicar por qué uso debian en vez de alpine: porque es más fácil para empezar... y por qué más?
+**Imagen -> contenedor en ejecución -> corre un único servicio**.
+En este proyecto se piden tres servicios principales:
   
-#### PID1 y ENTRYPOINT
-- En Linux, **PID1** es el primer proceso que se ejecuta; gestiona señales y zombies.
-- En Docker, el proceso definido como ENTRYPOINT se convierte en PID1.
-- Algunos programas necesitan ajustes para funcionar correctamente como PID1, lo que causa:
-  - Contenedores que no se apagan correctamente
-  - Procesos zombie
-  - Comportamientos inesperados
-  - Contenedores que se cierran solos o crashean
-  Por eso está prohibido en este ejercicio usar bucles infinitos. NGINX sí está preparado para ejecutarse directamente como PID1, por eso se usa `daemon off`. -> YA VERÉ QUÉ PASA CON ESTO
+| Servicio | Contenedor | Qué contiene |
+|----------|------------|--------------|
+| NGINX | `nginx` | Servidor web con TLS |
+| WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
+| MariaDB | `mariadb` | Database |
+
+**Debian vs Alpine**: explicar por qué uso debian en vez de alpine: porque es más fácil para empezar... y por qué más?
 
  /*En este proyecto, como base de cada imagen, se puede usar:
           - **Debian**: FROM debian:bookworm
@@ -205,17 +204,71 @@ Ejemplo simplificado para NGINX:
                 FROM nginx:latest
                 FROM mariadb:latest
                 FROM wordpress:latest*/
-
-**Imagen -> contenedor en ejecución -> corre un único servicio**.
-En este proyecto se piden tres servicios principales:
   
-| Servicio | Contenedor | Qué contiene |
-|----------|------------|--------------|
-| NGINX | `nginx` | Servidor web con TLS |
-| WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
-| MariaDB | `mariadb` | Database |
+#### PID 1 y ENTRYPOINT
+En Linux, **PID 1** es el primer proceso que se ejecuta en el sistema.  
+Es responsable de:
+- gestionar señales
+- reaprovechar procesos zombie
 
-Una imagen de Docker es una carpeta: contiene el Dockerfile en la raíz y puede contener otros archivos que se pueden copiar directamente en tu máquina virtual. ES NECESARIO PONER ESTO AQUÍ??
+En Docker, **cada contenedor tiene su propio PID 1**, que es proceso definido en el Dockerfile por:
+- `ENTRYPOINT`
+- `CMD`, si no hay `ENTRYPOINT`
+
+**Relación PID 1 <-> contenedor**
+- El proceso que se ejecuta como PID 1 mantiene vivo el contenedor
+- Si ese proceso termina, el contenedor se muere
+- Algunos programas necesitan ajustes para funcionar correctamente como PID1, lo que causa:
+  - Contenedores que no se detienen correctamente con `docker stop`
+  - Procesos zombie
+  - señales que no se gestionan correctamente
+  - contenedores que se cierran solos o crashean
+- Por eso en *Inception* está prohibido usar bucles infinitos. Tampoco se deben lanzar procesos en background y salir del script. ???
+
+**Foreground vs background**
+Un proceso en **foreground**:
+- No se ejecuta con `&`
+- No termina
+- Mantiene vivo el contenedor
+Un proceso en **background**
+- Se lanza con `&`
+- El script puede terminar
+- El contenedor se cierra
+**¿Cómo se consigue un proceso en foreground?**
+Se usa `exec`:
+
+      exec mysql_safe
+      exec pgp-fpm -F
+      exec nginx -g "daemon off;"
+
+`exec`:
+- reemplaza el proceso del script
+- convierte ese proceso en **PID 1**
+- permite que Docker envíe señales correctamente
+
+**Un proceso principal por contenedor**
+- Cada contenedor debe tener **un solo proceso principal**
+- Ese proceso vive en foreground
+- El contenedor vive mientras el proceso viva
+
+| Contenedor | Proceso PID 1 |
+|------------|---------------|
+| mariadb | mysql_safe |
+| wordpress | php-fpm |
+| nginx | nginx |
+
+**Apagado limpio de contenedores**  
+Cuando se ejecuta 
+
+    docker compose stop
+
+Docker:
+- Envía `SIGTERM` al PID 1
+- Espera unos segundos
+- Si no responde, envía `SIGKILL`
+
+Si el proceso está en foreground y gestiona señales correctamente, el contenedor se apaga limpiamente.
+
 
 ### Docker Compose
 **Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
@@ -417,11 +470,21 @@ NGINX es más eficiente que Apache para manejar muchas conexiones simultáneas.
 - temas
 En este proyecto debe ejecutarse con PHP-FPM (no con Apache) porque:
 - NGINX no ejecuta PHP directamente
-- PHP-FPM gestiona procesos PHO como un servicio separado
+- PHP-FPM gestiona procesos PHP como un servicio separado. PHP-FPM es el proceso que ejecuta PHP y espera repeticiones.
+
 
 El flujo es:
 
-Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress -> MariaDB (3306)
+Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
+
+WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos. Con WP-CLI se pueden hacer cosas como:
+- descargar wordpress
+- crear wp-config.php
+- instalar wordpress
+- crear usuarios
+- activar plugins / themes...
+
+En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
 
 #### MariaDB
 **MariaDB** es un sistema de bases de datos SQL (alternativa a MySQL). WordPress lo usa para guardar:
@@ -654,7 +717,7 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
 - Para poder cambiar valores sin tocar el código.
 - ESTE ARCHIVO NO HA DE SUBIRSE A NINGÚN SITIO!!
 
-     DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
+    DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
 
     MYSQL_HOSTNAME=mariadb
     MYSQL_DATABASE=database
@@ -663,13 +726,15 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
     MYSQL_ROOT_USER=root
     MYSQL_ROOT_PASSWORD=blablapasswordsql
     
-    WORDPRESS_TITLE=Inception #título del sitio wordpress
+    WORDPRESS_TITLE=myWebsite
     WORDPRESS_ADMIN_USER=boss
     WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
-    WORDPRESS_ADMIN_EMAIL= #??
-    WORDPRESS_USER=amacarul?
-    WORDPRESS_USER_EMAIL= #??
-    WORDPRESS_USER_PASSWORD=
+    WORDPRESS_ADMIN_EMAIL=boss@inception.fr
+    WORDPRESS_USER=user1
+    WORDPRESS_USER_EMAIL=user1@inception.fr
+    WORDPRESS_USER_PASSWORD=passuserwordpress
+
+Hay cosas de estas que tienen que ir a secrets, creo... las contraseñas, por ejemplo, no deberian estar como variables de entorno, no?
 
 ## Definir `docker-compose.yml` (servicios, redes, volúmenes y dependencias)
 El archivo `docker-compose.yml` es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
@@ -734,7 +799,7 @@ Tras configurar el archivo `docker-compose.yml`, ejecutar:
 Si no hay errores, seguimos.
 
 ## Construcción de cada imagen
-1. MariaDB
+### MariaDB
    - Dockerfile
      - Tiene que construir la imagen
      - Instalar mariadb-server / mysql
@@ -742,7 +807,7 @@ Si no hay errores, seguimos.
      - Copiar el script de arranque en el directorio que toca
      - Dar permisos para ejecutar ese script
      - Documentar que escucha en 3306
-     - Definir el entrypoint (qué se ejecuta cuando arranca el contenedor), reemplaza pid1
+     - Definir el entrypoint (qué se ejecuta cuando arranca el contenedor), reemplaza pid1 -> hemos hecho que el entrypoint sea setup.sh, que hace `exec mysql_safe`, por lo que `mysql_safe` es el PID1. El contenedor vivirá mientras MariaDB esté viva.
    - setup.sh
      - arranca mariadb
      - inicializa DB y usuarios si no existen
@@ -766,15 +831,17 @@ Si no hay errores, seguimos.
      - inicialización la primera vez
      - solo arranque las siguientes
 
-¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!"
+
+¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!
       
-2. WordPress + PHP-FOM
+### WordPress + PHP-FOM
    - Dockerfile
-   - Instalación manual de PHP, PHP-FPM
+   - Instalación manual de PHP, PHP-FPM -> 
    - Descarga de WordPress
    - Configuración dinámica con variables de entorno
    - Script de setup
-3. NGINX
+     
+### NGINX
    - Dockerfile
    - Configuración TLS
    - Exposición del puerto 443
