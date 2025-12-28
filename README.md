@@ -491,14 +491,15 @@ WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos
 En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
 
 #### MariaDB
-**MariaDB** es un sistema de bases de datos SQL (alternativa a MySQL). WordPress lo usa para guardar:
+**MariaDB** es un sistema de bases de datos SQL (alternativa a MySQL, en realidad es un fork de MySQL). WordPress lo usa para guardar:
 - posts
 - usuarios
 - contraseñas
 - configuraciones
 - plugins
 - etc
-Los datos deben persisitir en un volumen, para que no se pierdan al destruir contenedores.  
+Los datos deben persisitir en un volumen, para que no se pierdan al destruir contenedores.
+
 
 ### Cómo se relacionan todos los conceptos
 
@@ -819,6 +820,14 @@ Si no hay errores, seguimos.
    - Instalación de la base de datos
    - Inicialización de usuarios y permisos
    - Configuración persistente del volúmen
+
+MariaDB es la base de datos para el wordpress que hagamos. WordPress necesita conectarse a ella par aguardar posts, usuarios, configuración, etc. Antes de que wordpress pueda arrancar, mariadb debe:
+1. Arrancar el servidor (`mysql` o `service mysql start`)
+2. Crear la base de datos que va a usar wordpress
+3. Crear un usuario con contraseña que wordpress usará
+4. Dar permisos a ese usuario sobre la base de datos
+5. Condigurar la contraseña de root y refrescar privilegios
+El `setup.sh` de mariadb prepara la base de datos para que wordpress puede usarla sin problemas.
   
      --> archivos Dockerfile, setup.sh y my.conf de mariadb hechos.
      --> Cómo probar solo mariadb: desde srcs
@@ -836,7 +845,9 @@ Si no hay errores, seguimos.
      - solo arranque las siguientes
 
 
-¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!
+¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!  
+
+
       
 ### WordPress + PHP-FOM
    - Dockerfile
@@ -844,7 +855,15 @@ Si no hay errores, seguimos.
    - Descarga de WordPress
    - Configuración dinámica con variables de entorno
    - Script de setup
-     
+
+
+Comprobar conexión desde WordPress al contenedor MariaDB:
+
+      docker exec -it wordpress bash
+      mysql -h mariadb -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE
+
+Si funciona, la base de datos es accesible.
+
 ### NGINX
    - Dockerfile
    - Configuración TLS
