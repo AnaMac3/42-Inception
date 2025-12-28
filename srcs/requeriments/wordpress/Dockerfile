@@ -2,14 +2,11 @@ FROM debian:bookworm
 
 # Instalar PHP, PHP-FPM y dependencias 
 RUN apt-get update && apt-get install -y \
-	php \
+	php8.2 \
 	php-fpm \
 	php-mysql \
-	php-cli \
 	curl \
-	mariadb-client \
-	unzip \
-	&& rm -rf /var/lib/apt/lists/*
+	mariadb-client
 
 # Instalar WP-CLI
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \

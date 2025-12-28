@@ -1,11 +1,14 @@
 #!/bin/bash
-set -e
+set -e # salir si hay error
+
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
 
 # Esperar a mariadb
 until mysqladmin ping \
-	-h mariadb \
+	-h "$MYSQL_HOSTNAME" \
 	-u "$MYSQL_ROOT_USER" \
-	-p "$MYSQL_ROOT_PASSWORD" \
+	-p"$MYSQL_ROOT_PASSWORD" \
 	--silent
 do
 	echo "Waiting for MariaDB..."
@@ -40,6 +43,7 @@ if [ ! -f wp-config.php ]; then
 		"$WORDPRESS_USER" \
 		"$WORDPRESS_USER_EMAIL" \
 		--user_pass="$WORDPRESS_USER_PASSWORD" \
+		--role=subscriber \
 		--allow-root
 fi
 
