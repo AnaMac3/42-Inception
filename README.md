@@ -32,7 +32,7 @@
   - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
   - [Archivo .env](#archivo-env)
   - [Definir docker-compose.yml (servicios, redes, volúmenes y dependencias)](#definir-docker-compose.yml-(servicios-redes-volumenes-y-dependencias))
-  - [Construcción de cada imagen](#construccion-de-cada-imagen)
+  - [Construcción de cada imagen](#construcción-de-cada-imagen)
 - [Resources](#resources)
 
 ----------------------------------------
