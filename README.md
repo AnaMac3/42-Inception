@@ -112,6 +112,8 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
 
+Containers are isolated processes for each of your app's components. Each component runs in its own isolated environment, completely isolated from everything else on your machine.  
+
 **Problemas que resuelve Docker:**
 - Dependencias que son incompatibles con tu versión de software
 - Dependencias en versiones diferentes
@@ -133,6 +135,8 @@ Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema
 | Pesada y lenta en arrancar | Muy ligero y arranca en milisegundos |
 | Cada VM consume mucha RAM/CPU | Cada contenedor usa solo lo imprescindible |
 | Diseñada para aislamiento total | Diseñado para despliegue rápido ; aislamiento de procesos y red, pero comparte kernel |
+
+A menudo, los containers y las VM se utilizan juntas (como en este proyecto *Inception*). En vez de utilizar una máquina virtual para correr una aplicación, una máquina virtual con container runtime puede correr múltiples aplicaciones conteinarizadas -> mayor uso de recursos y reducción de costes.  
 
 ### Docker Images and Dockerfile
 #### Images
@@ -873,4 +877,5 @@ Si no hay errores, seguimos.
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
 [Grademe tutorial](https://tuto.grademe.fr/inception/)  
+[dockerdocs](https://docs.docker.com/)  
 [dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
