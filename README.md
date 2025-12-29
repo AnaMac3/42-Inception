@@ -857,6 +857,9 @@ El `setup.sh` de mariadb prepara la base de datos para que wordpress puede usarl
    - Configuración dinámica con variables de entorno
    - Script de setup
 
+Entrar en el container:
+
+    docker exec -it wordpress bash
 
 Comprobar conexión desde WordPress al contenedor MariaDB:
 
