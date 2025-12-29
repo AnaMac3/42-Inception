@@ -868,6 +868,14 @@ Comprobar conexión desde WordPress al contenedor MariaDB:
 
 Si funciona, la base de datos es accesible.
 
+---------------------
+Borrar contenedore sy volúmenes cuando hacemos cambios:
+
+      docker compose -f srcs/docker-compose.yml down
+      # Para borrar contenedores pero mantener volúmenes
+      docker compose -f srcs/docker-compose.yml down -v  # borra también volúmenes
+
+------------------
 ### NGINX
    - Dockerfile
    - Configuración TLS
