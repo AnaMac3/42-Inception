@@ -2,6 +2,7 @@ FROM debian:bookworm
 
 # Instalar PHP, PHP-FPM y dependencias 
 RUN apt-get update && apt-get install -y \
+	unzip \
 	php8.2 \
 	php-fpm \
 	php-mysql \
