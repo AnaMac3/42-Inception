@@ -7,8 +7,8 @@ chmod -R 755 /var/www/html
 # Esperar a mariadb
 until mysqladmin ping \
 	-h "$MYSQL_HOSTNAME" \
-	-u "$MYSQL_ROOT_USER" \
-	-p"$MYSQL_ROOT_PASSWORD" \
+	-u "$MYSQL_USER" \
+	-p"$MYSQL_PASSWORD" \
 	--silent
 do
 	echo "Waiting for MariaDB..."
@@ -48,4 +48,4 @@ if [ ! -f wp-config.php ]; then
 fi
 
 echo "Starting PHP-FPM..."
-exec php-fpm -F
+exec php-fpm8.2 -F
