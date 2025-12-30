@@ -806,6 +806,49 @@ Si no hay errores, seguimos.
 
 [Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)
 
+
+-------------
+EXPLICACIÓN EN BURDO SOBRE CÓMO FUNCIONA ESTO:  
+Las imágenes de docker son plantillas, creamos una para mariadb, otra para wordpress y otra para nginx, con sus respectivos Dockerfiles.  
+Los contenedores son instancias en ejecución de las imágenes. A partir de una imagen podemos crear uno o varios contenedores. El contenedor es lo que se ejecuta.  
+docker-compose.yml define qué contenedores se crean a partir de qué imágenes, cómo se conectan entre ellos, las redes, los volúmenes, las variables de entorno y los puertos. En Inception, docker-compose no descarga imágenes externas, sino que usa `build` para construir imágenes locales y luego levanta los contenedores con esas imágenes `up`.   
+Flujo de ejecución:  
+
+      docker compose build
+      docker compose up
+      
+Opción no manual para hacer todo a la vez:
+
+      docker compose up --build
+
+¿Qué pasa cuando los contenedores están `up`?   
+- Mariadb: arranca y crea la base de datos y el usuario
+- Wordpress (php-fpm): se conecta a mariadb por la red interna de docker
+- nginx: escucha en el puerto 443(TLS obligatorio en inception) y reenvia peticiones php a wordpress.
+
+Parar contendores: detiene los contenedores pero no los borra, se pueden volver a arrancar con `up`:
+
+      docker compose stop
+
+Parar un contenedor concreto:
+
+      docker stop wordpress
+
+Matar contendores (forzar parada, usar solo si stop no funciona):
+
+      docker kill wordpress
+
+Parar y borrar contenedores (no borra volúmenes por defecto): 
+
+      docker compose down
+
+Para borrar también volúmenes:
+
+      docker compose down -v
+
+
+-------------------
+
 ## Construcción de cada imagen
 ### MariaDB
    - Dockerfile
@@ -850,9 +893,8 @@ El `setup.sh` de mariadb prepara la base de datos para que wordpress puede usarl
 
 ¡¡¡EXPLICAR QUÉ SE HACE EN CADA ARCHIVO PASO A PASO!!!  
 
-
       
-### WordPress + PHP-FOM
+### WordPress + PHP-FPM
    - Dockerfile
    - Instalación manual de PHP, PHP-FPM -> 
    - Descarga de WordPress
@@ -871,11 +913,13 @@ Comprobar conexión desde WordPress al contenedor MariaDB:
 Si funciona, la base de datos es accesible.
 
 ---------------------
-Borrar contenedore sy volúmenes cuando hacemos cambios:
+Borrar contenedores y volúmenes cuando hacemos cambios:
 
       docker compose -f srcs/docker-compose.yml down
       # Para borrar contenedores pero mantener volúmenes
       docker compose -f srcs/docker-compose.yml down -v  # borra también volúmenes
+
+
 
 ------------------
 ### NGINX
