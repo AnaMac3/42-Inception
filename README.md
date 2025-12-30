@@ -912,16 +912,17 @@ Comprobar conexión desde WordPress al contenedor MariaDB:
 
 Si funciona, la base de datos es accesible.
 
----------------------
-Borrar contenedores y volúmenes cuando hacemos cambios:
+Comprobar que wordpress se ha instalado correctamente:
 
-      docker compose -f srcs/docker-compose.yml down
-      # Para borrar contenedores pero mantener volúmenes
-      docker compose -f srcs/docker-compose.yml down -v  # borra también volúmenes
+      # conectarse al contenedor
+      docker exec -it wordpress bash
+      # ver si existe el archivo wp-config.php -> si existe, wordpress está configurado
+      ls -l /var/www/html
 
+Verificar que wordpress puede conectar a mariadb:
 
+        wp db check --allow-root
 
-------------------
 ### NGINX
    - Dockerfile
    - Configuración TLS
