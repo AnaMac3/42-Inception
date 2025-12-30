@@ -923,6 +923,15 @@ Verificar que wordpress puede conectar a mariadb:
 
         wp db check --allow-root
 
+Ver usuarios de wordpress:
+
+      wp user list --allow-root
+
+Comprobar que wordpress responde (sin navegador):
+
+      docker exec -it wordpress wp core is-installed --allow-root
+      # tiene que devolver exit code 0
+
 ### NGINX
    - Dockerfile
    - Configuración TLS
