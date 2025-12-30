@@ -804,6 +804,8 @@ Tras configurar el archivo `docker-compose.yml`, ejecutar:
 
 Si no hay errores, seguimos.
 
+[Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)
+
 ## Construcción de cada imagen
 ### MariaDB
    - Dockerfile
@@ -910,3 +912,4 @@ Borrar contenedore sy volúmenes cuando hacemos cambios:
 [Grademe tutorial](https://tuto.grademe.fr/inception/)  
 [dockerdocs](https://docs.docker.com/)  
 [dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
+[Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)  
