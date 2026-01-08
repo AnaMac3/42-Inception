@@ -29,8 +29,13 @@ status:
 
 clean:
 	@echo "$(CYAN)Cleaning containers, networks, and volumes... $(RESET)"
-	docker compose -f $(COMPOSE_FILE) down -v
+	docker compose -f $(COMPOSE_FILE) down --volumes --rmi all
 
-re: clean all
+fclean: clean
+	@sudo rm -rf /home/amacarul/data/wordpress/*
+	@sudo rm -rf /home/amacarul/data/mariadb/*
+	@docker system prune -a --force
+
+re: fclean all
 
 .PHONY: all build up down clean re
