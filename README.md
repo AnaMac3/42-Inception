@@ -975,7 +975,7 @@ Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
   - Mantener esa ventana abierta. Mientras esté conectada, el túnel estará activo.
   - Abrir en Chrome https://localhost
   - 
-- TAMBIÉN HAY QUE HACER ESTO EN WINDOWS!!
+- TAMBIÉN HAY QUE HACER ESTO EN WINDOWS --> 
   - Pulsar tecla Windows y escribir block de notas
   - Click dcho, seleccionar Ejecutar como admin
   - Dentro de block de notas ir a Archivo -> Abrir
