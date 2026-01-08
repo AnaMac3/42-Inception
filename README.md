@@ -947,10 +947,6 @@ Comprobar que wordpress responde (sin navegador):
    - Configuración de fastcgi_pass
    - Scripts necesarios -> creo que hay parte del dockerfile que deberia ir a script
 
-## Configuración de la red
-- Creación de red Docker
-- Registros en docker-compose
-
 ## Configuración de volúmenes
 - Mapeo de `/home/<login>/data/...
 - Permisos y usuario correcto
