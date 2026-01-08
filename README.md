@@ -33,6 +33,7 @@
   - [Archivo .env](#archivo-env)
   - [Definir docker-compose.yml (servicios, redes, volúmenes y dependencias)](#definir-docker-compose.yml-(servicios-redes-volumenes-y-dependencias))
   - [Construcción de cada imagen](#construcción-de-cada-imagen)
+  - [Configuración de de dominio](#configuración-de-dominio)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -969,14 +970,37 @@ Guardar con Ctrl+O, Enter, salir con Ctrl+X
 
 Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
 
-⚠️COMO ESTAMOS EN UNA VM...:
-En el host del ordenador real:
+⚠️COMO ESTAMOS EN UNA VM HAY QUE HACER UN TUNEL SSH QUE CONECTE EL 443 CON EL NAVEGADOR (?):
+- Windows (con WSL):
+  - En terminal, ejecutar:
 
-    sudo nano /etc/hosts
+            ssh -L 443:localhost:443 login@<IP_DE_VM>
 
-Añadir línea:
+  - Mantener esa ventana abierta. Mientras esté conectada, el túnel estará activo.
+  - Abrir en Chrome https://localhost
+ 
+- En iMacs con Linux:
+  - Como no somos sudo no podemos usar el puerto 442 local
+  - Solución: Mapeo de puertos altos: usaremos un puerto libre, como 8443
+  - En terminal:
+ 
+          ssh -L 8443:localhost:443 login@<IP_DE_VM>
 
-    [IP_DE_VM] amacaruk.42.fr
+  - En el navegador: https://localhost:8443
+  - Explicación: se redirige el puerto 443 de la VM al 8443 del IMac mediante un túnel SSH, porque no tenemos privilegios de root en el host para usar el puerto 443 o editar el archivo host.
+ 
+Otra opción para los ordenadores de 42: Proxy SOCKS ⚠️ PENDIENTE DE PROBAR!!!:
+- Crear túnel SOCKS con SSH:
+
+         ssh -D 8080 login@<IP_VM>
+
+- Mantener terminal abierta
+- Configurar el navegador (firefox)
+  - Ajustes -> configuración de red
+  - Configuración manual de proxy
+  - Servidor SOCKS: 127.0.0.1 y puerto 8080
+  - Marcar casilla: Proxy DNS cuando se utiliza SOCKS v5
+  - Cuando escribas login.42.fr en la barra de direcciones, Firefox no le preguntará al iMac (donde no eres sudo), sino que le preguntará a la VM a través del tunel.
 
 ## Pruebas del sistema
 - Comprobación de que todos los contenedores arrancan
