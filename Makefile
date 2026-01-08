@@ -1,32 +1,36 @@
+NAME = inception
 
-DOCKER_COMPOSE=docker compose -f srcs/docker-compose.yml
+COMPOSE_FILE = srcs/docker-compose.yml
 
-mariadb-build:
-	$(DOCKER_COMPOSE) build mariadb
+CYAN = \033[0;36m
+RESET = \033[0m
 
-wordpress-build:
-	$(DOCKER_COMPOSE) build wordpress
-
-nginx-build:
-	$(DOCKER_COMPOSE) build nginx
+all: build up
 
 build:
-	$(DOCKER_COMPOSE) build mariadb wordpress
+	@echo "$(CYAN)Building images... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) build
 
 
 up:
-	$(DOCKER_COMPOSE) up mariadb wordpress
-
-logs:
-	$(DOCKER_COMPOSE) logs mariadb wordpress
-
-status:
-	$(DOCKER_COMPOSE) ps
-
+	@echo "$(CYAN)Launching containers... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) up -d
 
 stop:
-	$(DOCKER_COMPOSE) stop mariadb wordpress
+	@echo "$(CYAN)Stopping containers... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) stop
+down:
+	@echo "$(CYAN)Shutting down containers... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) down
 
+status:
+	@echo "$(CYAN)Checking status... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) ps
 
 clean:
-	$(DOCKER_COMPOSE) down
+	@echo "$(CYAN)Cleaning containers, networks, and volumes... $(RESET)"
+	docker compose -f $(COMPOSE_FILE) down -v
+
+re: clean all
+
+.PHONY: all build up down clean re
