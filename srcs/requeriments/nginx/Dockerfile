@@ -2,7 +2,7 @@ FROM debian:bookworm
 
 # Instalar nginx y openssl para certificados
 RUN apt-get update && apt-get install -y nginx openssl && rm -rf /var/lib/apt/lists/*
-# por qué borramos lib/apt/lists??? se supone que los volúmenes tienen que ser persistentes, esto no los estará borrando, no?
+# por qué borramos lib/apt/lists??? para que la imagen pese menos
 
 # Crear carpeta para certificados
 RUN mkdir -p /etc/nginx/ssl
@@ -14,7 +14,7 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 	-subj "/C=ES/ST=Madrid/L=Madrid/O=42/CN=amacarul.42.fr"
 
 # Copiar nuestra conf
-COPY conf/nginx.conf /etc/nginx/sites_available/default
+COPY conf/nginx.conf /etc/nginx/sites-available/default
 RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 EXPOSE 443
