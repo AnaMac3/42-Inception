@@ -981,7 +981,11 @@ Añadir línea:
 ## Pruebas del sistema
 - Comprobación de que todos los contenedores arrancan
 - Conexión entre servicios
-- Acceso HTTPS
+- Acceso HTTPS:
+
+        curl -k https://amacarul.42.fr
+
+  
 - Persistencia de datos
 - Revisión de logs
 
