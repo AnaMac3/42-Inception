@@ -430,7 +430,7 @@ Los contenedores se buscan por su nombre de servicio:
 
     fastcgi_pass wordpress:9000;
 
-????
+???? ⚠️
 
 #### Docker Network vs Host Network
 
@@ -465,6 +465,13 @@ NGINX es más eficiente que Apache para manejar muchas conexiones simultáneas.
 | certificado TLS |
 |-----|
 | Un certificado TLS (Transport Layer Security) es un protocolo que cifra la comunicación entre el navegador y tu servidor (HTTPS). Es un archivo que: <br>- identifica al servidor <br> - permite cifrar el tráfico HTTPS <br>- asegura que la comunicación no puede ser leída por terceros |
+
+En este proyecto/esquema, NGINX actúa como **servidor web** y **proxy inverso**. Sus funciones son:
+- Punto de entrada único: es el único contenedor que expone puertos al mundo exterior (puerto 443).
+- Terminación TLS: el tráfico viaja cifrado desde el navegador hasta NGINX. NGINX "desencripta" la petición usando tus certificados generados con OpenSSL (??).
+- Servidor de archivos estáticos: ...
+- Pasarela FastCGI: ...??? ⚠️
+
 
 #### WordPress
 **WordPress** es un CMS (Content Management System) escrito en PHP. Permite crear con facilidad:
@@ -869,7 +876,7 @@ Para borrar también volúmenes:
 
 MariaDB es la base de datos para el wordpress que hagamos. WordPress necesita conectarse a ella par aguardar posts, usuarios, configuración, etc. Antes de que wordpress pueda arrancar, mariadb debe:
 1. Arrancar el servidor (`mysql` o `service mysql start`)
-2. Crear la base de datos que va a usar wordpress
+2. Crear la base de datos que va a usar wordpress ->   CÓMO ES ESTA BASE DE DATOS? DÓNDE LA CONFIGURO???⚠️
 3. Crear un usuario con contraseña que wordpress usará
 4. Dar permisos a ese usuario sobre la base de datos
 5. Condigurar la contraseña de root y refrescar privilegios
@@ -937,7 +944,7 @@ Comprobar que wordpress responde (sin navegador):
    - Configuración TLS
    - Exposición del puerto 443
    - Configuración de fastcgi_pass
-   - Scripts necesarios
+   - Scripts necesarios -> creo que hay parte del dockerfile que deberia ir a script
 
 ## Configuración de la red
 - Creación de red Docker
@@ -949,6 +956,27 @@ Comprobar que wordpress responde (sin navegador):
 
 ## Configuración del dominio
 - `/etc/hosts`-> `login.42.fr`
+
+En terminal:
+
+      sudo nano /etc/hosts
+
+Añadir línea:
+
+      127.0.0.1 login.42.fr
+
+Guardar con Ctrl+O, Enter, salir con Ctrl+X
+
+Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
+
+⚠️COMO ESTAMOS EN UNA VM...:
+En el host del ordenador real:
+
+    sudo nano /etc/hosts
+
+Añadir línea:
+
+    [IP_DE_VM] amacaruk.42.fr
 
 ## Pruebas del sistema
 - Comprobación de que todos los contenedores arrancan
