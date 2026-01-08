@@ -946,6 +946,11 @@ Comprobar que wordpress responde (sin navegador):
    - Exposición del puerto 443
    - Configuración de fastcgi_pass
    - Scripts necesarios -> creo que hay parte del dockerfile que deberia ir a script
+   - 
+
+⚠️ IMPORTANTE!!: EJECUTAR EL MAKE FCLEAN CON SUDO!! 
+
+        sudo ls && make fclean
 
 ## Configuración de volúmenes
 - Mapeo de `/home/<login>/data/...
