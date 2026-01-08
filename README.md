@@ -974,6 +974,16 @@ Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
 
   - Mantener esa ventana abierta. Mientras esté conectada, el túnel estará activo.
   - Abrir en Chrome https://localhost
+  - 
+- TAMBIÉN HAY QUE HACER ESTO EN WINDOWS!!
+  - Pulsar tecla Windows y escribir block de notas
+  - Click dcho, seleccionar Ejecutar como admin
+  - Dentro de block de notas ir a Archivo -> Abrir
+  - Ruta: C:\Windows\System32\drivers\etc
+  - Cambiar filtro de documentos de texto txt a Todos los archivos
+  - Abrir el arhcivo host
+  - Añadir al final del archivo la línea: 127.0.0.1 amacarul.42.fr
+  - Guardar y cerrar
  
 - En iMacs con Linux:
   - Como no somos sudo no podemos usar el puerto 442 local
