@@ -1031,20 +1031,21 @@ COSAS A PROBAR:
 - Comprobar qué se modifica cuando haces esto:
   - Ver usuarios:
 
-      #entrar al contenedor mariadb
-      docker exec -it mariadb bash
-      mysql -u root -p
-      #ejecutar SQL
-      SHOW DATABASES;
-      USE wordpress;
-      SELECT user_login, user_registered FROM wp_users;
+            #entrar al contenedor mariadb
+            docker exec -it mariadb bash
+            mysql -u root -p
+            #ejecutar SQL
+            SHOW DATABASES;
+            USE wordpress;
+            SELECT user_login, user_registered FROM wp_users;
     
   - Ver posts:
     
-      SELECT ID, post_title, post_status FROM wp_post
+              SELECT ID, post_title, post_status FROM wp_post
   
   - Ver archivos subidos:
-     ls data/wordpress/wp-content/uploads
+  
+              ls data/wordpress/wp-content/uploads
 
 ## Limpieza y validación final
 
