@@ -33,7 +33,7 @@
   - [Archivo .env](#archivo-env)
   - [Definir docker-compose.yml (servicios, redes, volúmenes y dependencias)](#definir-docker-compose.yml-(servicios-redes-volumenes-y-dependencias))
   - [Construcción de cada imagen](#construcción-de-cada-imagen)
-  - [Configuración de de dominio](#configuración-de-dominio)
+  - [Configuración de dominio](#configuración-de-dominio)
 - [Resources](#resources)
 
 ----------------------------------------
