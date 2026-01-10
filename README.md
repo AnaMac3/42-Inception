@@ -1020,9 +1020,31 @@ Otra opción para los ordenadores de 42: Proxy SOCKS ⚠️ PENDIENTE DE PROBAR!
 
         curl -k https://amacarul.42.fr
 
-  
 - Persistencia de datos
-- Revisión de logs
+- Revisión de logs -> creo que esto se mira en data/mariadb/wordpress -> wp_users.idb, wp_usermeta.idb
+- Creación de posts -> wp_posts, wp_postmeta, wp_term_relationships, wp_terms, wp_term_taxonomy ???
+- en data/wordpress/wp-content -> uploads (imagenes subidas), plugins, themes...
+
+COSAS A PROBAR:
+- Hacer login en la página: https://login.42.fr/wp-login.php ó /wp-admin
+- Crear entrada: en https://login.42.fr/wp-admin -> menú izquierdo -> entradas -> añadir nueva -> escribir título y contenido -> publicar -> esto crea filas en wp_posts, wp_postmeta
+- Comprobar qué se modifica cuando haces esto:
+  - Ver usuarios:
+
+      #entrar al contenedor mariadb
+      docker exec -it mariadb bash
+      mysql -u root -p
+      #ejecutar SQL
+      SHOW DATABASES;
+      USE wordpress;
+      SELECT user_login, user_registered FROM wp_users;
+    
+  - Ver posts:
+    
+      SELECT ID, post_title, post_status FROM wp_post
+  
+  - Ver archivos subidos:
+     ls data/wordpress/wp-content/uploads
 
 ## Limpieza y validación final
 
