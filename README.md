@@ -1,9 +1,10 @@
 # 42-Inception
 This project has been created as part of the 42 curriculum by amacarul.
 
-- de qué va??
 - System administration
 - Docker technology
+
+⚠️ CÓMO TIENE QUE SER: rápido y superficial. Lo va a leer cualquiera que entre a la repo. Tiene que dar infor sobre qué es esto y cómo se ejecuta rápidamente.
 
 ## Table of Contents
 - [Description](#description)
@@ -72,13 +73,48 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
 ## Instructions
 
-1. Descargar repositorio, que contiene:
-  - Makefile
-  - docker-compose.yml
-  - Dockerfiles
-  - Scripts de setup
-  - Configuraciones
-2. Copiar [Archivo .env](#archivo-env) y guardar en directorio `srcs`
+⚠️ REDUCIR ⚠️  
+TIENE QUE CONTENER SOLO:
+
+1. Prerequisites:
+  - Docker y Docker Compose instalados (AÑADIR ENLACES A DONDE ESTÁ ESTA EXPLICACIÓN??)
+  - Acceso a una máquina Linux / VM
+
+2. Installation
+   - Clonar el repositorio
+   - Crear el archivo `.env` en `srcs/`
+   - Crear carpetas de volúmenes:
+
+         /home/<login>/data/mariadb
+         /home/<login>/data/wordpress
+
+3. Build & Run
+
+         make
+
+4. Access
+
+       https://<login>.42.fr
+
+5. Stop / Clean
+
+       make stop
+       make down
+       make clean
+       make fclean
+
+⚠️ INDICAR QUÉ HACE CADA UNA DE ESTAS INSTRUCCIONES
+
+TODO LO DEMÁS SE VA FUERA DEL README:
+- VIRTUALBOX
+- DEBIAN
+- SSH
+- TÚNELES
+- WSL
+- MACS DE 42
+- /ETC/HOSTS
+- EXPLICACIÓN DEL MAKEFILE
+
 3. Proyecto realizado en Máquina Virtual: [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload), [Preparar la Virtual Machine](#preparar-la-virtual-machine)
 4. Crear volúmenes en `/home/login/data` en la host machine (Máquina Virtual):
   - `/home/<login>/data/mairadb`
