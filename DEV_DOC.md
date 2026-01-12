@@ -2,54 +2,63 @@
 
 ⚠️ CÓMO TIENE QUE SER: contiene lo técnico pesado. Indicar cómo está construido, cómo se despliega y cómo se mantiene.
 
+## Table of Contents
 - [Set up the environment from scratch](set-up-the-environment-from-scratch)
+  - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-(virtualbox-+-debian))
 - [Build and launch the project using the Makefile and Docker Compose](build-and-launch-the-project-using-the-makefile-and-docker-compose)
 - [Use relevant commands to manage the containers and volumes](use-relevant-commands-to-manage-the-containers-and-volumes)
 - [Identify where the project data is stored and how it persist](identify-where-the-project-data-is-stored-and-how-it-persist)
 
-Describe how a developer can:
-- Set up the environment from scartch (prerequisites, configiration files, secrets...)
-- Build and launch the project using the Makefile and Docker Compose
-- Use relevant commands to manage the containers and volumes
-- Identify where the project data is stored and how it persist
+-----------------------------------------------------
 
 ## Set up the environment from scratch
-DEBERIA TENER:
-- VIRTUALBOX
-- DEBIAN ISO
-- RED
-- SSH
-- CARPETAS COMPARTIDAS
-- DOCKER Y DOCKER COMPOSE
-- .ENV
-- VOLÚEMNES
-- /ETC/HOSTS
-- TÚNELES SSH
-- WSL / MACS DE 42
 
-⚠️ ORDENAR BIEN ESTE APARTADO
-⚠️ + ENTERARME BIEN DE LA PARTE DE /ETC/HOST Y LOS TÚNELES SSH PARA CONECTAR VM CON NAVEGADOR DEL HOST
+This sections explains how to prepare a complete development environmet to run the *Inception* project from scratch.  
+The stack is deployed inside a **Debian Virtual Machine** using **Docker and Docker Compose**, with persistent volumes stored on the host filesystem.  
+The setup includes:
+- VirtualBox virtual machine
+- Debian installation
+- Network and SSH access
+- Docker and Docker Compose
+- Shared folders (optional)
+- Persistent volumes
+- Environment variables (`.env`)
+- Domain configuration and SSH tunneling
+- Platform-specific notes (Windows / WSL / 42 iMacs -> TENER EN CUENTA QUE EN 42 SÍ, SON IMACS, PERO USAMOS LINUX!!)
 
-### Preparar la VM:
-1. Este proyecto se hace en la VM [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
-   -> SE GUARDA EN EL SGOINFREE??
-3. Instalar [Debian](https://www.debian.org/download.es.html)
-   - Debian en la VM no es lo mismo que Debian en los contenedores; dentro de cada servicio podemos elegir entre debian o alpine, lo que es independiente del SO de la VM)
-   - La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
+### Virtual Machine setup (VirtualBox + Debian)
+#### Virtualization tool
+The project is developed inside a virtual machine created with [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
+
+      ⚠️ On 42 computers, the VM disk is usually stored in `sgoinfree` to avoid quota issues ⚠️COMPROBAR QUÉ SIGNIFICA ESTO EXACTAMENTE
+
+#### Debian ISO
+A [Debian GNU/Linux ISO](https://www.debian.org/download.es.html) is used to install the operating system inside the VM.
+
+Clarification:
+- The Debian OS installed in the VM is **independent** from the Debian/Alpine images used inside Docker containers.
+- The ISO is only used to install the host operating system of the VM.
+
+
+           La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
+  
    - ¿Qué hace la ISO en la VM?
      - Arranca la VD desde la ISO, igual que si arrancaras un PC desde un DVD
      - Inicia el instalador de Debian, que te guía para instalar el SO dentro del disco virtual de la VM
      - Permite particionarl el disco virtual, seleccionar el entorno de escritorio, instalar paquetes básicos, configurar red, usuarios, etc
-4. Crear la VM en VirtualBox:
-   - Abre VirtualBox -> clic en **Nueva**
-     - Name: inception
-     - Folder: sgoinfre (??)
-     - ISO Image: --
-     - OS: Linux
-     - OS Distribution: Debian
-     - OS Version: Debian (64-bit)
-     - Memoria RAM: 2048 minimo, 4096 recomendado
-     - Number of CPU: 2 por qué??
+    
+#### Creating the Virtual Machine
+In VirtualBox -> `New`:
+- Name: inception
+- Folder: sgoinfree (??)
+- ISO Image: --
+- OS: Linux
+- OS Distribution: Debian
+- OS Version: Debian (64-bit)
+- RAM: minimum 2048 MB, recommended 4096 MB
+- Number of CPU: 2
+
+        Using 2 CPUs is a reasonable compromise: enough for Docker without overloading the host.
 
   - Ajustes recomendados antes de arrancar la VM: **Configuración**
     - Sistema -> Placa Base:
