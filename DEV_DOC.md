@@ -4,7 +4,7 @@
 
 ## Table of Contents
 - [Set up the environment from scratch](set-up-the-environment-from-scratch)
-  - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian))
+  - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian)
   - [Creating the Virtual Machine](#creating-the-virtual-machine)
   - [Installing Debian inside the VM](#installing-debian-inside-the-vm)
   - [Basic VM management](#basic-vm-management)
