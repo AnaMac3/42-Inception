@@ -1,5 +1,6 @@
 # 42-Inception
-42 Common Core Inception 
+This project has been created as part of the 42 curriculum by amacarul.
+
 - de qué va??
 - System administration
 - Docker technology
@@ -46,67 +47,82 @@ Hay que configurar:
   - **NGINX** con TLS 1.2/1.3 (única puerta de entrada al sistema, puerto 443)
   - **WordPress + PHP-FPM** (sin NGINX)
   - **MariaDB** (solo base de datos)
-- **2 volúmenes persistentes**:
+- **2 volúmenes persistentes** que han de estar disponibles en /home/login/data de la host machine que use docker:
   - Uno para la base de datos de MariaDB
-  - Uno para los archivos de WordPress
+  - Otro para los archivos de WordPress
 - **Una Docker-network** que conecte los tres servicios entre sí.
   - NGINX se conecta a PHP -> puerto 9000
-  - PHP conecta con MariaDB -> puerto 3306 (esto va aquí???)
+  - PHP conecta con MariaDB -> puerto 3306
 - **Dockerfiles propios** para cada servicio (no se permite usar imágenes preconfiguradas - excepto Alpine o Debian)
 - **Variables de entorno obligatorias**, credenciales fuera del repositorio (usar `.env` y/o Docker secrets)
-- Todos los contenedores deben reiniciarse automáticamente si fallan
-- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.)
-- El dominio debe resolver a tu máquina local: `login.42.fr`
-
-
- MAS COSAS:
+- Todos los contenedores deben reiniciarse automáticamente si fallan ⚠️
+- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.) ⚠️
+- El dominio debe resolver (??) a tu máquina local: `login.42.fr`
 - Los Dockerfiles debe llamarse en tu docker-compose.yml por tu Makefile
 
--> leer sobre como trabaja daemons y si es buena idea usarlos !!
-
-
--> leer sobre PID 1 y buenas prácticas de Dockerfiles 
-
+More requeriments:
 - En tu database WordPress tiene que haber dos usuarios: uno de ellos ha de ser el administrador, su username no puede contener 'admin', 'Admin', 'administrator, o 'Administrator'
-
--> tus volumenes estarán disponibles en la carpeta /home/login/data de la host machine que use Docker. Tienes que reemplazar el login por el tuyo.
-
-- para simplificar el proceso, debes configurar tu domain name to point a tu local IP address
+- para simplificar el proceso, debes configurar tu domain name to point a tu local IP address ⚠️
 - Este domain name debe ser login.42.fr. usa tu propio login. amacarul.42.fr redirigirá a la dirección IP que apunta a la website de amacarul
 
--> no tiene que haber contraseñas
-> se recomienda usar .env file para guardar las variables de entorno y para usar Docker secrets para almacenar infor confidencial
-
+-> no tiene que haber contraseñas ⚠️
+> se recomienda usar .env file para guardar las variables de entorno y para usar Docker secrets para almacenar infor confidencial ⚠️
 Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guardarse localmente de varias maneras / en varios archivos y deben ser ignorados por git. Las credenciales almacenadas publicamente suponen el suspenso del proyecto.  
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
 
-
 ## Instructions
 
-- Esto hay que hacerlo dentro de una máquina virtual... -> utilizar la VirtualBox
-- Cómo hacerlo desde diferentes ordenadores:
-  - Cosas que meter en github:
-    - Makefile
-    - docker-compose.yml
-    - Dockerfiles
-    - scripts
-    - Configuraciones (nginx.conf, www.conf, etc)
-  - Cosas que no deben subirse a github:
-    - Los volúmenes: /home/login/data -> estos se crean en la máquina virtual, no se guardan en github
-    - archivo .env si contene contraseñas -> debe estar en .gitignore
-    - certificados TLS generados
+1. Descargar repositorio, que contiene:
+  - Makefile
+  - docker-compose.yml
+  - Dockerfiles
+  - Scripts de setup
+  - Configuraciones
+2. Copiar [Archivo .env](#archivo-env) y guardar en directorio `srcs`
+3. Proyecto realizado en Máquina Virtual: [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload), [Preparar la Virtual Machine](#preparar-la-virtual-machine)
+4. Crear volúmenes en `/home/login/data` en la host machine (Máquina Virtual):
+  - `/home/<login>/data/mairadb`
+  - `/home/<login>/data/wordpress`
+5. Compartir carpetas entre la VM y el host: [Cómo compartir carpetas entre la VM y el host](#cómo-compartir-carpetas-entre-la-VM-y-el-host)
+6. Instalar docker y docker compose en la máquina virtual: [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
+7. Conectarse a la VM desde la terminal del host:
 
-- Cada ordenador necesita su propia máquina virtual con Docker instalado. El proyecto es portable (los archivos), pero Docker no se sincroniza entre máquinas.
-- En cada ordenador hay que tener:
-  - Una VM
-  - Docker Engine
-  - Docker Compose
-  - carpetas de volúmenes:
+        ssh <login>@<IP_VM>
 
-        /home/<login>/data/mariadb
-        /home/<login>/data/wordpress
+8. [Configuración del dominio](#configuración-del-dominio) -> AÑADIR EXPLICACIÓN PARA WINDOWS CON WSL Y PARA ORDENADORES DE 42 (QUE NO PUEDES HACER SUDO)  
+Como estamos en una máquina virtual, hay que hacer un tunel ssh que conecte el puerto 443 con el navegador:
+8.1. En windows:
+   - Abrir archivo `C:\Windows\System32\drivers\etc\host` como administrador (O HACER SUDO NANO /ETC/HOSTS NO ES LO MISMO???)
+   - Añadir al final del archivo la línea: `127.0.0.1 <login>.42.fr`
+   - Guardar y cerrar
+   - Comprobar: `ping <login>42.fr` -> si responde desde 127.0.0.1, está bien configurado.
+   - En terminal, ejecutar:
 
-  - contraseñas? certificados TLS??
+         ssh -L 443:localhost:443 <login>@<IP_VM>
+
+   - Mantener esta ventana abierta. Mientras esté conectada, el túnel estará activo.
+
+8.2. En iMacs de 42 (no se puede hacer sudo)
+⚠️
+⚠️
+⚠️
+
+⚠️? ESTO LO TENGO QUE EXPLICAR AQUÍ O EN OTRO SITIO???
+
+9. Para arrancar los contenedores, en el directorio general del repositorio, hacer:
+
+          make
+
+   `make` hace `build` y `up`. ESTO ES COMPILAR??? ⚠️ MAKE DEBERIA COMPILAR, NO??
+   Para parar los contenedores: `stop`
+   Para destruir contenedores: `down`
+   Para comprobar su estado: `status`
+   Para limpiar los contenedores, redes y volúmenes: `clean`
+   Para borrar del todo los volúemes: `fclean`
+
+⚠️ COMPROBAR QUE ESTO ESTÉ BIEN EXPLICADO Y SE AJUSTE BIEN AL MAKEFILE!!!
+
+10. En el navegador, ir a la dirección `https://<login>.42.fr` 
 
 ## Project description
 ### Docker
@@ -369,7 +385,7 @@ Si destruyes el contenedor:
 Tus datos siguen ahí. 
 
 #### Docker Volumes vs Bind Mounts
-Los contenedores son efímeros: si borras un contenedor, se vorra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
+Los contenedores son efímeros: si borras un contenedor, se borra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
 Para evitarlo, Docker permite la **persistencia de datos fuera del contenedor** de dos maneras diferentes:
 - Docker volumes
 - Bind mounts
@@ -431,9 +447,12 @@ Los contenedores se buscan por su nombre de servicio:
 
     fastcgi_pass wordpress:9000;
 
-???? ⚠️
+???? ⚠️ DONDE APARECE ESTO???
+
+QUÉ SON LOS HOST NETWORKS???
 
 #### Docker Network vs Host Network
+?????
 
 ### Variables de entorno y secretos
 Nunca se deben poner contraseñas en el repositorio.
