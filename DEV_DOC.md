@@ -4,7 +4,15 @@
 
 ## Table of Contents
 - [Set up the environment from scratch](set-up-the-environment-from-scratch)
-  - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-(virtualbox-+-debian))
+  - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian))
+  - [Creating the Virtual Machine](#creating-the-virtual-machine)
+  - [Installing Debian inside the VM](#installing-debian-inside-the-vm)
+  - [Basic VM management](#basic-vm-management)
+  - [Installing Docker, Docker Compose and build tools](#installing-docker-docker-compose-and-build-tools)
+  - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
+  - [Persistent volumes](#persistent-volumes)
+  - [Environment variables (`.env` file)](#environment-variables-env-file)
+  - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
 - [Build and launch the project using the Makefile and Docker Compose](build-and-launch-the-project-using-the-makefile-and-docker-compose)
 - [Use relevant commands to manage the containers and volumes](use-relevant-commands-to-manage-the-containers-and-volumes)
 - [Identify where the project data is stored and how it persist](identify-where-the-project-data-is-stored-and-how-it-persist)
@@ -30,7 +38,7 @@ The setup includes:
 #### Virtualization tool
 The project is developed inside a virtual machine created with [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 
-      ⚠️ On 42 computers, the VM disk is usually stored in `sgoinfree` to avoid quota issues ⚠️COMPROBAR QUÉ SIGNIFICA ESTO EXACTAMENTE
+> ⚠️ On 42 computers, the VM disk is usually stored in `sgoinfree` to avoid quota issues ⚠️COMPROBAR QUÉ SIGNIFICA ESTO EXACTAMENTE
 
 #### Debian ISO
 A [Debian GNU/Linux ISO](https://www.debian.org/download.es.html) is used to install the operating system inside the VM.
@@ -39,15 +47,14 @@ Clarification:
 - The Debian OS installed in the VM is **independent** from the Debian/Alpine images used inside Docker containers.
 - The ISO is only used to install the host operating system of the VM.
 
-
-           La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
+> La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
   
-   - ¿Qué hace la ISO en la VM?
+>   - ¿Qué hace la ISO en la VM?
      - Arranca la VD desde la ISO, igual que si arrancaras un PC desde un DVD
      - Inicia el instalador de Debian, que te guía para instalar el SO dentro del disco virtual de la VM
      - Permite particionarl el disco virtual, seleccionar el entorno de escritorio, instalar paquetes básicos, configurar red, usuarios, etc
-    
-#### Creating the Virtual Machine
+
+### Creating the Virtual Machine
 In VirtualBox -> `New`:
 - Name: inception
 - Folder: sgoinfree (??)
@@ -58,98 +65,98 @@ In VirtualBox -> `New`:
 - RAM: minimum 2048 MB, recommended 4096 MB
 - Number of CPU: 2
 
-        Using 2 CPUs is a reasonable compromise: enough for Docker without overloading the host.
+> Using 2 CPUs is a reasonable compromise: enough for Docker without overloading the host.
 
-  - Ajustes recomendados antes de arrancar la VM: **Configuración**
-    - Sistema -> Placa Base:
-      - Orden de arranque: dejar `Optical` arriba (para instalar desde ISO)
-      - Chipset: Default
-    - Sistema -> Procesador:
-      - CPUS: 2 (si tu equipo tiene >= 4 cores, pon 2 o 4)
-      - Enable PAE/NX, qué hace esto??
-    - Pantalla -> Video Memory: 16-64MB (no crítico)
-    - Almacenamiento:
-      - Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
-    - Red:
-      - Adaptador 1: Bridged Adapter (conecta la VM a la misma red que tu host; así obtendrá IP en la LAN) (QUEREMOS QUE PASE ESO???)
-    - Carpetas compartidas (opcional) -> lo configuramos más adelante
-4. Arrancar la VM e instalar Debian:
-   - Inicia la VM (Start)
-   - Sigue el instalador de Debian:
-     - Seleccionar idioma, zona horaria Europe/Spain, teclado
-     - Participado: Guided - use entire disk
-     - Hostname: debian, inception ... -> es para identificar la máquina dentro de la red local -> debian-inception
-     - Domain name: `login.42.fr` no??
-     - Root password: blablapassword
-     - Usuario y contraseña: Crea un usuario con login de 42 -> amacarul, passuser
-     - Particionado: guided - use entire disk -> el instalador se crea automaticamente el en disco virtual inception.vdi -> /swap
-     - Instala el sistema base y el paquete SSH server si quieres acceder por SHH -> Sí -> permite conectarte a la vm desde tu host usando `ssh`, facilita trabajar en la vm sin abrir interfaz gráfica todo el tiempo.
-     - NO SELECCIONAR LO DE GNOME! ESO ES LA INTERFAZ GRÁFICA, NO LA QUIERO
-   - No instalar software adicional innecesario, se pueden añadir herramientas luego
-   - Finaliza y reinicia.
+**VM settings before installation**:  
+System -> Motherboard
+- Boot order: Optiocal first (to boot from ISO)
+- Chipset: default  
+System->Processor  
+- CPUs: 2 (or more if available)
+- Enable PAE/NX
+  - This allows access to extended CPU features and is recommended for modern Linux kernels.  
+Display
+- Video memory: 16-64 MB (no critical, no GUI required)
+Storage
+- Attach the Debian ISO as an optical disk
+- The virtual hard disk (`.vdi`) is used for the system installation
 
-METER ESTO EN SUBAPARTADO DENTRO DE PREPARAR LA MÁQUINA VIRTUAL, NO SE SI ES MEJOR UNA TABLA O QUÉ
+      > Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
 
-| Más cosas de la VM |
-|-------------------|
-|**Cambiar de modo gráfico a modo texto**: desactivar completamente el modo gráfico en Debian (arrancar siempre en terminal): sudo systemctl stop gmd (si usas GNOME); para deshabilitarlo permanentemente: sudo systemctl set-default multi-user.target (multi-user.target = modo servidor (sin GUI)); y reiniciar: sudo reboot |
-|**Conectarse a la VM desde host con SSH**: Arrancar la VM; Averiguar la IP de la VM -> dentro de la VM (en terminal) ejecutar `ip a`; Buscar la interfaz que esté conectada a la red, usualmente `enp0s3` o `eth0` y apunta la IP que aparece después de `inet` -> esa es la IP que usarás para SSH; En tu host: `ssh <login>@<IP_VM>`; Primer acceso: la primera vez te pedirá confirmar la huella digital del host -> yes; luego te pedirá contraseña del usuario de la VM |
-| **Cambiar de usuario a root:** su - ; y ejecutar lo que quiera. No he hecho sudo, no se si hace falta |
-| **Cambiar de root a usuario:** su - login |
-| **Reiniciar máquina virtual**: reboot |
+Network
+- Adapter 1: Bridged Adapter
+  - This allows the VM to obtain an IP address on the local network
+  - Required to access the VM via SSH from the host
 
-### Instalar Docker y Docker Compose
-5. Dentro de Debian, se instala Docker, Docker Compose, Make, Git
-  Si añadiste usuario al instalar, deberias poder usar sudo. Si no, usa root para ejecutar los comandos y crea el usuario apropiado.
-  - Instalar Docker y Docker compose:
+### Installing Debian inside the VM
+Start the VM and follow the Debian installer:
+- Language, keyboard, timezone
+- Partitioning: *Guided - use entire disk*
+- Hostname: `debian-inception` (example)
+- Domain name: can be left empty or set to `<login>.42.fr`
+- Root password: set a secure password //blablapassword
+- User:
+  - Username: 42 login
+  - Password: user password //passuser
+- Software selection:
+  - Do not install GNOME or any graphical desktop (optional - YO NO LO INSTALO PORQUE ME LIA... PERO CREO QUE NO ESTÁ PROHIBIDO)
+  - Install SSH server
 
-        #Instalar Docker (paquete docjer.io) y plugin docker-compose
-        sudo apt install -y docker.io docker-compose
+After instalation, reboot the VM.
 
-        #Habilitar y arrancar el servicio Docker
-        sudo systemctl enable --now docker
+### Basic VM management
+| Task | Command / Explanation |
+|------|-----------------------|
+| Disable graphical mode permanently | `sudo systemctl set-default multi-user.target`|
+| Reboot VM | `reboot`|
+| Get VM IP address | `ip a` |
+| SSH from host | `ssh <login>@<IP_VM>` |
+| Switch to root | `su -` |
+| Return to user | `su - <login> |
 
-        #Añadir tu usuario al grupo docker
-        sudo usermod -aG docker <login>
+> Using `sudo` is recommended, but switching to root is also acceptable for this project. ¿??¿¿?¿
 
-        #Nota: es necesario hacer logout/login o reiniciar la VM para aplicar el grupo docker
+### Installing Docker, Docker Compose and build tools
+Inside the Debian VM:
 
-        #Comprobar que has añadido el usuario a docker correctamente
-        groups <login>
+    sudo apt update
+    sudo apt install -y docker.io docker-compose
 
-        #build-essential incluye make, gcc y otras herramientas de compilación importantes
-        sudo apt install build-essential
+Install also other essentials such as make, gcc...
 
-Después de hacer usermod, sal de la sesión y vuelve a entrar.  
-Verifica:
+    sudo apt install build-essential
+
+Enable Docker and add the user to the docker group:
+
+    sudo systemctl enable --now docker
+    sudo usermod -aG docker <login>
+
+Log out and log back in (or reboot), then verify:
 
     docker --version
     docker compose version
+    groups <login>
 
-### Cómo compartir carpetas entre la VM y el host
-6. Compartir carpeta que está en host (local) en la Virtual Machine:
-   - Vm -> Settings -> Shared Folders -> Añadir carpeta
-   - Folder path: ubicación en local
-   - Folder name: nombre que le vamos a dar
-   - Mount point: /home/amacarul/inception
-   - Marcar auto-mont y make permanent
-   - Luego, en terminal de la VM:
+### Shared folders between host and VM
+Shared folders allow editing files on the host while running them inside the VM. YO LO HE HECHO SOBRE TODO PORQUE EL REPO DE GITHUB NO LO PUEDO CREAR EN LA VM... NO? SE ME CREA EN LOCAL... O NO ESTOY SEGURA...
 
+Steps:  
+- VM Settings -> Shared Folders
+- Folder Path: local host directory
+- Mount point: `/home/<login>/inception´
+- Enable auto-mount and make permanent
 
-             sudo mkdir -p /home/amacarul/inception
-             sudo mount -t vboxsf -o uid=$(id -u),gid=$(id -g) inception /home/amacarul/inception
-     
-   - Tu user tiene que estar en el grupo vboxsf ->
-   
-           sudo groupadd vboxsf
-           sudo usermod -aG vboxsf $USER
+Inside the VM:
 
-   
-   - Y así ya te aparece en esa nueva carpeta lo que hay en tu carpeta host
-   - Ahora, cualquier cambio dentro de la vm se refleja directamente en el host
-  
-  - Insertar CD de Guest Additions :
-      - En la ventana de la VM -> menú superior -> Devices -> Insert Guest Aditions CD image
+      sudo mkdir -p /home/<login>/inception
+      sudo mount -t vboxsf -o uid=$(id -u),gid=$(id -g) inception /home/<login>/inception
+
+Add user to `vboxsf` group:
+
+    sudo usermod -aG vboxsf $USER
+
+Guest Additions must be installed for shared folders to work correctly:
+En la ventana de la VM -> menú superior -> Devices -> Insert Guest Aditions CD image
       - En terminal de la VM:
 
               sudo apt update
@@ -180,10 +187,10 @@ Verifica:
             lsmod | gep vbox
 
         Si aparece `vbpxsf` las shared folders deberían funcionar.
+-
 
-### Volúmenes persistentes
-
-Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
+### Persistent volumes
+Persistent data is stored on the VM filesystem and mounted into containers.
 
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
@@ -191,60 +198,69 @@ Crea las carpetas del host que luego montarás como volúmenes / estructura de d
        #Ajustar permisos para que Docker pueda escribir
        sudo chown -R <login>:<login> /home/<login>/data
 
-### Archivo .env
-El archivo `.env` contiene las variables de entorno. No es código, no se ejecuta, solo define valores.  
-Docker y docker compose leen este archivo y lo cargan como variables de entorno.  
-Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los containers, en scripts y en configuraciones.  
+These directories are later mounted as Docker volumes
+
+### Environment variables (`.env` file)
+The `.env` file defines all configuration valeus used by Docker Compose and the containers.  
+- It contains no executable code
+- It must NOT be committed to version control
+- It avoids hardcoding secrets in configuration files
+
+My example:
+
+      DOMAIN_NAME=amacarul.42.fr
+
+      MYSQL_HOSTNAME=mariadb
+      MYSQL_DATABASE=database
+      MYSQL_USER=amacarul
+      MYSQL_PASSWORD=passusersql
+      MYSQL_ROOT_USER=root
+      MYSQL_ROOT_PASSWORD=blablapasswordsql
+      
+      WORDPRESS_TITLE=myWebsite
+      WORDPRESS_ADMIN_USER=boss
+      WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
+      WORDPRESS_ADMIN_EMAIL=boss@inception.fr
+      WORDPRESS_USER=user1
+      WORDPRESS_USER_EMAIL=user1@inception.fr
+      WORDPRESS_USER_PASSWORD=passuserwordpress
+
 ¿Por qué se usa `.env` en Inception?  
 - Porque no hay qu hardcodear contraseñas
 - La configuración tiene que ser dinámica
 - Para poder cambiar valores sin tocar el código.
-- ESTE ARCHIVO NO HA DE SUBIRSE A NINGÚN SITIO!!
 
-    DOMAIN_NAME=amacarul.42.fr #dominio que usará NGINX para TLS y wordpress
+> Note: Docker secrets would be more secure, but environment variables are acceptable for Inception. ???? QUIZÁS DEBA USAR LA OTRA OPCIÓN!
 
-    MYSQL_HOSTNAME=mariadb
-    MYSQL_DATABASE=database
-    MYSQL_USER=amacarul
-    MYSQL_PASSWORD=passusersql
-    MYSQL_ROOT_USER=root
-    MYSQL_ROOT_PASSWORD=blablapasswordsql
-    
-    WORDPRESS_TITLE=myWebsite
-    WORDPRESS_ADMIN_USER=boss
-    WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
-    WORDPRESS_ADMIN_EMAIL=boss@inception.fr
-    WORDPRESS_USER=user1
-    WORDPRESS_USER_EMAIL=user1@inception.fr
-    WORDPRESS_USER_PASSWORD=passuserwordpress
-
-Hay cosas de estas que tienen que ir a secrets, creo... las contraseñas, por ejemplo, no deberian estar como variables de entorno, no?
-
-### Configuración del dominio
-- `/etc/hosts`-> `login.42.fr`
-
-En terminal:
+### Domain configuration and SSH tunneling
+`/etc/hosts`  
+Inside the VM:
 
       sudo nano /etc/hosts
 
-Añadir línea:
+Add:
 
-      127.0.0.1 login.42.fr
+    127.0.0.1 <login>.42.fr
 
-Guardar con Ctrl+O, Enter, salir con Ctrl+X
+Save with `Ctrl+O`, Enter, exit with `Ctrl+X`.  
+Verify with:
 
-Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
+       ping <login>.42.fr
 
-⚠️COMO ESTAMOS EN UNA VM HAY QUE HACER UN TUNEL SSH QUE CONECTE EL 443 CON EL NAVEGADOR (?):
-- Windows (con WSL):
-  - En terminal, ejecutar:
+Si responde desde 127.0.0.1, está bien configurado.
 
-            ssh -L 443:localhost:443 login@<IP_DE_VM>
+#### SSH tunneling (VM -> host browser)
+Because the services run inside a VM, HTTPS traffic must be forwarded to the host browser.   
+##### Windows / WSL
 
-  - Mantener esa ventana abierta. Mientras esté conectada, el túnel estará activo.
-  - Abrir en Chrome https://localhost
-  - 
-- TAMBIÉN HAY QUE HACER ESTO EN WINDOWS --> 
+      ssh -L 443:localhost:443 <login>@<IP_VM>
+
+Access:
+
+    https://localhost
+
+⚠️ PARA PODER ACCEDER DESDE EL NAVEGADOR PONIENDO HTTPS://LOGIN.42.FR::
+
   - Pulsar tecla Windows y escribir block de notas
   - Click dcho, seleccionar Ejecutar como admin
   - Dentro de block de notas ir a Archivo -> Abrir
@@ -253,29 +269,17 @@ Probar: ping login.42.fr, si responde desde 127.0.0.1, está bien configurado.
   - Abrir el arhcivo host
   - Añadir al final del archivo la línea: 127.0.0.1 amacarul.42.fr
   - Guardar y cerrar
- 
-- En iMacs con Linux:
-  - Como no somos sudo no podemos usar el puerto 442 local
-  - Solución: Mapeo de puertos altos: usaremos un puerto libre, como 8443
-  - En terminal:
- 
-          ssh -L 8443:localhost:443 login@<IP_DE_VM>
 
-  - En el navegador: https://localhost:8443
-  - Explicación: se redirige el puerto 443 de la VM al 8443 del IMac mediante un túnel SSH, porque no tenemos privilegios de root en el host para usar el puerto 443 o editar el archivo host.
- 
-Otra opción para los ordenadores de 42: Proxy SOCKS ⚠️ PENDIENTE DE PROBAR!!!:
-- Crear túnel SOCKS con SSH:
+##### 42 iMacs (no sudo)
+Port 443 cannot be used locally:
 
-         ssh -D 8080 login@<IP_VM>
+      ssh -L 8443:localhost:443 <login>@<VM_IP>
 
-- Mantener terminal abierta
-- Configurar el navegador (firefox)
-  - Ajustes -> configuración de red
-  - Configuración manual de proxy
-  - Servidor SOCKS: 127.0.0.1 y puerto 8080
-  - Marcar casilla: Proxy DNS cuando se utiliza SOCKS v5
-  - Cuando escribas login.42.fr en la barra de direcciones, Firefox no le preguntará al iMac (donde no eres sudo), sino que le preguntará a la VM a través del tunel.
+Access:
+
+      https://localhost:8443
+
+⚠️ SOCKS proxy alternative is still under investigation!! AVERIGUAR ESTO!!!
 
 ## Build and launch the project using the Makefile and Docker Compose
 
@@ -285,62 +289,39 @@ What `make` does is:
       docker compose build
       docker compose up -d
 
-NO SÉ QUÉ MAS SE ESPERA QUE EXPLIQUE AQUÍ
+The Makefile provides a simplified interface to manage the lifecycle of the stack without typing logn Docker commands.  
+AÑADIR RESUMEN DE COSAS QUE HACE EL MAEFILE???
 
 ## Use relevant commands to manage the containers and volumes
 
+Common commands:
+
          docker ps
          docker logs nginx
+         docker logs wordpress
+         docker logs mariadb
          docker exec -it mariadb bash
+         docker exec -it wordpress bash
          docker volume ls
          docker compose down
 
 CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS...
 ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE
+EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL '??
 
 ## Identify where the project data is stored and how it persist
-- Dónde están los volúmenes peristentes
+Persistent data locations:
 
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
 
-- Explicar tablas SQL ?? TODAVIA NI SÉ CÓMO SON...
-- wp-content/uploads
-- qué sobrevivie a `make down`
-- qué se borra con `fclean`
+- MariaDB stores its database files in the mariadb volume
+- WordPress stores uploads, plugins, and themes in `wp-content`
 
+Persistence behaviour:
+- `make down`: containers are removed, data remains
+- `make fclean`: container,s volumes, and data are deleted
+- `make clean`: ???
 
+Uploaded files and WordPress content survive restarts as long as volumes are preserved.
 
-EN SUCIO:
-- Comprobación de que todos los contenedores arrancan
-- Conexión entre servicios
-- Acceso HTTPS:
-
-        curl -k https://amacarul.42.fr
-
-- Persistencia de datos
-- Revisión de logs -> creo que esto se mira en data/mariadb/wordpress -> wp_users.idb, wp_usermeta.idb
-- Creación de posts -> wp_posts, wp_postmeta, wp_term_relationships, wp_terms, wp_term_taxonomy ???
-- en data/wordpress/wp-content -> uploads (imagenes subidas), plugins, themes...
-
-COSAS A PROBAR:
-- Hacer login en la página: https://login.42.fr/wp-login.php ó /wp-admin
-- Crear entrada: en https://login.42.fr/wp-admin -> menú izquierdo -> entradas -> añadir nueva -> escribir título y contenido -> publicar -> esto crea filas en wp_posts, wp_postmeta
-- Comprobar qué se modifica cuando haces esto:
-  - Ver usuarios:
-
-            #entrar al contenedor mariadb
-            docker exec -it mariadb bash
-            mysql -u root -p
-            #ejecutar SQL
-            SHOW DATABASES;
-            USE wordpress;
-            SELECT user_login, user_registered FROM wp_users;
-    
-  - Ver posts:
-    
-              SELECT ID, post_title, post_status FROM wp_post
-  
-  - Ver archivos subidos:
-  
-              ls data/wordpress/wp-content/uploads
