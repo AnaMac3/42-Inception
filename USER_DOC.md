@@ -2,11 +2,15 @@
 
 ⚠️ CÓMO TIENE QUE SER: orientado al usuario final / administrador. Que indique qué se puede hacer con esta web y cómo se usa. Indicar uso funcional.
 
+## Table of Contents
+
 - [Services provided by the stack](#services-provided-by-the-stack)
 - [Start and stop the project](#start-and-stop-the-project)
 - [Access the website and the administrator panel](#access-the-website-and-the-administrator-panel)
 - [Locate and manage credentials](locate-and-manage-credentials)
 - [Check that the services are running correctly](check-that-the-services-are-running-correctly)
+
+-------------------------------------------------
 
 ## Services provided by the stack
 
