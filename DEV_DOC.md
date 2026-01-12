@@ -1,5 +1,12 @@
 # 42-Inception - Developer Documentation
 
+⚠️ CÓMO TIENE QUE SER: contiene lo técnico pesado. Indicar cómo está construido, cómo se despliega y cómo se mantiene.
+
+- [Set up the environment from scratch](set-up-the-environment-from-scratch)
+- [Build and launch the project using the Makefile and Docker Compose](build-and-launch-the-project-using-the-makefile-and-docker-compose)
+- [Use relevant commands to manage the containers and volumes](use-relevant-commands-to-manage-the-containers-and-volumes)
+- [Identify where the project data is stored and how it persist](identify-where-the-project-data-is-stored-and-how-it-persist)
+
 Describe how a developer can:
 - Set up the environment from scartch (prerequisites, configiration files, secrets...)
 - Build and launch the project using the Makefile and Docker Compose
@@ -7,7 +14,21 @@ Describe how a developer can:
 - Identify where the project data is stored and how it persist
 
 ## Set up the environment from scratch
-Quizás es aquí donde deberia añadir todo esto??:
+DEBERIA TENER:
+- VIRTUALBOX
+- DEBIAN ISO
+- RED
+- SSH
+- CARPETAS COMPARTIDAS
+- DOCKER Y DOCKER COMPOSE
+- .ENV
+- VOLÚEMNES
+- /ETC/HOSTS
+- TÚNELES SSH
+- WSL / MACS DE 42
+
+⚠️ ORDENAR BIEN ESTE APARTADO
+⚠️ + ENTERARME BIEN DE LA PARTE DE /ETC/HOST Y LOS TÚNELES SSH PARA CONECTAR VM CON NAVEGADOR DEL HOST
 
 ### Preparar la VM:
 1. Este proyecto se hace en la VM [VirtualBox de Oracle](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
@@ -153,7 +174,7 @@ Verifica:
 
 ### Volúmenes persistentes
 
- Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
+Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
@@ -190,7 +211,7 @@ Esas variables luego pueden usarse en `docker-compose.yml`, dentro de los contai
 
 Hay cosas de estas que tienen que ir a secrets, creo... las contraseñas, por ejemplo, no deberian estar como variables de entorno, no?
 
-# Configuración del dominio ¿esto deberia ir aquí, no?? en developer documentation
+### Configuración del dominio
 - `/etc/hosts`-> `login.42.fr`
 
 En terminal:
@@ -249,18 +270,40 @@ Otra opción para los ordenadores de 42: Proxy SOCKS ⚠️ PENDIENTE DE PROBAR!
 
 ## Build and launch the project using the Makefile and Docker Compose
 
-¿Habría que explicar primero como conectarse vía ssh desde terminal normal a la VM o eso sobra?
-- `make`: hace build y up
-- `stop`: para los contenedores
-- `down`: destruye los contenedores pero no los volúmenes persistentes de data
-- `clean`:
-- `fclean`:
+Although no source code is compiled, `make` orchestrates the build of the Docker images and the deployment of the stack.
+What `make` does is:
+
+      docker compose build
+      docker compose up -d
+
+NO SÉ QUÉ MAS SE ESPERA QUE EXPLIQUE AQUÍ
 
 ## Use relevant commands to manage the containers and volumes
-no entiendo qué tiene que ir aquí
+
+         docker ps
+         docker logs nginx
+         docker exec -it mariadb bash
+         docker volume ls
+         docker compose down
+
+CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS...
+ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE
 
 ## Identify where the project data is stored and how it persist
-no sé qué parte de todo esto debe ir aquí o en otro sitio: - Comprobación de que todos los contenedores arrancan
+- Dónde están los volúmenes peristentes
+
+        /home/<login>/data/mariadb
+        /home/<login>/data/wordpress
+
+- Explicar tablas SQL ?? TODAVIA NI SÉ CÓMO SON...
+- wp-content/uploads
+- qué sobrevivie a `make down`
+- qué se borra con `fclean`
+
+
+
+EN SUCIO:
+- Comprobación de que todos los contenedores arrancan
 - Conexión entre servicios
 - Acceso HTTPS:
 
