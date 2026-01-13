@@ -1,8 +1,12 @@
 # 42-Inception
 This project has been created as part of the 42 curriculum by amacarul.
 
-- System administration
 - Docker technology
+- Containers
+- Service orchestration
+- Networking
+- Persistent storage
+- Secure environment configuration
 
 ⚠️ CÓMO TIENE QUE SER: rápido y superficial. Lo va a leer cualquiera que entre a la repo. Tiene que dar infor sobre qué es esto y cómo se ejecuta rápidamente.
 
@@ -31,15 +35,6 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [WordPress](#wordpress)
     - [MariaDB](#mariadb)
   - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
-- [Guía paso a paso](#guía-paso-a-paso)
-  - [Preparar la Virtual Machine](#preparar-la-virtual-machine)
-    - [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
-    - [Cómo compartir carpetas entre la VM y el host](cómo-compartir-carpetas-entre-la-VM-y-el-host)
-  - [Crear estructura del proyecto](#crear-estructura-del-proyecto)
-  - [Archivo .env](#archivo-env)
-  - [Definir docker-compose.yml (servicios, redes, volúmenes y dependencias)](#definir-docker-compose.yml-(servicios-redes-volumenes-y-dependencias))
-  - [Construcción de cada imagen](#construcción-de-cada-imagen)
-  - [Configuración del dominio](#configuración-del-dominio)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -552,6 +547,7 @@ Cómo funciona Docker engine:
 - Docker engine proporciona un environment seguro y aislado para ejecutar la app en el y también gestiona recursos como el CPY, memoria y almacenamiento para el contenedor
 - Puedes usar Docker client para ver, parar y gestionar containers en ejecución en tu sistema. También peudes usar docker client para pushear la iamgen docker a un registro como docjer Hub
 
+-------------------------------------
 
 ## Guía paso a paso
 
@@ -1069,8 +1065,7 @@ COSAS A PROBAR:
   
               ls data/wordpress/wp-content/uploads
 
-## Limpieza y validación final
-
+-------------------------------------
 
 ## Resources
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
