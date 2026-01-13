@@ -198,7 +198,8 @@ Persistent data is stored on the VM filesystem and mounted into containers.
        #Ajustar permisos para que Docker pueda escribir
        sudo chown -R <login>:<login> /home/<login>/data
 
-These directories are later mounted as Docker volumes
+These directories are later mounted as Docker volumes  
+FALTA EXPLICAR PERMISOS Y MONTAJE! AQUÍ SOLO DIGO QUE SE CREAN LOS DIRECTORIOS Y QUÉ SIGNIFICAN ESTOS PERMISOS?? NO FALTA ALGO PARA INDICAR QUE SON PERSISTENTES?? SU PERSISTENCIA DEPENDE DE QUE NO SE BORREN EN EL MAKEFILE, NO? DEPENDE DE QUE HACER DOCKER COMPOSE DOWN BORRA LOS CONTAINERS PERO NO ESTOS VOLÚEMENS... DEBERÍA EXPLICAR ESO AQUÍ? MÁS ADELANTE HAY UN APARTADO QUE ES IDENTIFY WHERE THE PROJECT DATA IS STORED AND HOW IT PERSIST... NO DEBERIA IR TOOD JUNTO?
 
 ### Environment variables (`.env` file)
 The `.env` file defines all configuration valeus used by Docker Compose and the containers.  
@@ -291,6 +292,13 @@ What `make` does is:
 
 The Makefile provides a simplified interface to manage the lifecycle of the stack without typing logn Docker commands.  
 AÑADIR RESUMEN DE COSAS QUE HACE EL MAEFILE???
+
+| Command | What it does |
+|---------|--------------|
+| `make stop` | Stops the containers, sin eliminar ni los contenedores ni los volúemenes |
+| `make down` | Para y elimina los contenedores, redes y los volúmenes interos de docker-compose (los declarados dentro de docker-compose) (QUÉ VOLÚMENES SON ESTOS?), pero conserva los datos persistentes en las carpetas montadas en el host. Las imágenes no se eliminan. ¿QUÉ IMPLICA QUE NO SE ELIMINEN LAS IMÁGENES? ¿QUE SI SE HACEN CAMBIOS EN EL SETUP.SH DE LAS DIFERENTES APPS, NO SE VERÁN REFLEJADOS O ALGO ASÍ? |
+| `male clean` | Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas. |
+| `make fclean` | Hace `clean` y borra completamente los datos persistentes en `/home/<login>/data/...` y hace un `docker system prine -a --force`: ⚠️ esto resetea completamente el proyecto. |
 
 ## Use relevant commands to manage the containers and volumes
 
