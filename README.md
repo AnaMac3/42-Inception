@@ -9,6 +9,10 @@ This project has been created as part of the 42 curriculum by amacarul.
 ## Table of Contents
 - [Description](#description)
 - [Instructions](#instructions)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Build & Run](#build-&-run)
+  - [Networking / SHH tunnel](#networking-ssh-tunnel)
 - [Project description](#project-description)
   - [Docker](#docker)
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
@@ -42,123 +46,86 @@ This project has been created as part of the 42 curriculum by amacarul.
 
 ## Description
 
-El proyecto **Inception** consiste en crear una infraestructura completa usando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.
-Hay que configurar:
-- **3 contenedores independientes**:
-  - **NGINX** con TLS 1.2/1.3 (única puerta de entrada al sistema, puerto 443)
-  - **WordPress + PHP-FPM** (sin NGINX)
-  - **MariaDB** (solo base de datos)
-- **2 volúmenes persistentes** que han de estar disponibles en /home/login/data de la host machine que use docker:
+El proyecto **Inception** consiste en crear una infraestructura completa de servicios web utilziando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.  
+El objetivo del proyecto es desplegar un **stack de servicios interconectados** de manera modular y segura, gestionando contenedores, volúmenes persistentes, redes internas y variables de entorno, siguiendo buenas prácticas de desarrollo y DevOps.  
+El proyecto debe incluir:  
+- **Tres contenedores independientes**:
+  - **NGINX**: única puerta de entrada al sistema mediante HTTPS (TLS 1.2/1.3 ) en el puerto 443.
+  - **WordPress + PHP-FPM**: servidor de aplicación web sin NGINX
+  - **MariaDB**: base de datos independiente
+- **Dos volúmenes persistentes** disponibles en `/home/<login>/data` de la host machine que ejecute docker:
   - Uno para la base de datos de MariaDB
   - Otro para los archivos de WordPress
-- **Una Docker-network** que conecte los tres servicios entre sí.
-  - NGINX se conecta a PHP -> puerto 9000
-  - PHP conecta con MariaDB -> puerto 3306
-- **Dockerfiles propios** para cada servicio (no se permite usar imágenes preconfiguradas - excepto Alpine o Debian)
-- **Variables de entorno obligatorias**, credenciales fuera del repositorio (usar `.env` y/o Docker secrets)
-- Todos los contenedores deben reiniciarse automáticamente si fallan ⚠️
-- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.) ⚠️
-- El dominio debe resolver (??) a tu máquina local: `login.42.fr`
-- Los Dockerfiles debe llamarse en tu docker-compose.yml por tu Makefile
+- **Una Docker-network** que conecte los tres servicios entre sí:
+  - NGINX se comunica con PHP mediante el puerto 9000
+  - PHP conecta con MariaDB mediante el puerto 3306
+- **Dockerfiles propios** para cada servicio (no se permite usar imágenes preconfiguradas, excepto Alpine o Debian)
+- **Variables de entorno obligatorias** y credenciales fuera del repositorio (usar `.env` y/o Docker secrets)
+- Todos los contenedores deben **reiniciarse automáticamente** si fallan ⚠️ DÓNDE GESTIONO ESTO? CÓMO SE PRUEBA??
+- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.) ⚠️ CÓMO EVITO USAR ESTO??
+- El dominio de la aplicación debe ser `<login>.42.fr` y debe resolverse localmente hacia la VM donde corren los contenedores, de modo que el navegador del host pueda acceder a la web usando HTTPS.  
+- Los Dockerfiles debe ser referenciados correctamente en el `docker-compose.yml` y gestionados desde el Makefile
 
+
+----------------------------
 More requeriments:
-- En tu database WordPress tiene que haber dos usuarios: uno de ellos ha de ser el administrador, su username no puede contener 'admin', 'Admin', 'administrator, o 'Administrator'
-- para simplificar el proceso, debes configurar tu domain name to point a tu local IP address ⚠️
-- Este domain name debe ser login.42.fr. usa tu propio login. amacarul.42.fr redirigirá a la dirección IP que apunta a la website de amacarul
+- En tu database WordPress tiene que haber dos usuarios: uno de ellos ha de ser el administrador, su username no puede contener 'admin', 'Admin', 'administrator, o 'Administrator' ✅
+- para simplificar el proceso, debes configurar tu domain name to point a tu local IP address ✅ -> CREO QUE ESTO YA LO HAGO CON EL TUNEL SSH  Y TODO ESO, NO? SÍ, ESTO SE LOGRA MEDIANTE LA CONFIGURACIÓN DE /ETC/HOSTS Y SI ES NECESARIO UN TUNEL SSH- AVERIGUAR CÓMO SE HACE ESTO EN LOS ORDENADORES DE 42!!!
+- Este domain name debe ser login.42.fr. usa tu propio login. amacarul.42.fr redirigirá a la dirección IP que apunta a la website de amacarul ✅
 
--> no tiene que haber contraseñas ⚠️
-> se recomienda usar .env file para guardar las variables de entorno y para usar Docker secrets para almacenar infor confidencial ⚠️
+-> no tiene que haber contraseñas ⚠️ -> CÓMO QUE NO??
+> se recomienda usar .env file para guardar las variables de entorno y para usar Docker secrets para almacenar infor confidencial ⚠️ -> SOLO USO .ENV POR AHORA
 Por razones de seguridad, las credenciales, API keys, passwords, etc. deben guardarse localmente de varias maneras / en varios archivos y deben ser ignorados por git. Las credenciales almacenadas publicamente suponen el suspenso del proyecto.  
 Puedes guardar tus variables (como domain name) en un archivo de variables de entorno cono .env.
+-------------------------------------
 
 ## Instructions
 
-⚠️ REDUCIR ⚠️  
-TIENE QUE CONTENER SOLO:
+### Prerequisites:
+  - Acces to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
+  - Dockera and Docker Compose installed ([ver DEV_DOC](./DEV_DOC.md#installing-docker-docker-compose-and-build-tools))
 
-1. Prerequisites:
-  - Docker y Docker Compose instalados (AÑADIR ENLACES A DONDE ESTÁ ESTA EXPLICACIÓN??)
-  - Acceso a una máquina Linux / VM
+### Installation
+   - Clone the repository:
+     
+        git clone git@github.com:AnaMac3/42-Inception.git
+     
+     Options:
+     - Clone on your local machine and share the folder with the VM via VirtualBox Shared Folders ([see DEV_DOC](./DEV_DOC.MD#shared-folders-between-host-and-vm)
+     - Clone directly inside the VM
 
-2. Installation
-   - Clonar el repositorio
-   - Crear el archivo `.env` en `srcs/`
-   - Crear carpetas de volúmenes:
+   - Create the [`.env` file](./DEV_DOC.md#environment-variables-env-file) in `srcs/`
+   - Create the persistent volume folders:
 
-         /home/<login>/data/mariadb
-         /home/<login>/data/wordpress
+         mkdir -p /home/<login>/data/mariadb
+         mkdir -p /home/<login>/data/wordpress
 
-3. Build & Run
+### Build & Run
+   - Start all services:
 
          make
 
-4. Access
+  > Nota: `make` builds e Docker images and starts all containers in the stack.
+
+### Networking / SSH tunnel
+As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.  
+Doman configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configuration-and-ssh-tunneling).
+
+> ⚠️ Keep the terminal open while accessing the site.
+
+5. Access to the website
+   - Open in your browser: 
 
        https://<login>.42.fr
 
-5. Stop / Clean
+6. Stop / Clean
 
-       make stop
-       make down
-       make clean
-       make fclean
-
-⚠️ INDICAR QUÉ HACE CADA UNA DE ESTAS INSTRUCCIONES
-
-TODO LO DEMÁS SE VA FUERA DEL README:
-- VIRTUALBOX
-- DEBIAN
-- SSH
-- TÚNELES
-- WSL
-- MACS DE 42
-- /ETC/HOSTS
-- EXPLICACIÓN DEL MAKEFILE
-
-3. Proyecto realizado en Máquina Virtual: [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload), [Preparar la Virtual Machine](#preparar-la-virtual-machine)
-4. Crear volúmenes en `/home/login/data` en la host machine (Máquina Virtual):
-  - `/home/<login>/data/mairadb`
-  - `/home/<login>/data/wordpress`
-5. Compartir carpetas entre la VM y el host: [Cómo compartir carpetas entre la VM y el host](#cómo-compartir-carpetas-entre-la-VM-y-el-host)
-6. Instalar docker y docker compose en la máquina virtual: [Instalar Docker y Docker Compose](#instalar-docker-y-docker-compose)
-7. Conectarse a la VM desde la terminal del host:
-
-        ssh <login>@<IP_VM>
-
-8. [Configuración del dominio](#configuración-del-dominio) -> AÑADIR EXPLICACIÓN PARA WINDOWS CON WSL Y PARA ORDENADORES DE 42 (QUE NO PUEDES HACER SUDO)  
-Como estamos en una máquina virtual, hay que hacer un tunel ssh que conecte el puerto 443 con el navegador:
-8.1. En windows:
-   - Abrir archivo `C:\Windows\System32\drivers\etc\host` como administrador (O HACER SUDO NANO /ETC/HOSTS NO ES LO MISMO???)
-   - Añadir al final del archivo la línea: `127.0.0.1 <login>.42.fr`
-   - Guardar y cerrar
-   - Comprobar: `ping <login>42.fr` -> si responde desde 127.0.0.1, está bien configurado.
-   - En terminal, ejecutar:
-
-         ssh -L 443:localhost:443 <login>@<IP_VM>
-
-   - Mantener esta ventana abierta. Mientras esté conectada, el túnel estará activo.
-
-8.2. En iMacs de 42 (no se puede hacer sudo)
-⚠️
-⚠️
-⚠️
-
-⚠️? ESTO LO TENGO QUE EXPLICAR AQUÍ O EN OTRO SITIO???
-
-9. Para arrancar los contenedores, en el directorio general del repositorio, hacer:
-
-          make
-
-   `make` hace `build` y `up`. ESTO ES COMPILAR??? ⚠️ MAKE DEBERIA COMPILAR, NO??
-   Para parar los contenedores: `stop`
-   Para destruir contenedores: `down`
-   Para comprobar su estado: `status`
-   Para limpiar los contenedores, redes y volúmenes: `clean`
-   Para borrar del todo los volúemes: `fclean`
-
-⚠️ COMPROBAR QUE ESTO ESTÉ BIEN EXPLICADO Y SE AJUSTE BIEN AL MAKEFILE!!!
-
-10. En el navegador, ir a la dirección `https://<login>.42.fr` 
+| Command | What it does |
+|---------|--------------|
+| `make stop` | Stops the containers, without deleting anything.|
+| `make down` | Stops and removes containers and networks, but keeps persistent data in the mounted folders. |
+| `male clean` | Stops and removes containers, networks, and internal Docker volumes, and deletes generated images, but does not remove persistent data in `/home/<login>/data/...`.|
+| `make fclean` | Performs `clean` and also deletes all persistent data in `/home/<login>/data/...`. ⚠️ Completely resets the project. |
 
 ## Project description
 ### Docker
