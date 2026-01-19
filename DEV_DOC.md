@@ -451,7 +451,7 @@ TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
   Los logs que existen, son:
   - Logs de PHP-FPM: dentro del contenedor Wordpress, no persistentes si no los montas.
   - Logs de MariaDB: normalmente se guarda en /var/log/mysql. No persistentes en tu volumne.
-  Para que wordpress guardara los logs habría que configurarlos explícitamente ❌❌ COMPROBAR SI HAY QUE HACER ESTO O QUÉ - REVISAR SUBJECT
+  Para que wordpress guardara los logs habría que configurarlos explícitamente ❌❌ CREO QUE NO HACE FATLA HACER ESTO
 - Dónde se guardan las creaciones de posts, las actualizaciones, los archivos que se han subido, etc: `wp_posts`
 
           SELECT ID, post_title, post_type, post_status
@@ -462,6 +462,10 @@ TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
   - `page`: página
   - `revision`: historial de cambios
   - `attachment`: imágenes
+  - 
+  Más cosas de wp_post:
+  - post_author: corresponde al wp_users.ID, referencia al ID del usuario en `wp_users` (suele ser 1 para el administrador, 2 para mi user; el valor 0 indica contenido no asociado a un usuario - elementos generados por el sistema). Me aparecen post_author = 1 porque creo que mi user1 es solo un subscriber, no genera posts.
+  - DEBERIA CAMBIARLE LOS PERMISOS AL USER1? ❌
  
   > Actualizaciones de posts: Wordpress no sobrescribe, crea una nueva fila con `post_type = revision`.
 
