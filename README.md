@@ -8,8 +8,6 @@ This project has been created as part of the 42 curriculum by amacarul.
 - Persistent storage
 - Secure environment configuration
 
-⚠️ CÓMO TIENE QUE SER: rápido y superficial. Lo va a leer cualquiera que entre a la repo. Tiene que dar infor sobre qué es esto y cómo se ejecuta rápidamente.
-
 ## Table of Contents
 - [Description](#description)
 - [Instructions](#instructions)
@@ -78,7 +76,7 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
 ### Prerequisites:
   - Acces to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
-  - Dockera and Docker Compose installed ([ver DEV_DOC](./DEV_DOC.md#installing-docker-docker-compose-and-build-tools))
+  - Dockera and Docker Compose installed ([see DEV_DOC](./DEV_DOC.md#installing-docker-docker-compose-and-build-tools))
 
 ### Installation
    - Clone the repository:
@@ -86,7 +84,7 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
         git clone git@github.com:AnaMac3/42-Inception.git
      
      Options:
-     - Clone on your local machine and share the folder with the VM via VirtualBox Shared Folders ([see DEV_DOC](./DEV_DOC.MD#shared-folders-between-host-and-vm)
+     - Clone on your local machine and share the folder with the VM via VirtualBox Shared Folders ([see DEV_DOC](./DEV_DOC.MD#shared-folders-between-host-and-vm))
      - Clone directly inside the VM
 
    - Create the [`.env` file](./DEV_DOC.md#environment-variables-env-file) in `srcs/`
@@ -100,7 +98,7 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
          make
 
-  > Nota: `make` builds e Docker images and starts all containers in the stack.
+  > Note: `make` builds thee Docker images and starts all containers in the stack.
 
 ### Networking / SSH tunnel
 As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.  
@@ -109,9 +107,9 @@ Doman configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configurat
 > ⚠️ Keep the terminal open while accessing the site.
 
 5. Access to the website
-   - Open in your browser: 
+   - Open in your browser:
 
-       https://<login>.42.fr
+               https://<login>.42.fr
 
 6. Stop / Clean
 
@@ -119,13 +117,12 @@ Doman configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configurat
 |---------|--------------|
 | `make stop` | Stops the containers, without deleting anything.|
 | `make down` | Stops and removes containers and networks, but keeps persistent data in the mounted folders. |
-| `male clean` | Stops and removes containers, networks, and internal Docker volumes, and deletes generated images, but does not remove persistent data in `/home/<login>/data/...`.|
+| `make clean` | Stops and removes containers, networks, and internal Docker volumes, and deletes generated images, but does not remove persistent data in `/home/<login>/data/...`.|
 | `make fclean` | Performs `clean` and also deletes all persistent data in `/home/<login>/data/...`. ⚠️ Completely resets the project. |
 
 ## Project description
 ### Docker
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
-
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
 
 Containers are isolated processes for each of your app's components. Each component runs in its own isolated environment, completely isolated from everything else on your machine.  
@@ -141,7 +138,7 @@ Containers are isolated processes for each of your app's components. Each compon
 - La aplicación (p.ej. WordPress, NGINX, MariaDB...)
 - Sus dependencias (librerías, binarios)
 - Archivos de configuración
-- El entorno de ejecución mínimo necesario
+- El entorno de ejecución mínimo necesario  
 Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema operativo ni una máquina virtual.
 
 #### Virtual Machine vs Docker
@@ -175,9 +172,12 @@ Un **Dockerfile** es archivo que define cómo construir una imagen de Docker.
 Ejemplo simplificado para NGINX:
 
       FROM debian:bookworm
-      RUN apt update && apt install -y nginx
-      COPY ./config/default.conf /etc/nginx/conf.d/
-      ENTRYPOINT ["nginx", "-g", "daemon off;"]
+      RUN apt update && apt install -y nginx #instala nginx
+      COPY ./config/default.conf /etc/nginx/conf.d/ #copia la configuración...
+      ENTRYPOINT ["nginx", "-g", "daemon off;"] #define el entry point...
+
+  ⚠️ EXPLICAR QUÉ HACE CADA LÍNEA !!!
+  ⚠️ NO SÉ SI ESTO DEBERIA IR EN EL README O EN EL DEV_DOC O SIMPLEMENTE SON DETALLES PARA MI QUE NO DEBERIAN IR EN NINGÚN LADO...
 
 **Instrucciones principales de Dockerfile**
 | Keyword | Definition |
@@ -188,8 +188,6 @@ Ejemplo simplificado para NGINX:
 | EXPOSE | Indica los puertos de red específicos en los que se escucha durante la ejecución. No permite que el host acceda a los puertos del contenedor; expone el puerto especificado y lo hace disponible solo para la comunicación entre contenedores.  |
 | ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
 | CMD | Argumentos por defecto del ENTRYPOINT |
-
-[Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
 
 **Buenas prácticas:**
 - Un contenedor debe ejecutar **un solo servicio**
@@ -215,17 +213,18 @@ En este proyecto se piden tres servicios principales:
 
 **Debian vs Alpine**: explicar por qué uso debian en vez de alpine: porque es más fácil para empezar... y por qué más?
 
- /*En este proyecto, como base de cada imagen, se puede usar:
-          - **Debian**: FROM debian:bookworm
-          - **Alpine**: FROM alpine:3.18
-          - 
+ > En este proyecto, como base de cada imagen, se puede usar:  
+          - **Debian**: FROM debian:bookworm  
+          - **Alpine**: FROM alpine:3.18  
+  
           En *Inception* está prohibido usar imágenes prefabricadas como:
           
                 FROM nginx:latest
                 FROM mariadb:latest
-                FROM wordpress:latest*/
+                FROM wordpress:latest
   
 #### PID 1 y ENTRYPOINT
+  ⚠️ HAY QUE HACER ESTE APARTADO MÁS CLARO... RESUMIR Y EXPLICAR BIEN LAS RELACIONES ENTRE LOS DIFERENTES CONTAINERS/SERVICIOS Y SUS ENTRYPOINTS...
 En Linux, **PID 1** es el primer proceso que se ejecuta en el sistema.  
 Es responsable de:
 - gestionar señales
@@ -245,7 +244,7 @@ En Docker, **cada contenedor tiene su propio PID 1**, que es proceso definido en
   - contenedores que se cierran solos o crashean
 - Por eso en *Inception* está prohibido usar bucles infinitos. Tampoco se deben lanzar procesos en background y salir del script. ???
 
-**Foreground vs background**
+**Foreground vs background**  
 Un proceso en **foreground**:
 - No se ejecuta con `&`
 - No termina
@@ -253,8 +252,8 @@ Un proceso en **foreground**:
 Un proceso en **background**
 - Se lanza con `&`
 - El script puede terminar
-- El contenedor se cierra
-**¿Cómo se consigue un proceso en foreground?**
+- El contenedor se cierra  
+**¿Cómo se consigue un proceso en foreground?**   
 Se usa `exec`:
 
       exec mysql_safe
@@ -274,7 +273,7 @@ Se usa `exec`:
 | Contenedor | Proceso PID 1 |
 |------------|---------------|
 | mariadb | mysql_safe |
-| wordpress | php-fpm |
+| wordpress | php-fpm (⚠️ PROFUNDICAR EN QUÉ ES ESTO, QUÉ ES PHP-FPM, QUÉ ES CADA ENTRYPOINT DE CADA CONTAINER!)|
 | nginx | nginx |
 
 **Apagado limpio de contenedores**  
@@ -287,7 +286,7 @@ Docker:
 - Espera unos segundos
 - Si no responde, envía `SIGKILL`
 
-Si el proceso está en foreground y gestiona señales correctamente, el contenedor se apaga limpiamente.
+Si el proceso está en foreground y gestiona señales correctamente, el contenedor se apaga limpiamente.   ⚠️ TODO ESTO SE GESTIONA EN LOS DOCKERFILES, NO???
 
 
 ### Docker Compose
@@ -306,11 +305,11 @@ En el proyecto *Inception* se requieren varios contenedores conectados entre sí
 
       Internet -> NGINX -> WORDPRESS -> MARIADB
 
-Compose los levanta todos juntos (ESTO IRÁ EN EL MAKEFILE????):
+Compose los levanta todos juntos:
 
       docker compose up --build
 
-CREO QUE PARTE DE ESTE PUNTO DEBERÍA IR EN EL "PASO A PASO" , NO EN LA TEORIA...  
+  ⚠️ DÓNDE DEBERIA EXPLCIAR TODO ESTO?? EN DEV_DOC??   
 **Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
 Ejemplo simplificado:
 
@@ -346,18 +345,15 @@ Ejemplo simplificado:
 
 
 - `services`: se definen los servicios que ejecutarán los contenedores. Servicios que tenemos: `nginx`, `wordpress`, `mariadb`.
-  - container_name: asigna un nombre específico al contenedor que se crea a partir de este servicio
-  - build: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
-  - image: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
-  - ports: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
-  - volumes: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
-  - restart: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
-  - networks: especifica a qué redes tiene que estar conectado el contenedor.
-  - red llamada amacarulnet (TIENE QUE LLAMARSE ASÍ?)
+  - `container_name`: asigna un nombre específico al contenedor que se crea a partir de este servicio
+  - `build`: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
+  - `image`: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
+  - `ports`: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
+  - `volumes`: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
+  - `restart`: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
+  - `networks`: especifica a qué redes tiene que estar conectado el contenedor.
+  - red llamada amacarulnet....   ⚠️ ACTUALIZAR VERSIÓN DEL .YML
   - controlador de red `bridge`: permite a los contenedores comunicarse entre sí en el mismo host
-
-
-...... -> seguir en: https://github.com/gemartin99/Inception?tab=readme-ov-file#1--descargar-imagen-de-la-maquina-virtual-
 
 ### Volúmenes - Persistencia de datos
 Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
@@ -375,12 +371,13 @@ Sirven para:
 - con MariaDB -> persistir la base de datos
 - con WordPress -> guardar plugins, temas, uploads
 
-Si destruyes el contenedor:
+Si destruyes el contenedor y lo vuelves a levantar:
 
       docker compose down
       docker compose up --build
 
-Tus datos siguen ahí. 
+Tus datos siguen ahí.  
+Estos datos se borran con ... ⚠️ : 
 
 #### Docker Volumes vs Bind Mounts
 Los contenedores son efímeros: si borras un contenedor, se borra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
@@ -457,6 +454,8 @@ Nunca se deben poner contraseñas en el repositorio.
 Usar `.env` para:
 
     ....
+
+Usar secrets para...: ⚠️⚠️⚠️⚠️
 
 ⚠ Cosas que meter en github:
     - Makefile
@@ -1074,4 +1073,5 @@ COSAS A PROBAR:
 [dockerdocs](https://docs.docker.com/)  
 [dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
 [Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html) 
-[Comandos de docker](https://kinsta.com/es/blog/comandos-docker/)
+[Comandos de docker](https://kinsta.com/es/blog/comandos-docker/)  
+[Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
