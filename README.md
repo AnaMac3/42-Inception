@@ -171,10 +171,14 @@ Un **Dockerfile** es archivo que define cómo construir una imagen de Docker.
 
 Ejemplo simplificado para NGINX:
 
+      # Imagen base del contenedor: todo se construye sobre bookworm
       FROM debian:bookworm
-      RUN apt update && apt install -y nginx #instala nginx
-      COPY ./config/default.conf /etc/nginx/conf.d/ #copia la configuración...
-      ENTRYPOINT ["nginx", "-g", "daemon off;"] #define el entry point...
+      # Instala paquete nginx
+      RUN apt update && apt install -y nginx
+      # Copia la configuración personalizada, sustituyendo la configuración por defecto
+      COPY ./config/default.conf /etc/nginx/conf.d/
+      # Define el entrypoint
+      ENTRYPOINT ["nginx", "-g", "daemon off;"]
 
   ⚠️ EXPLICAR QUÉ HACE CADA LÍNEA !!!
   ⚠️ NO SÉ SI ESTO DEBERIA IR EN EL README O EN EL DEV_DOC O SIMPLEMENTE SON DETALLES PARA MI QUE NO DEBERIAN IR EN NINGÚN LADO...
