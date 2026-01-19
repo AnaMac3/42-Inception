@@ -351,6 +351,7 @@ In this project, all persistent data is stored explicitly on the host machine (t
 - WordPress stores uploads, plugins, and themes in `wp-content`
 
 This are **Docker bind mounts**, defined in `docker-compose.yml`, and ensure that data survives container restarts and rebuilds.  
+As long as these directories are preserved, all WordPress content, configuration and database state survive container restarts and rebuilds.  
 
 ### Volume mounting and container paths
 The persistent volumes are mounted as follows:  
@@ -449,117 +450,133 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
       docker exec -it mariadb bash
       mysql -u root -p
 
-Root access is required for inspection
+Root access is required for inspection.  
+> - In MariaDB, users are defined as 'user'@'host'.
+> - In this project (`setup.sh` of `mariadb\tools\`):
+
+>      CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+
+>  - `%` is a wildcard meaning "any host on the network"
+>  - This allows WordPress (in another container) to connect
+>  - However, `%` does not include `localhost`
+>  - When running `mysql -u login -p`, MariaDB tries `login@localhost`, and that user does not exist
+>  - Therefore, WordPress connects via Docker networking -> works
+>  - Manual inspection should be done as `root`
 
 #### Listing databases
 
       SHOW DATABASES;
 
 Databases:
-- `mysql -> system database
-- information_schema
-- performance_schema
-- database <- wordpress
-- sys
-- test
+- `mysql` -> system database
+- `information_schema`
+- `performance_schema`
+- `sys`
+- `test`
+- `database`-> WordPress database
 
-⚠ AÑADIR:  
-TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
-- Dónde se guardan los usuarios -> `wp_users`
+### Some SQL keywords
 
-        docker exec -it mariadb bash
-        mysql -u root -p
-        USE database;
-        SHOW TABLES;
+| Keyword | Description |
+|---------|-------------|
+| DESCRIBE | |
+| SELECT | |
+| FROM | |
+| SHOW | |
+| USE | |
 
-  > Note: tal como he configurado mariadb (setup.sh), el usuario amacarul puede acceder a wordpress desde red, no como localhost. amacarul@% no es lo mismo que amacarul%localhost. Así que para acceder a data de mariadb/wordpress, usar root.
-  > '%' es un wildcard (comodín) que significa "Desde cualquier host". 'login'@'%' puede conectarse desde:
-  > - wordpress
-  > - nginx
-  > - 172.18.0.5
-  > - cualquier IP de la red Docker
-  > - Pero, al parecer, '%' no incluye 'localhost'... Cuando ahces mysql -u amacarul -p, mariaDB interpreta 'amacarul'@'localhost', y este usuario no existe
-  > WordPress se conecta por MariaDB por red Docker, no por localhost
-  > `nginx -> php -> wordpress -> mariadb`
-  > ergo... sigo sin entender por qué puedo usar root para acceder a la database y no amacarul.
-  > En MariaDB los usuarios están definidos como user@localhost; el wildcard % permite conexiones desde la red Docker pero no desde localhost, lo cual es adecuado apra WordPress en contenedores separados.
 
-  Esto muestra algo como: EXPLICAR QUÉ HAY EN CADA TABLE
+### WordPress database tables
+After selecting the WordPress database:
 
-          wp_users
-          wp_posts
-          wp_usermeta
-          wp_postmeta
-          wp_commentmeta
-          wp_comments
-          wp_links
-          wp_options
-          wp_term_relationships
-          wp_term_taxonomy
-          wp_termmeta
-          wp_terms
-          
+      USE database;
+      SHOW TABLES;
 
-  Ver usuarios:
+Main tables:
+- `wp_users` -> users
+- `wp_usermeta` -> roles and permissions
+- `wp_posts`-> post, pages, revisions, attachments
+- `wp_postmeta` -> post metadata
+- `wp_comments`, `wp_commentmeta`
+- `wp_options` -> global configuration
+- `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`
+
+#### Users 
+Stored in `wp_users`.  
+Example:
 
         SELECT ID, user_login, user_email FROM wp_users;
 
+#### Logs
+WordPress does not store logs in MariaDB by default.  
+Existing logs:
+- PHP-FPM logs -> inside WordPress container (not persistent)
+- MariaDB logs -> `/var/log/mysql` (not persistent)
+⚠️ COMPROBAR ESTO!!! VER DONDE SE GUARDA
+Persistent logging would require explicit configuration, which is not required for Inception ❌❌ CREO QUE NO HACE FATLA HACER ESTO
 
-  > cómo ver las columnas de una tabla: `DESCRIBE wp_users;`
-  
-- Dónde se guardan los logs: WordPress no guarda logs en MariaDB por defecto.
-  Los logs que existen, son:
-  - Logs de PHP-FPM: dentro del contenedor Wordpress, no persistentes si no los montas.
-  - Logs de MariaDB: normalmente se guarda en /var/log/mysql. No persistentes en tu volumne.
-  Para que wordpress guardara los logs habría que configurarlos explícitamente ❌❌ CREO QUE NO HACE FATLA HACER ESTO
-- Dónde se guardan las creaciones de posts, las actualizaciones, los archivos que se han subido, etc: `wp_posts`
+#### Roles and permissions
+Stored in `wp_usermeta`.  
+Key: `wp_capabilities`.
+Example:
 
-          SELECT ID, post_title, post_type, post_status
-          FROM wp_posts;
+        SELECT user_id, meta_key, meta_value
+        FROM wp_usermeta
+        WHERE meta_key LIKE '%capabilities%';
 
-  Important types:
-  - `post`: entrada
-  - `page`: página
-  - `revision`: historial de cambios
-  - `attachment`: imágenes
-  - 
-  Más cosas de wp_post:
-  - post_author: corresponde al wp_users.ID, referencia al ID del usuario en `wp_users` (suele ser 1 para el administrador, 2 para mi user; el valor 0 indica contenido no asociado a un usuario - elementos generados por el sistema). Me aparecen post_author = 1 porque creo que mi user1 es solo un subscriber, no genera posts (configurado así en el setup.sh de wordpress)
-  - DEBERIA CAMBIARLE LOS PERMISOS AL USER1? Cómo cambiar los permisos del user1:
-    - Desde el panel de admin, en WordPress: usuarios -> user1 -> cambiar rol
-      - esta información se ve actualziada en `wp_usermeta`->meta_value
-    - Desde el contenedor WordPress:
+Values are PHP serialized data, e.g.:
 
-            wp user set-role user1 author --allow-root
+      a:1:{s:13:"administrator";b:1;}
+      a:1:{s:10:"subscriber";b:1;}
 
-      Esto cambia wp_capabilities y wp_user_level
-      Roles:
-      - contributor: puede escribir, no publicar
-      - author: puede escribir y publicar
-      - editor: puede editar posts de otros
- 
-  > Actualizaciones de posts: Wordpress no sobrescribe, crea una nueva fila con `post_type = revision`.
+#### Posts, pages, uploads and revisions
+All content is stored in `wp_posts`.  
+Example:
+
+      SELECT ID, post_title, post_type, post_status
+      FROM wp_posts;
+
+Important `post_type` values:
+- `post` -> blog post
+ - `page` -> page
+ - `revision` -> update history
+ - `attachment` -> uploaded files (images, etc.)
+
+WordPress does not overwrite posts. Each update creates a new row with `post_type = revision`.  
+`post_author`:  
+- References `wp_users.ID`
+- `1` usually correspondos to the admin user
+- `2` would be a normal user ⚠️⚠️⚠️ EXPRESAR ESTO BIEN, NORMAL USER ES POCO ESPECIFICO
+- `0` means system-generated content
+
+#### Permissions
+PRIMERO EXPLCIAR LOS ROLES QUE EXISTEN EN WORDPRESS!! 
+⚠️ FALTAN MAS ROLES??  
+- `subscriber`:
+- `contributor`: write, not publish
+- `author`: write and publish
+- `editor`: edit other's posts
+
+Roles can be changed:
+- From WordPress admin panel
+  - Users -> user1 -> change role (COMPROBAR CÓMO SE HACE ESTO!)
+- From the WordPress container
+
+        wp user set-role user1 author --allow-root
+
+This updates:
+- `wp_capabilities`
+- `wp_user_level`
+⚠️ COMPROBAR TB ESTO!
+    
+
+#### Global WordPress configuration
+Stored in `wp_options`.  
+Includes:
+- site URL
+- active theme
+- enabled plugins
+- internal WordPress settings
 
 
-- Si doy formato a la web, dónde se guarda eso? eso ya no sería un volumen persistente, no? sería algo que se tendría que ejecutar al runnear el wordpress, el servicio en sí, no?
-- Dónde se guardan los roles y permisos: `wp_usermeta` 
-
-      SELECT user_id, meta_key, meta_value
-      FROM wp_usermeta
-      WHERE meta_key LIK '%capabilities%'
-
-  Verás algo como:
-
-            a:1:{s:13:"administrator";b:1;}
-            a:1:{s:10:"subscriber";b:1;}
-
-Esto es PHP serialized data
-
-- Configuración global de WordPress: `wp_options`
-  - URL del sitio
-  - Tema activo
-  - Plugins
-  - Opciones internas
-
-Uploaded files and WordPress content survive restarts as long as volumes are preserved.
 
