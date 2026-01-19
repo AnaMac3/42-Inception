@@ -14,6 +14,10 @@ This document describes the technical architecture of the *Inception* project. I
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
 - [Relevant commands to manage the containers and volumes](#relevant-commands-to-manage-the-containers-and-volumes)
+  - [Container inspection and logs](#container-inspection-and-logs)
+  - [Entering containers (interactive debugging)](#entering-containers-interactive-debugging)
+  - [Database inspection](#database-inspection)
+  - [Volumes and storage](#volumes-and-storage)
 - [Project data storage and persistence](#project-data-storage-and-persistence)
   - [Persistent data locations](#persistent-data-locations)
   - [Volume mounting and container paths](#volume-mounting-and-container-paths)
@@ -38,6 +42,7 @@ The setup includes:
 - Domain configuration and SSH tunneling
 
 ### Virtual Machine setup (VirtualBox + Debian)
+
 #### Virtualization tool
 The project is developed inside a virtual machine created with [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 
@@ -275,59 +280,85 @@ Access:
 ⚠️ SOCKS proxy alternative is still under investigation!! AVERIGUAR ESTO!!!
 
 ## Build and launch the project using the Makefile and Docker Compose
-The Makefile orchestrates Docker Compose commands to simplify stack management.  
-Ir provides a single interface to:
-- build images
-- start containers
-- stop containers
-- clean resources
+This section explains how the stack is built and managed using **Docker Compose**, abstracted through a **Makefile**.  
+The Makefile provides a single interface to:
+- build Docker images
+- start and stop containers
+- clean Docker resources
+- reset the project state
 
-Although no source code is compiled, `make` orchestrates the build of the Docker images and the deployment of the stack.
-What `make` does is:
+Although no source code is compiled, `make` orchestrates Docker Compose commands to manage the lifecycle of the stack.  
 
-      docker compose build
-      docker compose up -d
+### Core Docker Compose commands
+| Command | Description | 
+|---------|-------------|
+| `docker compose build` | Builds Docker images defined in `docker-compose.yml` | 
+| `docker compose up -d`| Creates and astarts containers in detached mode |
+| `docker compose stop`| Stops running containers without removing them |
+| `docker compose down` | Stops and removes containers and Docker networks |
+| `docker compose ps` | Lists containers managed by Docker Compose |
+| `docker compose down --volumes --rmi all` | Removes containers, networks, Docker-managed volumes, and images |
+| `docker system prune -a --force` | Removes all unused Docker objects (containers, images, networks, cache) |
 
-⚠️ PONER BIEN ESTA EXPLICACIÓN...
+⚠️ Bind-mounted directories (`/home/login/data/...`) are not removed unless explicitly deleted.  
 
-| Command | What it does |
+### Makefile shortcuts
+The Makefile wraps the Docker Compose commands above and defines the project's persistence policy.  
+| Makefile command | Description |
 |---------|--------------|
-| `make` | builds docker images and the deployment of the stack - it does `docker compose build` and `docker compose up -d` |
-| `make stop` | Stops the containers, sin eliminar ni los contenedores ni los volúemenes |
-| `make down` | Para y elimina los contenedores, redes y los volúmenes interos de docker-compose (los declarados dentro de docker-compose) (QUÉ VOLÚMENES SON ESTOS?), pero conserva los datos persistentes en las carpetas montadas en el host. Las imágenes no se eliminan. ¿QUÉ IMPLICA QUE NO SE ELIMINEN LAS IMÁGENES? ¿QUE SI SE HACEN CAMBIOS EN EL SETUP.SH DE LAS DIFERENTES APPS, NO SE VERÁN REFLEJADOS O ALGO ASÍ? |
-| `male clean` | Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas. |
-| `make fclean` | Hace `clean` y borra completamente los datos persistentes en `/home/<login>/data/...` y hace un `docker system prine -a --force`: ⚠️ esto resetea completamente el proyecto. |
+| `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
+| `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
+| `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
+| `male clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+
+⚠️ **Implication regarding images:**  
+If mages are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
 
 ## Relevant commands to manage the containers and volumes
-⚠️⚠️⚠️
-Common commands:
+This section lists useful **Docker and Docker Compose commands** for inspecting, debugging, and maintaining the project during development.   
 
-         docker ps
-         docker logs nginx
-         docker logs wordpress
-         docker logs mariadb
-         
-         docker volume ls
-         docker compose down
+### Container inspection and logs
+| Command | Purpose |
+|----|----|
+| `docker ps` | Lists running containers |
+| `docker ps -a` | Lists all containers, including stopped ones |
+| `docker logs` | Displays logs from the different containers |
+| `docker inspect <container>` | Shows low-level container configuration and runtime details | 
 
-- Entrar a un contenedor:
+### Entering containers (interactive debugging)
+| Command | Purpose |
+|----|----|
+| `docker exec -it mariadb bash` | Opens an interactive shell inside the MariaDB container. Used to inspect database files, logs, or run `mysql` |
+| `docker exec -it wordpress bash` | Opens a shell inside the WordPress container. Used to inspect WordPress files, run `wp-cli`, or debug PHP issues |
+| `docker exec -it nginx sh` | Opens a shell inside the NGINX container for configuration or TLS inspection |
 
-        docker exec -it mariadb bash
-        docker exec -it wordpress bash
+Once inside a container, you can:
+- inspect configuration files
+- run service-specific CLIs (e.g. `wp`, `mysql`)
+- debug permissions and file paths
 
-  EXPLICAR PARA QUÉ SE HACE ESTO... UNA VEZ CONECTADO PUEDES HACER QUÉ MÁS COSAS?
+⚠️ PROBAR TODAS ESTAS COSAS!!!
 
-- Conectarte a MariaDB
+### Database inspection
+| Command | Purpose |
+|----|----|
+| `mysql -u root -p` | Connects to MariaDB as root for full inspection |
+| `mysql -u root -p database` | Connects directly to the WordPress database |
+| `SHOW DATABASES;` | Lists available databases |
+| `USE database;` | Selects the WordPress database |
+| `SHOW TABLES;` | Lists WordPress tables |
 
-          mysql -u root -p database
+This is used to inspect the real persistent WordPress data stored in MariaDB. For see this in more detail [see Inspecting persistent data](#inspecting-persistent-data).
 
-      PARA QUÉ SE HACE ESTO? PARA ENTRAR A LA BASE REAL DE WORDPRESS
-          
+### Volumes and storage
+| Command | Purpose |
+|----|----|
+| `docker volume ls` | Lists Docker-managed volumes |
+| `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
+| `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
 
-⚠️  CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS... hacer una lista ordenada y coherente, con sentido.  
-ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE -> decir cuales...
-EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL '??  
-QUIZÁS DEBERIA DIFERENCIAR ENTRE COMANDOS DE DOCKER COMPOSE Y COMANDOS DE DOCKER A SECAS?  o igual los comandos de docker compose ya se han explicado en el apartado anterior de build and launch the project...??  
+
 
 ## Project data storage and persistence
 ### Persistent data locations
