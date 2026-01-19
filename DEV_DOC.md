@@ -341,7 +341,8 @@ EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL
 QUIZÁS DEBERIA DIFERENCIAR ENTRE COMANDOS DE DOCKER COMPOSE Y COMANDOS DE DOCKER A SECAS?  o igual los comandos de docker compose ya se han explicado en el apartado anterior de build and launch the project...??  
 
 ## Identify where the project data is stored and how it persist
-Persistent data locations:
+### Persistent data locations
+In this project, all persistent data is stored explicitly on the host machine (the VM) under: 
 
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
@@ -349,54 +350,113 @@ Persistent data locations:
 - MariaDB stores its database files in the mariadb volume
 - WordPress stores uploads, plugins, and themes in `wp-content`
 
-Persistence behaviour:
-- `make down`: containers are removed, data remains
-- `make fclean`: containers, volumes, and data are deleted
-- `make clean`: Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas.
-  
-INSISTIR EN LA DIFERENCIA ENTRE FCLEAN Y CLEAN  
+This are **Docker bind mounts**, defined in `docker-compose.yml`, and ensure that data survives container restarts and rebuilds.  
 
+### Volume mounting and container paths
+The persistent volumes are mounted as follows:  
+#### MariaDB
+- Host path: `/home/login/data/mariadb`
+- Container path: `/var/lib/mysql`
+- This directory contains all MariaDB database files, meaning:
+  - WordPress users
+  - Roles and permissions
+  - Posts, pages, revisions
+  - Comments
+  - WordPress options
+  In short: all logically important WordPress data.
+#### WordPress
+- Host path: `/home/login/data/wordpress`
+- Container path: `/var/www/html`
+- This directory contains:
+  - The WordPress core files
+  - `wp-config.php`
+  - Themes and plugins
+  - Uploaded files (`wp-content/uploads`)
+  This ensures WordPress content and configuration persist across restarts.
+⚠️ COMPROBAR TODOS ESTOS ARCHIVOS... REPASAR  
+ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 
-⚠️ NO SÉ SI ESTO ESTÁ BIEN EXPRESADO:  
-Los volúmenes persistentes de mariadb y wordpress están montados en `/var/lib/mysql` y `/var/www/html` respectivamente, lo cual se hace/establece en el `docker-compose.yml`.  
-- MariaDB
-  - Host: `/home/login/data/mariadb`
-  - Container: `/var/lib/mysql`
-  - Aquí está toda la base de datos real, persistente (usuarios, roles y permisos, posts, páginas, revisiones, comentarios, opciones del sitio...), todo lo importante a nivel lógico.
-- WordPress
-  - Host: `/home/login/data/wordpress`
-  - Container: `/var/www/html`
-  - Aquí están:
-    - Archivos de WordPress: LOS ARCHIVOS SUBIDOS?
-    - `wp-config.php`: Archivo de configuración central de Wordpress, que define cómo se conecta a la base de datos, su seguridad, su modo de ejecución y que arranca el core. Contiene:
-      - datos de conexión a la base de datos (DB_NAME, DB_USER, DB_PASSWORD, DB_HOST), que conectan WordPress al contenedor mariadb
-      - prefijo de tablas (wp_)
-      - claves de seguridad (las genera wp-cli automáticamente)
-      - configuración de depuración (WP_DEBUG) -> si lo pusiera en TRUE -> mostraria los errores PHP, los warnings... deberia ver cosas tipo un plugin mal escrito, una variable no definda, errores SQL...
-        > Note: No hace falta activar WP_DEBUG en Inception porque lo que estamos haciendo no es entorno de desarrollo interactivo.
-        > Pero podría activarlo si quisiera así:
-        > - Modificar `wp-config.php`: en `setup.sh` de WordPress, después delo bloque `wp config create`, añadir:
-        >
-        >         wp config set WP_DEBUG true --allow-root
-        >         wp config set WP_DEBUG_LOG true --allow-root
-        >         wp config set WP_DEBUG_DISPLAY false --allow-root
-        >   Esto modifica `wp-config.php` y queda persistente en el volumen. ⚠️ PROBABLEMENTE DEBERÍA BORRAR LOS VOLÚMENES PERSISTENTES PARA HACER EFECTIVO ESTE CAMBIO!
+### Persistent behaviour (`make` rules)
+- `make down`:
+  - Stops and removes containers
+  - Persistent data remains: volumes under `/home/login/data/...` are untouched
+- `make clean`:
+  - Stops and removes:
+    - containers
+    - Docker networks
+    - Docker-managed volumes
+    - built images
+  - Does not delete the bind-mounted directories / the persistent volumes
+- `make fclean`:
+  - Removes everything:
+    - containers
+    - images
+    - networks
+    - persistent data directories
 
-      - ABSPATH + carga de WordPress
-    - uploads
-    - themes, plugins
+⚠️ **Important distinction:**  
+`clean`preserves data, `fclean` deletes it entirely.
 
-Cómo ver las databases de MariaDB: 
+### WordPress configuration: `wp-config.php`  
 
-        #entrar en el contenedor
-        docker exec -it mariabd bash
-        # conectarse con root
-        mysql -u root -p
-        # meter contrasela
-        SHOW DATABASES;
+`wp-config.php` is the central configuration file of WordPress. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script.  
+#### Location
 
-Databases que tengo:
-- mysql -> sistema
+          /home/login/data/wordpress/wp-config.php 
+          
+#### What contains
+1. Database connection settings
+   This values allow WordPress to connect to the MariaDB container: `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`  
+   WordPress connects to MariaDB via the Docker network, not via `localhost`.
+   > ⚠️ IMPORTANTE A LA HORA DE ACCEDER A LA DATABASE -> CON ROOT, NO CON LOGIN/USER
+
+2. Table prefix: `wp_`
+3. Security keys
+   Used for:
+   - authentication
+   - cookies
+   - session security
+
+   These are generated automatically by `wp-cli`.
+4. Debug configuration (`WP_DEBUG`) 
+   By default, `WP_DEBUG` is not enabled in this project.  
+   If enabled, it would:
+   - show PHP errors
+   - show warnings and notices
+   - help detect plugin or SQL errors  
+   
+   **How it could be enabled (optional):** 
+   - In `setup.sh`, after `wp config create` block:
+
+             wp config set WP_DEBUG true --allow-root
+             wp config set WP_DEBUG_LOG true --allow-root
+             wp config set WP_DEBUG_DISPLAY false --allow-root
+     
+   - ⚠️ Since `wp_config.php` is persistent, existing volumes would need to be removed for this change to take effect.
+
+5. WordPress bootstrap
+   At the end of the file:
+
+           define('ABSPATH', __DIR__ . '/');
+           require_once ABSPATH . 'wp-settings.php';
+   
+   This boots the WordPress core.
+
+### MariaDB access and databases
+
+#### Entering MariaDB
+
+      docker exec -it mariadb bash
+      mysql -u root -p
+
+Root access is required for inspection
+
+#### Listing databases
+
+      SHOW DATABASES;
+
+Databases:
+- `mysql -> system database
 - information_schema
 - performance_schema
 - database <- wordpress
