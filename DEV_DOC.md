@@ -13,9 +13,9 @@
   - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
-- [Build and launch the project using the Makefile and Docker Compose](build-and-launch-the-project-using-the-makefile-and-docker-compose)
-- [Use relevant commands to manage the containers and volumes](use-relevant-commands-to-manage-the-containers-and-volumes)
-- [Identify where the project data is stored and how it persist](identify-where-the-project-data-is-stored-and-how-it-persist)
+- [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
+- [Use relevant commands to manage the containers and volumes](#use-relevant-commands-to-manage-the-containers-and-volumes)
+- [Identify where the project data is stored and how it persist](#identify-where-the-project-data-is-stored-and-how-it-persist)
 
 -----------------------------------------------------
 
@@ -295,6 +295,7 @@ AÑADIR RESUMEN DE COSAS QUE HACE EL MAEFILE???
 
 | Command | What it does |
 |---------|--------------|
+| `make` | qué hace esto |
 | `make stop` | Stops the containers, sin eliminar ni los contenedores ni los volúemenes |
 | `make down` | Para y elimina los contenedores, redes y los volúmenes interos de docker-compose (los declarados dentro de docker-compose) (QUÉ VOLÚMENES SON ESTOS?), pero conserva los datos persistentes en las carpetas montadas en el host. Las imágenes no se eliminan. ¿QUÉ IMPLICA QUE NO SE ELIMINEN LAS IMÁGENES? ¿QUE SI SE HACEN CAMBIOS EN EL SETUP.SH DE LAS DIFERENTES APPS, NO SE VERÁN REFLEJADOS O ALGO ASÍ? |
 | `male clean` | Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas. |
@@ -313,9 +314,10 @@ Common commands:
          docker volume ls
          docker compose down
 
-CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS...
-ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE
-EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL '??
+⚠️  CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS... hacer una lista ordenada y coherente, con sentido.  
+ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE -> decir cuales...
+EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL '??  
+QUIZÁS DEBERIA DIFERENCIAR ENTRE COMANDOS DE DOCKER COMPOSE Y COMANDOS DE DOCKER A SECAS?  o igual los comandos de docker compose ya se han explicado en el apartado anterior de build and launch the project...??  
 
 ## Identify where the project data is stored and how it persist
 Persistent data locations:
@@ -329,7 +331,18 @@ Persistent data locations:
 Persistence behaviour:
 - `make down`: containers are removed, data remains
 - `make fclean`: container,s volumes, and data are deleted
-- `make clean`: ???
+- `make clean`: Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas.
+
+INSISTIR EN LA DIFERENCIA ENTRE FCLEAN Y CLEAN  
+
+
+
+⚠ AÑADIR:  
+- Dónde se guardan los usuarios
+- Dónde se guardan los logins
+- Dónde se guardan las creaciones de posts, las actualizaciones, los archivos que se han subido, etc
+- Dónde se guardan los posts
+- Si doy formato a la web, dónde se guarda eso? eso ya no sería un volumen persistente, no? sería algo que se tendría que ejecutar al runnear el wordpress, el servicio en sí, no?
 
 Uploaded files and WordPress content survive restarts as long as volumes are preserved.
 
