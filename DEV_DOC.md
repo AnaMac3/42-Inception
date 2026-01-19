@@ -15,7 +15,12 @@
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
 - [Use relevant commands to manage the containers and volumes](#use-relevant-commands-to-manage-the-containers-and-volumes)
-- [Identify where the project data is stored and how it persist](#identify-where-the-project-data-is-stored-and-how-it-persist)
+- [Project data storage and persistence](#project-data-storage-and-persistance)
+  - [Persistent data locations](#persistent-data-locations)
+  - [Volume mounting and container paths](#volume-mounting-and-container-paths)
+  - [Persistent behaviour (`make` rules)](#persisten-behaviour-make-rules)
+  - [WordPress-MariaDB data model](#wordpressmariadb-data-model)
+  - [Inspecting persistent data](#inspecting-persistent-data)
 
 -----------------------------------------------------
 
@@ -340,7 +345,7 @@ ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE -> decir cuales...
 EXPLICAR QUÉ HACE CADA UNO?? CREO QUE TENGO MÁS EXPLICACIONES EN README NORMAL '??  
 QUIZÁS DEBERIA DIFERENCIAR ENTRE COMANDOS DE DOCKER COMPOSE Y COMANDOS DE DOCKER A SECAS?  o igual los comandos de docker compose ya se han explicado en el apartado anterior de build and launch the project...??  
 
-## Identify where the project data is stored and how it persist
+## Project data storage and persistence
 ### Persistent data locations
 In this project, all persistent data is stored explicitly on the host machine (the VM) under: 
 
@@ -378,6 +383,7 @@ The persistent volumes are mounted as follows:
 ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 
 ### Persistent behaviour (`make` rules)
+⚠️ AÑADIR CÓDIGO DEL MAKEFILE PARA VER CÓMO ESTOY HACIENDO TODO ESTO ⚠️ ⚠️ 
 - `make down`:
   - Stops and removes containers
   - Persistent data remains: volumes under `/home/login/data/...` are untouched
@@ -398,35 +404,40 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 ⚠️ **Important distinction:**  
 `clean`preserves data, `fclean` deletes it entirely.
 
-### WordPress configuration: `wp-config.php`  
+### WordPress-MariaDB data model
+#### WordPress configuration: `wp-config.php`  
 
-`wp-config.php` is the central configuration file of WordPress. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script.  
-#### Location
+`wp-config.php` is the central configuration file that links WordPress with its database and define its runtime behaviour. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script and stored persistently in the wordpress volume.    
+##### Location
 
           /home/login/data/wordpress/wp-config.php 
-          
-#### What contains
+
+##### Role in the WordPress-MariaDB architecture
+`wp-config.php` does not store content itself, but it defines how WordPress accesses and interprets persistent data stored in MariaDB.  
+It contains:
 1. Database connection settings
-   This values allow WordPress to connect to the MariaDB container: `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`  
+   These values allow WordPress to connect to the MariaDB container over the Docker network:
+   - `DB_NAME`
+   - `DB_USER`
+   - `DB_PASSWORD`
+   - `DB_HOST`  
    WordPress connects to MariaDB via the Docker network, not via `localhost`.
-   > ⚠️ IMPORTANTE A LA HORA DE ACCEDER A LA DATABASE -> CON ROOT, NO CON LOGIN/USER
 
 2. Table prefix: `wp_`
-3. Security keys
+3. Security keys and salts
    Used for:
    - authentication
    - cookies
    - session security
-
-   These are generated automatically by `wp-cli`.
-4. Debug configuration (`WP_DEBUG`) 
+   These are generated automatically by `wp-cli` during setup.
+4. Debug configuration
    By default, `WP_DEBUG` is not enabled in this project.  
    If enabled, it would:
    - show PHP errors
    - show warnings and notices
    - help detect plugin or SQL errors  
    
-   **How it could be enabled (optional):** 
+   Optional configuration (not required for *Inception*):
    - In `setup.sh`, after `wp config create` block:
 
              wp config set WP_DEBUG true --allow-root
@@ -441,33 +452,80 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
            define('ABSPATH', __DIR__ . '/');
            require_once ABSPATH . 'wp-settings.php';
    
-   This boots the WordPress core.
+   This loads and initializes the WordPress core.
 
-### MariaDB access and databases
+#### Database overview
+All WordPress logical data is stored in a single MariaDB database (EL DIRECTORIO ES `HOME/DATA/LOGIN/MARIADB/DATABASE`, NO??, o es data/login/mariadb/`).  
+This includes users, roles, content, configuration and metadata.  
+The database itself is persistent through the MariaDB bind mount and is independent from container lifecycles.  
 
-#### Entering MariaDB
+#### Users and roles (data model)
+User accounts are stored in the `wp_users` table.  
+Each user entry contains basic identity information such as:
+- login name
+- email
+- hashed password
+Additional information such as roles and permissions is stored in the related table `wp_usermeta`.
+Roles are stored under the `wp_capabilities` meta key as PHP serialized data, for example:
 
+      a:1:{s:13:"administrator";b:1;}
+      a:1:{s:10:"subscriber";b:1;}
+
+#### Posts, pages, uploads and revisions
+All WordPress content is stored in `wp_posts` table.  
+This table includes:
+- blog posts
+- pages
+- uploaded files
+- revision history
+
+Content types are differentiated using the `post_type` column:
+- `post` -> blog post
+- `page` -> page
+- `revision` -> update history
+- `attachment` -> uploaded files (images, media)
+
+WordPress does not overwrite posts. Each update creates a new row with `post_type = revision`, preserving the edit history.  
+The `post_author` filed references `wp_users.ID`:  
+- A positive value corresponds to the user who created the content: `1` usually correspondos to the admin user
+- `0` indicates system-generated content
+
+#### Global WordPress configuration
+Global WordPress condiguration is stored in the `wp_options` table.  
+This table includes:
+- site URL
+- active theme
+- enabled plugins
+- internal WordPress settings
+
+### Inspecting persistent data
+How to verify and inspect the persistent data described above.  
+
+#### Accessing MariaDB
+      
       docker exec -it mariadb bash
       mysql -u root -p
 
 Root access is required for inspection.  
-> - In MariaDB, users are defined as 'user'@'host'.
-> - In this project (`setup.sh` of `mariadb\tools\`):
+MariaDB users are defined using the format:
 
->      CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+        'user'@'host'
 
->  - `%` is a wildcard meaning "any host on the network"
->  - This allows WordPress (in another container) to connect
->  - However, `%` does not include `localhost`
->  - When running `mysql -u login -p`, MariaDB tries `login@localhost`, and that user does not exist
->  - Therefore, WordPress connects via Docker networking -> works
->  - Manual inspection should be done as `root`
+In this project, the WordPress database user is created as:
+
+      CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+
+- `%` is a wildcard meaning "any host on the network"
+- This allows WordPress (running in another container) to connect
+- However, `%` does not include `localhost`
+- When running `mysql -u login -p`, MariaDB attempts `login@localhost`, which does not exists
+- Therefore, WordPress connects successfully via Docker networking, while manual inspection must be done as `root`.
 
 #### Listing databases
 
       SHOW DATABASES;
 
-Databases:
+Typicall databases present:
 - `mysql` -> system database
 - `information_schema`
 - `performance_schema`
@@ -475,18 +533,16 @@ Databases:
 - `test`
 - `database`-> WordPress database
 
-### Some SQL keywords
+#### SQL inspection keywords
+| Keyword | Purpose |
+|---------|---------|
+| SHOW | List databases or tables |
+| USE | Select a database |
+| DESCRIBE | Show table structure |
+| SELECT | Query table contents |
+| FROM | Specify source table |
 
-| Keyword | Description |
-|---------|-------------|
-| DESCRIBE | |
-| SELECT | |
-| FROM | |
-| SHOW | |
-| USE | |
-
-
-### WordPress database tables
+#### Inspecting WordPress tables
 After selecting the WordPress database:
 
       USE database;
@@ -501,11 +557,33 @@ Main tables:
 - `wp_options` -> global configuration
 - `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`
 
-#### Users 
-Stored in `wp_users`.  
-Example:
+Example inspections:
 
-        SELECT ID, user_login, user_email FROM wp_users;
+- PARA VER USUARIOS
+
+      DESCRIBE wp_users;
+      SELECT ID, user_login, user_email FROM wp_users;
+
+- PARA VER PERMISOS/roles
+
+      SELECT user_id, meta_key, meta_value
+      FROM wp_usermeta
+      WHERE meta_key LIKE '%capabilities%';
+
+
+> How to change permissions from the WordPress contaniner:
+
+>      wp user set-role user1 author --allow-root
+
+> This updates:
+>  - `wp_capabilities`
+>  - `wp_user_level`
+
+
+- PARA VER POSTS
+
+      SELECT ID, post_title, post_type, post_status
+      FROM wp_posts;
 
 #### Logs
 WordPress does not store logs in MariaDB by default.  
@@ -513,70 +591,12 @@ Existing logs:
 - PHP-FPM logs -> inside WordPress container (not persistent)
 - MariaDB logs -> `/var/log/mysql` (not persistent)
 ⚠️ COMPROBAR ESTO!!! VER DONDE SE GUARDA
-Persistent logging would require explicit configuration, which is not required for Inception ❌❌ CREO QUE NO HACE FATLA HACER ESTO
+Persistent logging would require explicit configuration, which is not required for *Inception*. ❌❌ CREO QUE NO HACE FATLA HACER ESTO
 
-#### Roles and permissions
-Stored in `wp_usermeta`.  
-Key: `wp_capabilities`.
-Example:
 
-        SELECT user_id, meta_key, meta_value
-        FROM wp_usermeta
-        WHERE meta_key LIKE '%capabilities%';
 
-Values are PHP serialized data, e.g.:
 
-      a:1:{s:13:"administrator";b:1;}
-      a:1:{s:10:"subscriber";b:1;}
 
-#### Posts, pages, uploads and revisions
-All content is stored in `wp_posts`.  
-Example:
-
-      SELECT ID, post_title, post_type, post_status
-      FROM wp_posts;
-
-Important `post_type` values:
-- `post` -> blog post
- - `page` -> page
- - `revision` -> update history
- - `attachment` -> uploaded files (images, etc.)
-
-WordPress does not overwrite posts. Each update creates a new row with `post_type = revision`.  
-`post_author`:  
-- References `wp_users.ID`
-- `1` usually correspondos to the admin user
-- `2` would be a normal user ⚠️⚠️⚠️ EXPRESAR ESTO BIEN, NORMAL USER ES POCO ESPECIFICO
-- `0` means system-generated content
-
-#### Permissions
-PRIMERO EXPLCIAR LOS ROLES QUE EXISTEN EN WORDPRESS!! 
-⚠️ FALTAN MAS ROLES??  
-- `subscriber`:
-- `contributor`: write, not publish
-- `author`: write and publish
-- `editor`: edit other's posts
-
-Roles can be changed:
-- From WordPress admin panel
-  - Users -> user1 -> change role (COMPROBAR CÓMO SE HACE ESTO!)
-- From the WordPress container
-
-        wp user set-role user1 author --allow-root
-
-This updates:
-- `wp_capabilities`
-- `wp_user_level`
-⚠️ COMPROBAR TB ESTO!
-    
-
-#### Global WordPress configuration
-Stored in `wp_options`.  
-Includes:
-- site URL
-- active theme
-- enabled plugins
-- internal WordPress settings
 
 
 
