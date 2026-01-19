@@ -1,11 +1,10 @@
 # 42-Inception - Developer Documentation
 
-⚠️ CÓMO TIENE QUE SER: contiene lo técnico pesado. Indicar cómo está construido, cómo se despliega y cómo se mantiene.
+This document describes the technical architecture of the *Inception* project. It focuses on how the system is built, deployed, configured, persisted and inspected, and is intended for developers and evaluators.  
 
 ## Table of Contents
 - [Set up the environment from scratch](set-up-the-environment-from-scratch)
   - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian)
-  - [Creating the Virtual Machine](#creating-the-virtual-machine)
   - [Installing Debian inside the VM](#installing-debian-inside-the-vm)
   - [Basic VM management](#basic-vm-management)
   - [Installing Docker, Docker Compose and build tools](#installing-docker-docker-compose-and-build-tools)
@@ -14,12 +13,12 @@
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
-- [Use relevant commands to manage the containers and volumes](#use-relevant-commands-to-manage-the-containers-and-volumes)
-- [Project data storage and persistence](#project-data-storage-and-persistance)
+- [Relevant commands to manage the containers and volumes](#relevant-commands-to-manage-the-containers-and-volumes)
+- [Project data storage and persistence](#project-data-storage-and-persistence)
   - [Persistent data locations](#persistent-data-locations)
   - [Volume mounting and container paths](#volume-mounting-and-container-paths)
-  - [Persistent behaviour (`make` rules)](#persisten-behaviour-make-rules)
-  - [WordPress-MariaDB data model](#wordpressmariadb-data-model)
+  - [Persistent behaviour (`make` rules)](#persistent-behaviour-make-rules)
+  - [WordPress-MariaDB data model](#wordpress-mariadb-data-model)
   - [Inspecting persistent data](#inspecting-persistent-data)
 
 -----------------------------------------------------
@@ -27,7 +26,7 @@
 ## Set up the environment from scratch
 
 This sections explains how to prepare a complete development environmet to run the *Inception* project from scratch.  
-The stack is deployed inside a **Debian Virtual Machine** using **Docker and Docker Compose**, with persistent volumes stored on the host filesystem.  
+The stack is deployed inside a **Debian Virtual Machine** using **Docker and Docker Compose**, with persistent volumes stored on the VM filesystem.  
 The setup includes:
 - VirtualBox virtual machine
 - Debian installation
@@ -37,61 +36,52 @@ The setup includes:
 - Persistent volumes
 - Environment variables (`.env`)
 - Domain configuration and SSH tunneling
-- Platform-specific notes (Windows / WSL / 42 iMacs -> TENER EN CUENTA QUE EN 42 SÍ, SON IMACS, PERO USAMOS LINUX!!)
 
 ### Virtual Machine setup (VirtualBox + Debian)
 #### Virtualization tool
 The project is developed inside a virtual machine created with [Oracle VirtualBox](https://www.softonic.com/descargar/virtualbox/windows/post-descarga?dt=internalDownload)
 
-> ⚠️ On 42 computers, the VM disk is usually stored in `sgoinfree` to avoid quota issues ⚠️COMPROBAR QUÉ SIGNIFICA ESTO EXACTAMENTE
+> ⚠️ On 42 computers, the VM disk is usually stored in `sgoinfree` to avoid quota issues
 
 #### Debian ISO
 A [Debian GNU/Linux ISO](https://www.debian.org/download.es.html) is used to install the operating system inside the VM.
 
-Clarification:
-- The Debian OS installed in the VM is **independent** from the Debian/Alpine images used inside Docker containers.
-- The ISO is only used to install the host operating system of the VM.
+> **Clarification:**
+> - The Debian OS installed in the VM is **independent** from the Debian images used inside Docker containers.
+> - The ISO is only used to install the host operating system of the VM.
 
-> La **ISO Debian** es un archivo de imagen de disco que contiene todo el sistema de instalación del sistema operativo **Debian GNU/Linux**. Una ISO es un archivo que representa el contenido de un CD/DVD; en lugar de grabarlo en un disco físico, se puede montar en una VM como si fuera un disco real.
-  
->   - ¿Qué hace la ISO en la VM?
-     - Arranca la VD desde la ISO, igual que si arrancaras un PC desde un DVD
-     - Inicia el instalador de Debian, que te guía para instalar el SO dentro del disco virtual de la VM
-     - Permite particionarl el disco virtual, seleccionar el entorno de escritorio, instalar paquetes básicos, configurar red, usuarios, etc
+The Debian ISO is a disk image containing the full Debian installer. When mounted in VirtualBox, it behaves like a physical installation disk.  
 
-### Creating the Virtual Machine
+
+#### Creating the Virtual Machine
 In VirtualBox -> `New`:
 - Name: inception
-- Folder: sgoinfree (??)
-- ISO Image: --
+- Folder: sgoinfree (on 42 computers)
 - OS: Linux
 - OS Distribution: Debian
 - OS Version: Debian (64-bit)
-- RAM: minimum 2048 MB, recommended 4096 MB
+- RAM: minimum 2048 MB (recommended 4096 MB)
 - Number of CPU: 2
-
-> Using 2 CPUs is a reasonable compromise: enough for Docker without overloading the host.
 
 **VM settings before installation**:  
 System -> Motherboard
 - Boot order: Optiocal first (to boot from ISO)
-- Chipset: default  
+- Chipset: default
+ 
 System->Processor  
 - CPUs: 2 (or more if available)
-- Enable PAE/NX
-  - This allows access to extended CPU features and is recommended for modern Linux kernels.  
+- Enable PAE/NX  
+
 Display
-- Video memory: 16-64 MB (no critical, no GUI required)
+- Video memory: 16-64 MB (no critical, no GUI required)  
+
 Storage
 - Attach the Debian ISO as an optical disk
-- The virtual hard disk (`.vdi`) is used for the system installation
-
-      > Controlador: SATA, hacer click en el icono del CD y selecciona **elegir un archivo de disco óptico virtual** y apunta a la ISO de Debian que necesitas descargar. Tengo que tener el .vdi como Hard Diskj y el debian como optical disk
+- Use a virtual hard disk (`.vdi`) for the system installation  
 
 Network
 - Adapter 1: Bridged Adapter
-  - This allows the VM to obtain an IP address on the local network
-  - Required to access the VM via SSH from the host
+  This allows the VM to obtain an IP address on the local network and enables SSH access from the host.
 
 ### Installing Debian inside the VM
 Start the VM and follow the Debian installer:
@@ -99,12 +89,12 @@ Start the VM and follow the Debian installer:
 - Partitioning: *Guided - use entire disk*
 - Hostname: `debian-inception` (example)
 - Domain name: can be left empty or set to `<login>.42.fr`
-- Root password: set a secure password //blablapassword
+- Root password: secure password //blablapassword
 - User:
   - Username: 42 login
   - Password: user password //passuser
 - Software selection:
-  - Do not install GNOME or any graphical desktop (optional - YO NO LO INSTALO PORQUE ME LIA... PERO CREO QUE NO ESTÁ PROHIBIDO)
+  - Installing a graphical desktop is optional (GNOME)
   - Install SSH server
 
 After instalation, reboot the VM.
@@ -119,17 +109,15 @@ After instalation, reboot the VM.
 | Switch to root | `su -` |
 | Return to user | `su - <login> |
 
-> Using `sudo` is recommended, but switching to root is also acceptable for this project. ¿??¿¿?¿
+⚠️ AÑADIR MÁS COSAS ÚTILES!!
+
+Using `sudo` is recommended, but switching to root is also acceptable for this project.  ⚠️ ES NECESARIO DECIR ESTO?? QUÉ IMPLICA?
 
 ### Installing Docker, Docker Compose and build tools
 Inside the Debian VM:
 
     sudo apt update
-    sudo apt install -y docker.io docker-compose
-
-Install also other essentials such as make, gcc...
-
-    sudo apt install build-essential
+    sudo apt install -y docker.io docker-compose build-essential
 
 Enable Docker and add the user to the docker group:
 
@@ -143,7 +131,7 @@ Log out and log back in (or reboot), then verify:
     groups <login>
 
 ### Shared folders between host and VM
-Shared folders allow editing files on the host while running them inside the VM. YO LO HE HECHO SOBRE TODO PORQUE EL REPO DE GITHUB NO LO PUEDO CREAR EN LA VM... NO? SE ME CREA EN LOCAL... O NO ESTOY SEGURA...
+Shared folders allow editing files on the host while running them inside the VM.  
 
 Steps:  
 - VM Settings -> Shared Folders
@@ -151,75 +139,70 @@ Steps:
 - Mount point: `/home/<login>/inception´
 - Enable auto-mount and make permanent
 
-Inside the VM:
+- Inside the VM:
 
       sudo mkdir -p /home/<login>/inception
       sudo mount -t vboxsf -o uid=$(id -u),gid=$(id -g) inception /home/<login>/inception
 
-Add user to `vboxsf` group:
+- Add user to `vboxsf` group:
 
     sudo usermod -aG vboxsf $USER
 
-Guest Additions must be installed for shared folders to work correctly:
-En la ventana de la VM -> menú superior -> Devices -> Insert Guest Aditions CD image
-      - En terminal de la VM:
+- Guest Additions must be installed for shared folders to work correctly:
+  - In the VM window -> Devices -> Insert Guest Aditions CD image
+  - In the VM shell:
 
               sudo apt update
               sudo apt install -y build-essential dkms linux-headers-$(uname -r)
     
-      - Montar el disco:
+  - Mount the disk:
    
               sudo mkdir -p /mnt/cdrom
               sudo mount /dev/cdrom /mnt/cdrom
 
-      - Comprobar:
+  - Check:
    
             ls /mnt/cdrom
 
-        Debería estar `VBoxLinuxAdditons.run`
+    It must appear: `VBoxLinuxAdditons.run`
 
-
-      - Ejecutar el instalador
+  - Run the installer:
    
             sudo /mnt/cdrom/VBoxLinuxAdditions.run
 
-      - Reiniciar VM
+  - Reboot the VM:
    
               sudo reboot
 
-      - Comprobación tras reiniciar:
+  - Check after reboot:
    
             lsmod | gep vbox
 
-        Si aparece `vbpxsf` las shared folders deberían funcionar.
--
+    If `vbpxsf` appears, the shared folders must work. 
 
 ### Persistent volumes
 Persistent data is stored on the VM filesystem and mounted into containers.
 
+       # Create the directories
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
 
-       #Ajustar permisos para que Docker pueda escribir
+       #Adjust the permissions so that Docker can write
        sudo chown -R <login>:<login> /home/<login>/data
 
-These directories are later mounted as Docker volumes  
-FALTA EXPLICAR PERMISOS Y MONTAJE! AQUÍ SOLO DIGO QUE SE CREAN LOS DIRECTORIOS Y QUÉ SIGNIFICAN ESTOS PERMISOS?? NO FALTA ALGO PARA INDICAR QUE SON PERSISTENTES?? SU PERSISTENCIA DEPENDE DE QUE NO SE BORREN EN EL MAKEFILE, NO? DEPENDE DE QUE HACER DOCKER COMPOSE DOWN BORRA LOS CONTAINERS PERO NO ESTOS VOLÚEMENS... DEBERÍA EXPLICAR ESO AQUÍ? MÁS ADELANTE HAY UN APARTADO QUE ES IDENTIFY WHERE THE PROJECT DATA IS STORED AND HOW IT PERSIST... NO DEBERIA IR TOOD JUNTO?
+These directories are later mounted as Docker bind mounts and store all persistent project data.    
 
 ### Environment variables (`.env` file)
-The `.env` file defines all configuration valeus used by Docker Compose and the containers.  
+The `.env` file defines all configuration values used by Docker Compose and the containers.  
 - It contains no executable code
 - It must NOT be committed to version control
 - It avoids hardcoding secrets in configuration files
+- It must be located in `./srcs` 
 
-Indicar que este arhcivo .env tiene que estar en el directorio ./srcs.  
+Example structure: ⚠️ EXPLICAR QUÉ HACE CADA COSA, QUÉ ES CADA COSA...
 
-My example:
-
-      #Dominio que usará NGINX para TLS y wordpress (explicar ...)
       DOMAIN_NAME=amacarul.42.fr
 
-      #Explicar cada cosa!
       MYSQL_HOSTNAME=mariadb
       MYSQL_DATABASE=database
       MYSQL_USER=amacarul
@@ -230,20 +213,17 @@ My example:
       WORDPRESS_TITLE=amacarulsWebsite
       WORDPRESS_ADMIN_USER=boss
       WORDPRESS_ADMIN_PASSWORD=***
-      WORDPRESS_ADMIN_EMAIL=boss@inception.fr #llego a usar el mail? para qué lo necesito?
+      WORDPRESS_ADMIN_EMAIL=boss@inception.fr 
       WORDPRESS_USER=user1
       WORDPRESS_USER_EMAIL=user1@inception.fr
       WORDPRESS_USER_PASSWORD=***
 
-¿Por qué se usa `.env` en Inception?  
-- Porque no hay qu hardcodear contraseñas
-- La configuración tiene que ser dinámica
-- Para poder cambiar valores sin tocar el código.
-
-> Note: Docker secrets would be more secure, but environment variables are acceptable for Inception. ???? TENGO QUE AÑADIR SECRETS !!!
+Environment variables are used to configure containers dynamically without modifying source files.  
+⚠️ QUIZÁS DEBA DE USAR SECRETS TB!!! PARA LAS CONTRASEÑAS, NO??
 
 ### Domain configuration and SSH tunneling
-`/etc/hosts`  
+⚠️ PARA PODER ACCEDER DESDE LE NAVEGADOR DEL HOST A HTTPS://LOGIN.42.FR 
+#### `/etc/hosts`  
 Inside the VM:
 
       sudo nano /etc/hosts
@@ -257,12 +237,11 @@ Verify with:
 
        ping <login>.42.fr
 
-Si responde desde 127.0.0.1, está bien configurado.
+If it responds from 127.0.0.1, it is well configurated.  
 
 #### SSH tunneling (VM -> host browser)
 Because the services run inside a VM, HTTPS traffic must be forwarded to the host browser.   
 ##### Windows / WSL
-⚠️ PARA PODER ACCEDER DESDE EL NAVEGADOR PONIENDO HTTPS://LOGIN.42.FR::
 
   - Pulsar tecla Windows y escribir block de notas
   - Click dcho, seleccionar Ejecutar como admin
@@ -273,7 +252,7 @@ Because the services run inside a VM, HTTPS traffic must be forwarded to the hos
   - Añadir al final del archivo la línea: 127.0.0.1 amacarul.42.fr
   - Guardar y cerrar
 
-En terminal de windows / wsl:
+In the shell:
 
       ssh -L 443:localhost:443 <login>@<IP_VM>
 
@@ -284,7 +263,7 @@ Access:
     https://<login>.42.fr
 
 
-##### 42 iMacs (no sudo) ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ 
+##### 42 iMacs (no sudo) ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ -> HAY QUE HACER K TB SE PUEDA ACCEDER A HTTPS://LOGIN.42.FR DESDE EL NAVEGADOR
 Port 443 cannot be used locally:
 
       ssh -L 8443:localhost:443 <login>@<VM_IP>
@@ -296,6 +275,12 @@ Access:
 ⚠️ SOCKS proxy alternative is still under investigation!! AVERIGUAR ESTO!!!
 
 ## Build and launch the project using the Makefile and Docker Compose
+The Makefile orchestrates Docker Compose commands to simplify stack management.  
+Ir provides a single interface to:
+- build images
+- start containers
+- stop containers
+- clean resources
 
 Although no source code is compiled, `make` orchestrates the build of the Docker images and the deployment of the stack.
 What `make` does is:
@@ -303,19 +288,18 @@ What `make` does is:
       docker compose build
       docker compose up -d
 
-The Makefile provides a simplified interface to manage the lifecycle of the stack without typing logn Docker commands.  
-AÑADIR RESUMEN DE COSAS QUE HACE EL MAEFILE???
+⚠️ PONER BIEN ESTA EXPLICACIÓN...
 
 | Command | What it does |
 |---------|--------------|
-| `make` | qué hace esto |
+| `make` | builds docker images and the deployment of the stack - it does `docker compose build` and `docker compose up -d` |
 | `make stop` | Stops the containers, sin eliminar ni los contenedores ni los volúemenes |
 | `make down` | Para y elimina los contenedores, redes y los volúmenes interos de docker-compose (los declarados dentro de docker-compose) (QUÉ VOLÚMENES SON ESTOS?), pero conserva los datos persistentes en las carpetas montadas en el host. Las imágenes no se eliminan. ¿QUÉ IMPLICA QUE NO SE ELIMINEN LAS IMÁGENES? ¿QUE SI SE HACEN CAMBIOS EN EL SETUP.SH DE LAS DIFERENTES APPS, NO SE VERÁN REFLEJADOS O ALGO ASÍ? |
 | `male clean` | Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas. |
 | `make fclean` | Hace `clean` y borra completamente los datos persistentes en `/home/<login>/data/...` y hace un `docker system prine -a --force`: ⚠️ esto resetea completamente el proyecto. |
 
-## Use relevant commands to manage the containers and volumes
-
+## Relevant commands to manage the containers and volumes
+⚠️⚠️⚠️
 Common commands:
 
          docker ps
@@ -335,7 +319,7 @@ Common commands:
 
 - Conectarte a MariaDB
 
-          mysql -u <login> -p database
+          mysql -u root -p database
 
       PARA QUÉ SE HACE ESTO? PARA ENTRAR A LA BASE REAL DE WORDPRESS
           
@@ -347,7 +331,7 @@ QUIZÁS DEBERIA DIFERENCIAR ENTRE COMANDOS DE DOCKER COMPOSE Y COMANDOS DE DOCKE
 
 ## Project data storage and persistence
 ### Persistent data locations
-In this project, all persistent data is stored explicitly on the host machine (the VM) under: 
+All persistent data is stored explicitly on the VM filesystem: 
 
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
@@ -374,11 +358,12 @@ The persistent volumes are mounted as follows:
 - Host path: `/home/login/data/wordpress`
 - Container path: `/var/www/html`
 - This directory contains:
-  - The WordPress core files
+  - WordPress core
   - `wp-config.php`
   - Themes and plugins
-  - Uploaded files (`wp-content/uploads`)
+  - Uploads
   This ensures WordPress content and configuration persist across restarts.
+
 ⚠️ COMPROBAR TODOS ESTOS ARCHIVOS... REPASAR  
 ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 
@@ -406,7 +391,6 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 
 ### WordPress-MariaDB data model
 #### WordPress configuration: `wp-config.php`  
-
 `wp-config.php` is the central configuration file that links WordPress with its database and define its runtime behaviour. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script and stored persistently in the wordpress volume.    
 ##### Location
 
@@ -455,9 +439,7 @@ It contains:
    This loads and initializes the WordPress core.
 
 #### Database overview
-All WordPress logical data is stored in a single MariaDB database (EL DIRECTORIO ES `HOME/DATA/LOGIN/MARIADB/DATABASE`, NO??, o es data/login/mariadb/`).  
-This includes users, roles, content, configuration and metadata.  
-The database itself is persistent through the MariaDB bind mount and is independent from container lifecycles.  
+All WordPress logical data is stored in a single MariaDB database, which persists independently from container lifecycles. This includes users, roles, content, configuration and metadata.  
 
 #### Users and roles (data model)
 User accounts are stored in the `wp_users` table.  
@@ -521,9 +503,11 @@ In this project, the WordPress database user is created as:
 - When running `mysql -u login -p`, MariaDB attempts `login@localhost`, which does not exists
 - Therefore, WordPress connects successfully via Docker networking, while manual inspection must be done as `root`.
 
-#### Listing databases
+#### Inspecting databases and tables
 
       SHOW DATABASES;
+      USE database;
+      SHOW TABLES;
 
 Typicall databases present:
 - `mysql` -> system database
@@ -533,22 +517,7 @@ Typicall databases present:
 - `test`
 - `database`-> WordPress database
 
-#### SQL inspection keywords
-| Keyword | Purpose |
-|---------|---------|
-| SHOW | List databases or tables |
-| USE | Select a database |
-| DESCRIBE | Show table structure |
-| SELECT | Query table contents |
-| FROM | Specify source table |
-
-#### Inspecting WordPress tables
-After selecting the WordPress database:
-
-      USE database;
-      SHOW TABLES;
-
-Main tables:
+Main wordPress tables:
 - `wp_users` -> users
 - `wp_usermeta` -> roles and permissions
 - `wp_posts`-> post, pages, revisions, attachments
@@ -584,6 +553,15 @@ Example inspections:
 
       SELECT ID, post_title, post_type, post_status
       FROM wp_posts;
+
+#### SQL inspection keywords
+| Keyword | Purpose |
+|---------|---------|
+| SHOW | List databases or tables |
+| USE | Select a database |
+| DESCRIBE | Show table structure |
+| SELECT | Query table contents |
+| FROM | Specify source table |
 
 #### Logs
 WordPress does not store logs in MariaDB by default.  
