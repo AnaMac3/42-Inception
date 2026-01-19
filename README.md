@@ -1072,6 +1072,6 @@ COSAS A PROBAR:
 [Grademe tutorial](https://tuto.grademe.fr/inception/)  
 [dockerdocs](https://docs.docker.com/)  
 [dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
-[Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html) 
+[Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)   
 [Comandos de docker](https://kinsta.com/es/blog/comandos-docker/)  
 [Palabras clave de Dockerfile](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)
