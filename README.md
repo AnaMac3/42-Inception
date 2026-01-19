@@ -1080,3 +1080,4 @@ COSAS A PROBAR:
 [Docker commands](https://kinsta.com/es/blog/comandos-docker/)  
 [Dockerfile keywords](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)  
 [SQL keywords](https://www.w3schools.com/sql/sql_ref_keywords.asp)  
+[WordPress documentation](https://wordpress.org/documentation/)  
