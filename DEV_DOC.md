@@ -464,8 +464,19 @@ TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
   - `attachment`: imágenes
   - 
   Más cosas de wp_post:
-  - post_author: corresponde al wp_users.ID, referencia al ID del usuario en `wp_users` (suele ser 1 para el administrador, 2 para mi user; el valor 0 indica contenido no asociado a un usuario - elementos generados por el sistema). Me aparecen post_author = 1 porque creo que mi user1 es solo un subscriber, no genera posts.
-  - DEBERIA CAMBIARLE LOS PERMISOS AL USER1? ❌
+  - post_author: corresponde al wp_users.ID, referencia al ID del usuario en `wp_users` (suele ser 1 para el administrador, 2 para mi user; el valor 0 indica contenido no asociado a un usuario - elementos generados por el sistema). Me aparecen post_author = 1 porque creo que mi user1 es solo un subscriber, no genera posts (configurado así en el setup.sh de wordpress)
+  - DEBERIA CAMBIARLE LOS PERMISOS AL USER1? Cómo cambiar los permisos del user1:
+    - Desde el panel de admin, en WordPress: usuarios -> user1 -> cambiar rol
+      - esta información se ve actualziada en `wp_usermeta`->meta_value
+    - Desde el contenedor WordPress:
+
+            wp user set-role user1 author --allow-root
+
+      Esto cambia wp_capabilities y wp_user_level
+      Roles:
+      - contributor: puede escribir, no publicar
+      - author: puede escribir y publicar
+      - editor: puede editar posts de otros
  
   > Actualizaciones de posts: Wordpress no sobrescribe, crea una nueva fila con `post_type = revision`.
 
