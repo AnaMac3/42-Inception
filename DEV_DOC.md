@@ -317,10 +317,23 @@ Common commands:
          docker logs nginx
          docker logs wordpress
          docker logs mariadb
-         docker exec -it mariadb bash
-         docker exec -it wordpress bash
+         
          docker volume ls
          docker compose down
+
+- Entrar a un contenedor:
+
+        docker exec -it mariadb bash
+        docker exec -it wordpress bash
+
+  EXPLICAR PARA QUÉ SE HACE ESTO... UNA VEZ CONECTADO PUEDES HACER QUÉ MÁS COSAS?
+
+- Conectarte a MariaDB
+
+          mysql -u <login> -p database
+
+      PARA QUÉ SE HACE ESTO? PARA ENTRAR A LA BASE REAL DE WORDPRESS
+          
 
 ⚠️  CREO QUE HABRIA QUE EXPLICAR MÁS COMANDOS... hacer una lista ordenada y coherente, con sentido.  
 ALGUNOS DE ESTOS ESTÁN RECOGIDOS DIRECTAMENTE EN EL MAKEFILE -> decir cuales...
@@ -340,17 +353,101 @@ Persistence behaviour:
 - `make down`: containers are removed, data remains
 - `make fclean`: container,s volumes, and data are deleted
 - `make clean`: Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas.
-
+  
 INSISTIR EN LA DIFERENCIA ENTRE FCLEAN Y CLEAN  
+
+
+⚠️ NO SÉ SI ESTO ESTÁ BIEN EXPRESADO:  
+Los volúmenes persistentes de mariadb y wordpress están montados en `/var/lib/mysql` y `/var/www/html` respectivamente, lo cual se hace/establece en el `docker-compose.yml`.  
+- MariaDB
+  - Host: `/home/login/data/mariadb`
+  - Container: `/var/lib/mysql`
+  - Aquí está toda la base de datos real, persistente (usuarios, roles y permisos, posts, páginas, revisiones, comentarios, opciones del sitio...), todo lo importante a nivel lógico.
+- WordPress
+  - Host: `/home/login/data/wordpress`
+  - Container: `/var/www/html`
+  - Aquí están:
+    - Archivos de WordPress: LOS ARCHIVOS SUBIDOS?
+    - `wp-config.php`: QUÉ ES ESTO? Configuración -> guarda la infor del archivo .env (usuarios, contraseñas, nombres de databases... tb establece keys, para qué?, ⚠️ DEBERIA USAR WP_DEBUG EN MI DEVELOPMENT ENVIRONMENT?? PARA QUÉ? CÓMO USAR ESO??)
+    - uploads
+    - themes, plugins
+
+Cómo ver las databases de MariaDB: 
+
+        SHOW DATABASES;
+
+Databases que tengo:
+- mysql -> sistema
+- information_schema
+- performance_schema
+- database <- wordpress
+
+Conectarse a MariaDB:
+
+      docker exec -it mariadb bash
+      mysql -y amacarul -p database
+
 
 
 
 ⚠ AÑADIR:  
-- Dónde se guardan los usuarios
-- Dónde se guardan los logins
-- Dónde se guardan las creaciones de posts, las actualizaciones, los archivos que se han subido, etc
-- Dónde se guardan los posts
+TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
+- Dónde se guardan los usuarios -> `wp_users`
+
+        #DENTRO DE MARIADB O DE WORDPRESS??
+        # docker exec -it mariadb bash
+        # o docker exec -it wordpress bash??
+        SHOW TABLES;
+
+  Esto muestra algo como:
+
+          wp_users
+          wp_posts
+          wp_usermeta
+          wp_postmeta
+
+  Ver usuarios:
+
+        SELECT ID, user_login, user_email FROM wp_users;
+  
+- Dónde se guardan los logs: WordPress no guarda logs en MariaDB por defecto.
+  Los logs que existen, son:
+  - Logs de PHP-FPM: dentro del contenedor Wordpress, no persistentes si no los montas.
+  - Logs de MariaDB: normalmente se guarda en /var/log/mysql. No persistentes en tu volumne.
+  Para que wordpress guardara los logs habría que configurarlos explícitamente ❌❌ COMPROBAR SI HAY QUE HACER ESTO O QUÉ - REVISAR SUBJECT
+- Dónde se guardan las creaciones de posts, las actualizaciones, los archivos que se han subido, etc: `wp_posts`
+
+          SELECT ID, post_title, post_type, post_status
+          FROM wp_posts;
+
+  Important types:
+  - `post`: entrada
+  - `page`: página
+  - `revision`: historial de cambios
+  - `attachment`: imágenes
+ 
+  > Actualizaciones de posts: Wordpress no sobrescribe, crea una nueva fila con `post_type = revision`.
+
+
 - Si doy formato a la web, dónde se guarda eso? eso ya no sería un volumen persistente, no? sería algo que se tendría que ejecutar al runnear el wordpress, el servicio en sí, no?
+- Dónde se guardan los roles y permisos: `wp_usermeta` 
+
+      SELECT user_id, meta_key, meta_value
+      FROM wp_usermeta
+      WHERE meta_key LIK '%capabilities%'
+
+  Verás algo como:
+
+            a:1:{s:13:"administrator";b:1;}
+            a:1:{s:10:"subscriber";b:1;}
+
+Esto es PHP serialized data
+
+- Configuración global de WordPress: `wp_options`
+  - URL del sitio
+  - Tema activo
+  - Plugins
+  - Opciones internas
 
 Uploaded files and WordPress content survive restarts as long as volumes are preserved.
 
