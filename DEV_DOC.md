@@ -253,13 +253,6 @@ Si responde desde 127.0.0.1, está bien configurado.
 #### SSH tunneling (VM -> host browser)
 Because the services run inside a VM, HTTPS traffic must be forwarded to the host browser.   
 ##### Windows / WSL
-
-      ssh -L 443:localhost:443 <login>@<IP_VM>
-
-Access:
-
-    https://localhost
-
 ⚠️ PARA PODER ACCEDER DESDE EL NAVEGADOR PONIENDO HTTPS://LOGIN.42.FR::
 
   - Pulsar tecla Windows y escribir block de notas
@@ -271,7 +264,18 @@ Access:
   - Añadir al final del archivo la línea: 127.0.0.1 amacarul.42.fr
   - Guardar y cerrar
 
-##### 42 iMacs (no sudo)
+En terminal de windows / wsl:
+
+      ssh -L 443:localhost:443 <login>@<IP_VM>
+
+> Mientras esta ventana se mantenga abierta, el tunneling está activo (?)
+
+Access:
+
+    https://<login>.42.fr
+
+
+##### 42 iMacs (no sudo) ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ 
 Port 443 cannot be used locally:
 
       ssh -L 8443:localhost:443 <login>@<VM_IP>
