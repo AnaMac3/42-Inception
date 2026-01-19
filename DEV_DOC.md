@@ -207,31 +207,35 @@ The `.env` file defines all configuration valeus used by Docker Compose and the 
 - It must NOT be committed to version control
 - It avoids hardcoding secrets in configuration files
 
+Indicar que este arhcivo .env tiene que estar en el directorio ./srcs.  
+
 My example:
 
+      #Dominio que usará NGINX para TLS y wordpress (explicar ...)
       DOMAIN_NAME=amacarul.42.fr
 
+      #Explicar cada cosa!
       MYSQL_HOSTNAME=mariadb
       MYSQL_DATABASE=database
       MYSQL_USER=amacarul
-      MYSQL_PASSWORD=passusersql
+      MYSQL_PASSWORD=***
       MYSQL_ROOT_USER=root
-      MYSQL_ROOT_PASSWORD=blablapasswordsql
+      MYSQL_ROOT_PASSWORD=***
       
-      WORDPRESS_TITLE=myWebsite
+      WORDPRESS_TITLE=amacarulsWebsite
       WORDPRESS_ADMIN_USER=boss
-      WORDPRESS_ADMIN_PASSWORD=blablapasswordpress
-      WORDPRESS_ADMIN_EMAIL=boss@inception.fr
+      WORDPRESS_ADMIN_PASSWORD=***
+      WORDPRESS_ADMIN_EMAIL=boss@inception.fr #llego a usar el mail? para qué lo necesito?
       WORDPRESS_USER=user1
       WORDPRESS_USER_EMAIL=user1@inception.fr
-      WORDPRESS_USER_PASSWORD=passuserwordpress
+      WORDPRESS_USER_PASSWORD=***
 
 ¿Por qué se usa `.env` en Inception?  
 - Porque no hay qu hardcodear contraseñas
 - La configuración tiene que ser dinámica
 - Para poder cambiar valores sin tocar el código.
 
-> Note: Docker secrets would be more secure, but environment variables are acceptable for Inception. ???? QUIZÁS DEBA USAR LA OTRA OPCIÓN!
+> Note: Docker secrets would be more secure, but environment variables are acceptable for Inception. ???? TENGO QUE AÑADIR SECRETS !!!
 
 ### Domain configuration and SSH tunneling
 `/etc/hosts`  
