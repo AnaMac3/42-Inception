@@ -49,40 +49,67 @@ Acceso al panel del administrador:
 ⚠️ EXPLICAR QUÉ SE PUEDE HACER EN EL PANEL DEL ADMINISTRADOR
 
 ## Locate and manage credentials
+This section explains where the WordPress credentials are defined, how they are used to access the website, and how users and roles can be managed from the WordPress administration interface.  
 
-EXPLICAR:
-- Las credenciales están definidas en el archivo `.env`
-- Admin WordPress (SE TRATA DE EXPLICAR QUÉ PERMISOS HE DADO A CADA CATEGORÍA??)
-- Usuario WordPress
-- Base de datos (sin entrar en SQL)
+### WordPress access credentials
+The initial WordPress credentials are defined at deployment time via environment variables in the `.env` file.  
+The following credentials are created automatically when the stack is deployed:  
 
-No explicar comandos SQL aquí
-ME FALTA AVERIGUAR CÓMO FUNCIONA ESTO BIEN...
+         WORDPRESS_ADMIN_USER
+         WORDPRESS_ADMIN_PASSWORD
+         
+         WORDPRESS_USER
+         WORDPRESS_USER_PASSWORD
 
-⚠️ SE SUPONE QUE LO QUE SE PIDE EN ESTE APARTADO ES: ¿DÓNDE ENCUENTRA UN USUARIO/ADMIN LAS CREDENCIALES Y CÓMO LAS USA? 
+These credentials are used to access the WordPress website and the administration panel.  
+- Administrator credentials:
+  - Used to access the WordPress admin dashboard at `/wp-admin`
+  - Full control over the website
+- Standard user credentials
+  - Used to log in as a non-administrator user
+  - Limited permissions depending on the assigned role
 
-En Inception las credenciales existen en dos niveles:
-1. Credenciales de WordPress (usuario final y administrador): estas sí son las relevantes para el USER_DOC:
-Están definidas en el `.env`:
+Once WordPress is installed, these users are stored internally by WordPress and persist accross container restarts.  
 
-               WORDPRESS_ADMIN_USER
-               WORDPRESS_ADMIN_PASSWORD
-               WORDPRESS_USER
-               WORDPRESS_USER_PASSWORD
+### Administrator and user roles
+WordPress uses a role-based permission system.  
+Each user account is assigned exactly one role, which defines what actions the user is allowed to perform.  
+The default WordPress roles are:
+- Administrator: has access to all the administration features withinn a single site.
+- Editor: can publish and manage postst including the postst of other users.
+- Author: can publish and manage their own posts.
+- Contributor: can write and manage their own posts but cannot publish them.
+- Subscriber: can only manage their profile.
 
-Las credenciales iniciales de WordPress se definen durante el despliegue.  
-Existen dos tipos de cuentas:
-- Administrador (acceso a `/wp-admin`)
-- Usuario estándar
+In this project, WordPress is initially deployed with:
+- one administrator account
+- one standard user account with limited permissions
 
-El administrador puede:
-- Crear, editar y borrar contenido
-- Subir archivos
-- Gestionar usuarios desde el panel de WordPress
-  ⚠️ COMPROBAR CÓMO SE HACENE STAS COSAS Y DÓNDE SE VEN ESOS PERMISOS
+### Managing users from the admin panel
+User and role maangement is done directly from the WordPress administration interface.  
+To manage users:
+1. Log in as administrator at:
 
-2. Credenciales de base de datos (NO EXPLICAR EN USER_DOC!!!, ESTO VA EN DEVELOPER DOC)
-Database credentials are handled internally by the stack and are not required for normal usage.
+            https://<login>.42.fr/wp-admin
+
+2. Navigate to:
+
+         Users -> All Users
+
+3. Select a user
+4. Change the assigned role using the Role dropdown
+5. Save changes
+
+Role changes take effect immediately and define what actions the user can perform on the website.  
+
+### Database credentials (internal)
+Database credentials are handled internally by the Docker stack and are not required for normal usage of the website.  
+They are:
+- defined in the `.env` file
+- used automatically by WordPress to connect to MariaDB
+- never required to be entered manually by users or administrators
+For these reasons, database credentials are documented in the Developer Documentation, not in this user guide.  
+CREO QUE ESTO SOBRA...
 
 ## Check that services are running correctly
 1. Acceso a la web:
