@@ -351,7 +351,7 @@ Persistent data locations:
 
 Persistence behaviour:
 - `make down`: containers are removed, data remains
-- `make fclean`: container,s volumes, and data are deleted
+- `make fclean`: containers, volumes, and data are deleted
 - `make clean`: Para y elimina contenedores, redes y volúmenes interos de Docker, pero no borra los volúemenes que datos que creamos en `/home/<login>/data/...`. También elimina las imágenes generadas.
   
 INSISTIR EN LA DIFERENCIA ENTRE FCLEAN Y CLEAN  
@@ -368,12 +368,31 @@ Los volúmenes persistentes de mariadb y wordpress están montados en `/var/lib/
   - Container: `/var/www/html`
   - Aquí están:
     - Archivos de WordPress: LOS ARCHIVOS SUBIDOS?
-    - `wp-config.php`: QUÉ ES ESTO? Configuración -> guarda la infor del archivo .env (usuarios, contraseñas, nombres de databases... tb establece keys, para qué?, ⚠️ DEBERIA USAR WP_DEBUG EN MI DEVELOPMENT ENVIRONMENT?? PARA QUÉ? CÓMO USAR ESO??)
+    - `wp-config.php`: Archivo de configuración central de Wordpress, que define cómo se conecta a la base de datos, su seguridad, su modo de ejecución y que arranca el core. Contiene:
+      - datos de conexión a la base de datos (DB_NAME, DB_USER, DB_PASSWORD, DB_HOST), que conectan WordPress al contenedor mariadb
+      - prefijo de tablas (wp_)
+      - claves de seguridad (las genera wp-cli automáticamente)
+      - configuración de depuración (WP_DEBUG) -> si lo pusiera en TRUE -> mostraria los errores PHP, los warnings... deberia ver cosas tipo un plugin mal escrito, una variable no definda, errores SQL...
+        > Note: No hace falta activar WP_DEBUG en Inception porque lo que estamos haciendo no es entorno de desarrollo interactivo.
+        > Pero podría activarlo si quisiera así:
+        > - Modificar `wp-config.php`: en `setup.sh` de WordPress, después delo bloque `wp config create`, añadir:
+        >
+        >         wp config set WP_DEBUG true --allow-root
+        >         wp config set WP_DEBUG_LOG true --allow-root
+        >         wp config set WP_DEBUG_DISPLAY false --allow-root
+        >   Esto modifica `wp-config.php` y queda persistente en el volumen. ⚠️ PROBABLEMENTE DEBERÍA BORRAR LOS VOLÚMENES PERSISTENTES PARA HACER EFECTIVO ESTE CAMBIO!
+
+      - ABSPATH + carga de WordPress
     - uploads
     - themes, plugins
 
 Cómo ver las databases de MariaDB: 
 
+        #entrar en el contenedor
+        docker exec -it mariabd bash
+        # conectarse con root
+        mysql -u root -p
+        # meter contrasela
         SHOW DATABASES;
 
 Databases que tengo:
@@ -381,34 +400,52 @@ Databases que tengo:
 - information_schema
 - performance_schema
 - database <- wordpress
-
-Conectarse a MariaDB:
-
-      docker exec -it mariadb bash
-      mysql -y amacarul -p database
-
-
-
+- sys
+- test
 
 ⚠ AÑADIR:  
 TODO ESTO ES INFOR GUARDADA EN WORDPRESS O EN MARIADB?
 - Dónde se guardan los usuarios -> `wp_users`
 
-        #DENTRO DE MARIADB O DE WORDPRESS??
-        # docker exec -it mariadb bash
-        # o docker exec -it wordpress bash??
+        docker exec -it mariadb bash
+        mysql -u root -p
+        USE database;
         SHOW TABLES;
 
-  Esto muestra algo como:
+  > Note: tal como he configurado mariadb (setup.sh), el usuario amacarul puede acceder a wordpress desde red, no como localhost. amacarul@% no es lo mismo que amacarul%localhost. Así que para acceder a data de mariadb/wordpress, usar root.
+  > '%' es un wildcard (comodín) que significa "Desde cualquier host". 'login'@'%' puede conectarse desde:
+  > - wordpress
+  > - nginx
+  > - 172.18.0.5
+  > - cualquier IP de la red Docker
+  > - Pero, al parecer, '%' no incluye 'localhost'... Cuando ahces mysql -u amacarul -p, mariaDB interpreta 'amacarul'@'localhost', y este usuario no existe
+  > WordPress se conecta por MariaDB por red Docker, no por localhost
+  > `nginx -> php -> wordpress -> mariadb`
+  > ergo... sigo sin entender por qué puedo usar root para acceder a la database y no amacarul.
+  > En MariaDB los usuarios están definidos como user@localhost; el wildcard % permite conexiones desde la red Docker pero no desde localhost, lo cual es adecuado apra WordPress en contenedores separados.
+
+  Esto muestra algo como: EXPLICAR QUÉ HAY EN CADA TABLE
 
           wp_users
           wp_posts
           wp_usermeta
           wp_postmeta
+          wp_commentmeta
+          wp_comments
+          wp_links
+          wp_options
+          wp_term_relationships
+          wp_term_taxonomy
+          wp_termmeta
+          wp_terms
+          
 
   Ver usuarios:
 
         SELECT ID, user_login, user_email FROM wp_users;
+
+
+  > cómo ver las columnas de una tabla: `DESCRIBE wp_users;`
   
 - Dónde se guardan los logs: WordPress no guarda logs en MariaDB por defecto.
   Los logs que existen, son:
