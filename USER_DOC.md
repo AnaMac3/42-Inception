@@ -25,32 +25,18 @@ EXPLICAR QUE OFRECE WORDPRESS + NGINX + MARIADB
 NO HACE FALTA HABLAR DE CÓMO CAMBIAR PERMISOS, SOLO QUÉ EXISTE
 
 ## Start and stop the project
-1. Start the project:
-
-      make
-
-   `make` hace `build` y `up` de los containers.
+1. Start the project
+   - `make`: hace `build` y `up` de los contenedores.
 
 2. Stop and clean
 
-         make stop
-
-   `make stop` para los contenedores
-
-         make down
-
-   `make down` borra los contenedores
-
-
-         make clean
-
-   explicar qué limpia!!!
-
-         make fclean
-
-   explicar qué limpia!!!
-
+   - `make stop`: para los contenedores, sin eliminar los contenedores ni los volúmenes
+   - `make down`: para y borra los contenedores y redes, pero conserva los volúmenes persistentes
+   - `make clean`: para y elimina los contenedores, redes, volúmenes internos de docker y las imágenes, pero conserva los volúmenes persistentes
+   - `make fclean`: hace `clean` y borra también los volúmenes persistentes.
+     
 ## Access the website and the administrator panel
+⚠️ PONER ENLACE A PREREQUISITO NECESARIO: SSH TUNNELING SI ESTAMOS EN VM... O NO HACE FALTA PORQUE YA LO PONGO EN EL README??  
 
 Acceso al sitio web, en el navegador:
 
@@ -59,6 +45,8 @@ Acceso al sitio web, en el navegador:
 Acceso al panel del administrador:
 
       https://<login>.42.fr/wp-admin
+
+⚠️ EXPLICAR QUÉ SE PUEDE HACER EN EL PANEL DEL ADMINISTRADOR
 
 ## Locate and manage credentials
 
