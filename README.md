@@ -22,7 +22,7 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Images](#images)
     - [Dockerfile](#dockerfile)
   - [Docker Compose](#docker-compose)
-  - [Volúmenes - Persistencia de datos](#volúmenes---persistencia-de-datos)
+  - [Data Persistence](#volúmenes---persistencia-de-datos)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
     - [Docker Network vs Host Network](#docker-network-vs-host-network)
@@ -55,7 +55,7 @@ El proyecto debe incluir:
 - **Dockerfiles propios** para cada servicio (no se permite usar imágenes preconfiguradas, excepto Alpine o Debian)
 - **Variables de entorno obligatorias** y credenciales fuera del repositorio (usar `.env` y/o Docker secrets)
 - Todos los contenedores deben **reiniciarse automáticamente** si fallan ⚠️ DÓNDE GESTIONO ESTO? CÓMO SE PRUEBA??
-- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.) ⚠️ CÓMO EVITO USAR ESTO??
+- Prohibido usar: `latest`, `host`, `--link`, `links`, bucles infinitos (`sleep infinity`, `tail - f`, `bash`, `while true`, etc.) ⚠️ CÓMO EVITO USAR ESTO?? -> Creo que esto se evita usar utilizando scripts de espera en los scripts de arranque...?? setup.sh..., porque las instrucciones de dependencia de docker-compose.yml no aseguran que el contenedor del que dependen esté listo, simplemente que haya empezaod...
 - El dominio de la aplicación debe ser `<login>.42.fr` y debe resolverse localmente hacia la VM donde corren los contenedores, de modo que el navegador del host pueda acceder a la web usando HTTPS.  
 - Los Dockerfiles debe ser referenciados correctamente en el `docker-compose.yml` y gestionados desde el Makefile
 
@@ -305,98 +305,87 @@ Si el proceso está en foreground y gestiona señales correctamente, el contened
 
 
 ### Docker Compose
-**Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, que constituye el plano arquitectónico del proyecto y en el que se definen:
-- Servicios (qué contenedores hay: nginx, wordpress, mariadb)
-- Redes (cómo se comunican)
-- Volúmenes (dónde guardan datos persistentes)
-- Variables de entorno
-- Dependencias
-- Reconstrucciones automáticas
-- Puertos expuestos
-- Orden lógico del sistema
+**Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
+Using Docker Compose, we can define:
+- Which services are part of the system
+- How they communicate
+- Where persistent data is stored
+- Which ports are exposed
+- How containers are built and restarted
+- The startup order of the services
+In this project, the `Makefile` is responsible for executing Docker Compose commands.
 
-El Makefile ejecuta el `docker-compose.yml`.   
+#### The `docker-compose.yml` file in *Inception* 
+This file defines the complete architecture of the project.  
+##### Services
+The system is composed of three services:
+- `mariadb` -> data layer (database)
+- `wordpress` -> application layer (PHP)
+- `nginx` -> entry layer (reverse proxy + TLS)
+Each service corresponds to one Docker container vuilt from a custom Dockerfile.
 
-#### Explicación del `docker-compose.yml` de *Inception* 
-Este archivo define toda la arquitectura del proyecto:
-- 3 servicios:
-  - `mariadb` -> capa de datos
-  - `wordpress` -> capa de aplicación (PHP)
-  - `nginx` -> capa de entrada (reverse proxy + TLS)          
-- 1 red interna:
-  - `inceptionnet` -> permite que los contenedores se comuniquen por nombre
-- 2 volúmenes persistentes:
-  - WordPress (`/var/www/html`)
-  - MariaDB (`/var/lib/mysql`)
+##### Network
+A single internal Docker network is defined: `inceptionnet`.  
+This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
 
-##### Ejemplo simplificado:
 
-        services:
-          nginx:
-            build: ./requirements/nginx
-            ports:
-              - "443:443"
-            volumes:
-              - wordpress_data:/var/www/html
-            networks:
-              - inception
-        
-          wordpress:
-            build: ./requirements/wordpress
-            networks:
-              - inception
-        
-          mariadb:
-            build: ./requirements/mariadb
-            volumes:
-              - db_data:/var/lib/mysql
-            networks:
-              - inception
-        
-        volumes:
-          wordpress_data:
-          db_data:
-        
-        networks:
-          inceptionnet:
+##### Volumes and data persistence
+Two persistent volues are used:
+- WordPress (`/var/www/html`)
+- MariaDB (`/var/lib/mysql`)
+This volumes are implemented as [**bind mounts**](#data-persistence) to the host filesystem.
 
-| keyword o como llamar a esto? | Description |
+              /home/login/data/wordpress
+              /home/login/data/mariadb
+
+This ensures that:
+- Website files and database data persist across container restarts.
+- Data is not lost when containers are removed or rebuilt.
+
+##### Main `docker-compose.yml` keywords
+
+| Keyword | Description |
 |-----|------|
-| `services` | definen los servicios que ejecutarán los contenedores. Servicios que tenemos: `nginx`, `wordpress`, `mariadb`. |
-| `container_name` | asigna un nombre específico al contenedor que se crea a partir de este servicio |
-|  `build` | indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor |
-| `image` | indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR) |
-| `ports` | mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR |
-| `volumes` | creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES... |
-| `restart` | indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar |
-| `networks` | especifica a qué redes tiene que estar conectado el contenedor |
-| controlador de red `bridge` | permite a los contenedores comunicarse entre sí en el mismo host |
- 
+| `services` | Defines the containers that compose the application (`nginx`, `wordpress`, `mariadb`). |
+|  `build` | Specifies the path to the Dockerfile used to build the image. |
+| `container_name` | Assigns a specific name to the container created from the service. |
+| `env_file` | |
+| `image` | Specifies an existing image to use. In *Inception*, custom images are built instead, as required by the subject. |
+| `ports` | Maps ports from the host to the container (`HOST_PORT:CONTAINER_PORT`) |
+| `volumes` | Defines persistent storage by mounting host directories into containers. |
+| `depends_on` | |
+| `networks` | Specifies the networks the container is connected to. |
+| `restart` | Defines the container restart policy in case of failure. |
+| `bridge` driver | Allows containers on the same host to communicate through an isolated internal network. |
 
-##### Flujo de arranque:  
-Cuando ejecutas `docker-compose up`, ocurre lo siguiente:
-1. Docker crea la red `inceptionnet`
-2. Docker construye las imágenes (si no existen)
-3. Docker arranca los contenedores, respetand:
-   - `mariadb` primero
-   - luego `wordpress`
-   - finalmente `nginx`
-   ⚠️ `depends_on` **NO garantiza** que el servicio esté listo, solo que el contenedor haya arrancado. Por eso luego se utilizan scripts de espera (`sleep`) ⚠️⚠️⚠️⚠️ REPASAR QUE ESOS SCRIPTS DE ESPERA NO SEAN LOS PROHIBIDOS POR EL SUBJECT!!!
+##### Startup flow
+When running:
 
-##### Comunicación entre servicios
-La red `inceptionnet` permite que:
-- WordPress se conecta a MariaDB usando `host = mariadb` DÓNDE PASA ESTO???
-- Nginx se conecta a WordPress usando `fastcgi_pass wordpress:9000` (`/nginx/conf/nginx.conf`)
+        docker-compose up
+
+Docker performs the following steps:
+1. Creates the network
+2. Builds the images if they do not already exist
+3. Starts the containers following the dependency order:
+   - `mariadb`
+   - `wordpress`
+   - `nginx`
+   
+   > ⚠️ The `depends_on` directive only ensures startup order. Ir does **NOT** guarantee that service is ready to accept connections.
+   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure that MariaDB is available before continuing the installation process. NGINX does not need it, because it only has to stay listening to the port 443. It tries to connect to wordpress:9000 if it receives a request PHP, and if it tries the conection and wordpress does not respond, it will return a temporary error.
+
+
+##### Comunication between services
+Thanks to the internal Docker network:  
+- WordPress connects to MariaDB using `mariadb` as the database host (defined in `wp-config.php`)
+- NGINXforwards PHP requests to Wordpress using `fastcgi_pass wordpress:9000` (`/nginx/conf/nginx.conf`)
+
+Overall request flow:
 
           Internet -> NGINX -> WordPress -> MariaDB
 
-##### Persistencia de datos
-Se utilizan bind mounts
 
-        /home/login/data/wordpress
-        /home/login/data/mariadb
-
-### Volúmenes - Persistencia de datos
+### Data Persistence
 Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
 
       volumes:
@@ -639,70 +628,6 @@ Estructura del proyecto:
        #Ajustar permisos para que Docker pueda escribir
        sudo chown -R <login>:<login> /home/<login>/data
 
-        
-## Definir `docker-compose.yml` (servicios, redes, volúmenes y dependencias)
-El archivo `docker-compose.yml` es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
-- definir qué servicios existen
-- Para cada servicio:
-  - build (ruta al Dockerfile)
-  - env_file
-  - volumes
-  - networks
-  - depends_on
-  - ports (solo nginx)
- 
-
-            services: #define los contenedores que van a existir
-              nginx:
-                build: ./requeriments/nginx #docker construye la imagen usando el dockerfile en este directorio -> no usa imágenes prehechas
-                container_name: nginx #construye el contenedor con ese nombre en vez de con nombres aleatorios
-                env_file: #carga todas las variables de .env
-                  - .env
-                ports:
-                  - "443:443" #VM escucha en 443:443, redirige a 443 el contenido nginx, único servicio expuesto al exterior
-                volumes:
-                  - /home/amacarul/data/wordpress:/var/www/html #donde wordpress se instala, guarda themes, uploads... NGINX necesita leer estos archivos; wordpress y NGINX comparten volumen
-                depends_on: #dependencias: arranca wordpress antes
-                  - wordpress
-                networks:
-                  - inception #crea una red privada docker
-                restart: always
-            
-              wordpress:
-                build: ./requeriments/wordpress
-                container_name: wordpress
-                env_file:
-                  - .env
-                volumes:
-                  - /home/amacarul/data/wordpress:/var/www/html
-                depends_on: #arranca mariadb antes
-                  - mariadb
-                networks:
-                  - inception
-                restart: always
-            
-              mariadb:
-                build: ./requeriments/mariadb
-                container_name: mariadb
-                env_file:
-                  - .env
-                volumes:
-                  - /home/amacarul/data/mariadb:/var/lib/mysql #donde mariadb guarda db, tablas, users. Si se borra el contenedor, si no hay volumen, se pierde la base de datos. COn volumen, la base de datos persiste.
-                networks:
-                  - inception
-                restart: always
-            
-            networks:
-              inception:
-                driver: bridge
-
-Tras configurar el archivo `docker-compose.yml`, ejecutar:
-
-      docker compose config
-
-Si no hay errores, seguimos.
-
-[Comandos del docker compose](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)
 
 
 -------------
