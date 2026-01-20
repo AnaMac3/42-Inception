@@ -396,6 +396,57 @@ Once initialization is complete:
   - Keep the container running
 
 #### WordPress
+**WordPress** es un CMS (Content Management System) escrito en PHP. Permite crear con facilidad:
+- páginas
+- blogs
+- usuarios
+- plugins
+- temas
+En este proyecto debe ejecutarse con PHP-FPM (no con Apache) porque:
+- NGINX no ejecuta PHP directamente
+- PHP-FPM gestiona procesos PHP como un servicio separado. PHP-FPM es el proceso que ejecuta PHP y espera repeticiones.
+
+
+El flujo es:
+
+Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
+
+WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos. Con WP-CLI se pueden hacer cosas como:
+- descargar wordpress
+- crear wp-config.php
+- instalar wordpress
+- crear usuarios
+- activar plugins / themes...
+
+En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
+
+
+##### WordPress - Build time (Dockerfile)
+- Durante el build time no se installa WordPress, por qué no??
+  - creo que porque si se reinstalase wordpress sin comprobar si es o no la primera vez que se lanza el container, podría sobreescribir cosas o algo así (?)
+  - EL Dockerfile no debe crear estado de aplicación, el estado pertenece al runtime, no al buildtime
+  - Prepara una máquina capaz de ejecutar wordpress, no instala wordpress como una app concreta.
+  - sis e instalase wordpress en el dockerfile, este quedaría congelado en la imagen: los archivos pasarian a formar parte de la imagen, no del volumen, no se adpatarian... se rompe la persistencia de datos
+  - wordpress se instala en setup.sh porque es ESTADO de aplicación. Incluye archivos modificables, configuraciones específicas, dependeincia directa de la base de datos... esto no es infraestructura, es estado. y el estado vive en los volúmenes...
+- Si no que se instalan / preparan las herramientas y dependencias necesarias para que en el script de setup pueda instalarse y configurarse wordpress, en runtime
+- Herramientas que se preparan:
+   - PHP y PHP-FPM
+   - WP-CLI
+ 
+ 
+- Copiar configuraciones
+- Preparar entorno
+
+!! explicar qué es FastCGI, PHP, PHP-FPM y WP-CLI y cómo se relacionan con wordpress...
+
+##### WordPress - Runtime (setup.sh)
+- Waiting for the MariaDB service to become available
+#	- Installing and configuring WordPress on first startup only
+- genera wp-config.php
+- crea admin y usuarios
+- se conecta con mariadb???
+#	- Preserving data on container restarts when using volumes
+#	- Starting PHP-FPM in foreground mode	
 
 #### NGINX
 
@@ -620,31 +671,6 @@ En este proyecto/esquema, NGINX actúa como **servidor web** y **proxy inverso**
 - Servidor de archivos estáticos: ...
 - Pasarela FastCGI: ...??? ⚠️
 
-
-#### WordPress
-**WordPress** es un CMS (Content Management System) escrito en PHP. Permite crear con facilidad:
-- páginas
-- blogs
-- usuarios
-- plugins
-- temas
-En este proyecto debe ejecutarse con PHP-FPM (no con Apache) porque:
-- NGINX no ejecuta PHP directamente
-- PHP-FPM gestiona procesos PHP como un servicio separado. PHP-FPM es el proceso que ejecuta PHP y espera repeticiones.
-
-
-El flujo es:
-
-Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
-
-WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos. Con WP-CLI se pueden hacer cosas como:
-- descargar wordpress
-- crear wp-config.php
-- instalar wordpress
-- crear usuarios
-- activar plugins / themes...
-
-En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
 
 
 
