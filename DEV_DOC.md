@@ -355,6 +355,7 @@ Once inside a container, you can:
 | `SHOW DATABASES;` | Lists available databases |
 | `USE database;` | Selects the WordPress database |
 | `SHOW TABLES;` | Lists WordPress tables |
+| ``mysql -h mariadb -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE` | INTENTAR CONECTAR DESDE WORDPRESS (PREVIAMENTE DOCKER EXEC -IT WORDPRESS BASH) A MARIADB  + añadir mas maneras de comprobar conexiones |
 
 This is used to inspect the real persistent WordPress data stored in MariaDB. For see this in more detail [see Inspecting persistent data](#inspecting-persistent-data).
 
