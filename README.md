@@ -121,6 +121,12 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
 
 ## Project description
+NO SÉ SI ESTO PEGA AQUÍ O EN OTRO LUGAR, PERO PARA EXPLICAR EL CÓDIGO, EL PROYECTO ENTERO, EN ORDEN, LO IDEAL SERIA SEGUIR ESTA ESTRUCTURA:
+- DOCKER_COMPOSE.YML -> ARQUITECTURA GLOBAL, FLUJO DE ARRANQUE, RELACIÓN ENTRE SERVICIOS
+- DOCKERFILES -> QUÉ SE INSTALA, QUÉ SE COPIA... CÓMO SE CONSTRUYE CADA IMAGEN
+- SCRIPTS DE ENTRYPOINTS / SETUP -> QUÉ OCURRE CUANDO EL CONTENEDOR ARRANCA, POR QUÉ NO SE HACE TODO EN EL DOCKERFILE, DIFERENCIA ENTRE BUILD TIME Y RUN TIME
+- CONFIGURACIONES Y .ENV -> VARIABLES, SEGURIDAD, TLS, COMUNICACIÓN INTERNA ENTRE CONTENEDORES
+
 ### Docker
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
@@ -294,24 +300,21 @@ Si el proceso está en foreground y gestiona señales correctamente, el contened
 
 
 ### Docker Compose
-**Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, en el que se definen:
-- Servicios (qué contenedores hay)
+**Docker Compose** es una herramienta que permite definir y ejecutar varios contenedores a la vez junto con sus redes y sus volúmenes. Se gestiona através de un archivo `docker-compose.yml`, que constituye el plano arquitectónico del proyecto y en el que se definen:
+- Servicios (qué contenedores hay: nginx, wordpress, mariadb)
 - Redes (cómo se comunican)
 - Volúmenes (dónde guardan datos persistentes)
 - Variables de entorno
 - Dependencias
 - Reconstrucciones automáticas
 - Puertos expuestos
+- Orden lógico del sistema
 
-El Makefile ejecuta el `docker-compose.yml`.  
+El Makefile ejecuta el `docker-compose.yml`.   
 
 En el proyecto *Inception* se requieren varios contenedores conectados entre sí:
 
       Internet -> NGINX -> WORDPRESS -> MARIADB
-
-Compose los levanta todos juntos:
-
-      docker compose up --build
 
   ⚠️ DÓNDE DEBERIA EXPLCIAR TODO ESTO?? EN DEV_DOC??   
 **Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
@@ -552,13 +555,15 @@ Cómo funciona Docker engine:
 
 -------------------------------------
 
-## Guía paso a paso
-
-### Preparar la Virtual Machine
-
-
 ### Crear estructura del proyecto
-  7. Crear estructura del proyecto en local
+
+NO SÉ SI ESTO PEGA AQUÍ O EN OTRO LUGAR, PERO PARA EXPLICAR EL CÓDIGO, EL PROYECTO ENTERO, EN ORDEN, LO IDEAL SERIA SEGUIR ESTA ESTRUCTURA:
+- DOCKER_COMPOSE.YML -> ARQUITECTURA GLOBAL, FLUJO DE ARRANQUE, RELACIÓN ENTRE SERVICIOS
+- DOCKERFILES -> QUÉ SE INSTALA, QUÉ SE COPIA... CÓMO SE CONSTRUYE CADA IMAGEN
+- SCRIPTS DE ENTRYPOINTS / SETUP -> QUÉ OCURRE CUANDO EL CONTENEDOR ARRANCA, POR QUÉ NO SE HACE TODO EN EL DOCKERFILE, DIFERENCIA ENTRE BUILD TIME Y RUN TIME
+- CONFIGURACIONES Y .ENV -> VARIABLES, SEGURIDAD, TLS, COMUNICACIÓN INTERNA ENTRE CONTENEDORES
+
+Estructura del proyecto:
    
            inception/
                   │
@@ -590,9 +595,7 @@ Cómo funciona Docker engine:
                               └── tools/
                                   └── mariadb_init.sh
 
-QUÉ CARPETAS HAY QUE SUBIR, CUÁLES NO???
-Archivos que no han de subirse a github, ni compartirse:
-- `.env`: contiene contraseñas y datos sensibles
+- `.env`: contiene contraseñas y datos sensibles, no se sube al repositorio
      
 8. Crea las carpetas del host que luego montarás como volúmenes / estructura de directorios
 
@@ -603,8 +606,6 @@ Archivos que no han de subirse a github, ni compartirse:
        sudo chown -R <login>:<login> /home/<login>/data
 
         
-### Archivo .env
-
 ## Definir `docker-compose.yml` (servicios, redes, volúmenes y dependencias)
 El archivo `docker-compose.yml` es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
 - definir qué servicios existen
@@ -807,9 +808,7 @@ Comprobar que wordpress responde (sin navegador):
 
         sudo ls && make fclean
 
-## Configuración de volúmenes
-- Mapeo de `/home/<login>/data/...
-- Permisos y usuario correcto
+
 
 ## Configuración del dominio
 - `/etc/hosts`-> `login.42.fr`
