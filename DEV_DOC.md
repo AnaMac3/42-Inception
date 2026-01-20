@@ -326,6 +326,7 @@ This section lists useful **Docker and Docker Compose commands** for inspecting,
 | `docker ps -a` | Lists all containers, including stopped ones |
 | `docker logs` | Displays logs from the different containers |
 | `docker inspect <container>` | Shows low-level container configuration and runtime details | 
+| `docker inspect <container> | grep ExitCode` | PARA VER EXIT CODE: `0` -> salida limpia; `137` -> SIGKILL (mal) |
 
 HABRIA QUE EXPLICAR QUÉ HACEN COMANDOS COMO:
 - DOCKER KILL
