@@ -21,19 +21,17 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
     - [Images](#images)
     - [Dockerfile](#dockerfile)
+      - [MariaDB](#mariadb)
+      - [WordPress](#wordpress)
+      - [NGINX](#nginx)
+  - [Container lifecycle, ENTRYPOINT and PID 1](#container-lyfecicle-entrypoint-and-pid-1)
   - [Docker Compose](#docker-compose)
     - [The `docker-compose.yml` file in *Inception*](#the-docker-composeyml-file-in-inception)
   - [Data Persistence](#volúmenes---persistencia-de-datos)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Docker Network](docker-network)
     - [Docker Network vs Host Network](#docker-network-vs-host-network)
-  - [Variables de entorno y secretos](#variables-de-entorno-y-secretos)
-    - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
-  - [NGINX, WordPress and MariaDB](#nginx-wordpress-and-mariadb)
-    - [NGINX](#nginx)
-    - [WordPress](#wordpress)
-    - [MariaDB](#mariadb)
-  - [Cómo se relacionan todos los conceptos](cómo-se-relacionan-todos-los-conceptos) 
+  - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -159,84 +157,98 @@ Un contenedor es la **instancia ejecutable de una imagen Docker**, no un sistema
 A menudo, los containers y las VM se utilizan juntas (como en este proyecto *Inception*). En vez de utilizar una máquina virtual para correr una aplicación, una máquina virtual con container runtime puede correr múltiples aplicaciones conteinarizadas -> mayor uso de recursos y reducción de costes.  
 
 ### Docker Images and Dockerfile
-#### Images
-Una **imagen Docker** es una **plantilla inmutable** de un sistema que contiene:
-- Archivos de la aplicación
-- Dependencias
-- Configuraciones
-- Comandos de arranque
+#### Docker Images
+A **Docker image** is an **inmutable blueprint** used to create containers. It contains everything required to run a service:
+- Application files
+- System dependencies
+- Configuration files
+- Startup instructions  
+Images are built once and reused to create one or multiple containers.  
 
-**Diferencias entre imagen y contenedor**
-| Imagen | Contenedor |
+**Image vs Container**
+| Image | Container |
 |--------|------------|
-| Plantilla | Instancia ejecutable de la imagen |
-| Inmutable | Puede modificarse durante su ejecución |
-| Sin estado | Con estado temporal (se pierde al destruirse) |
+| Inmutable template | Running instance of an image |
+| Built at build time | Exists at runtime |
+| Stateless | Has temporary state |
+| Cannot change | Can modify its lifesystem during execution |
+
+When a container is removed, all its runtime state is lost unless persistent volumes are used.  
 
 #### Dockerfile
-Un **Dockerfile** es archivo que define cómo construir una imagen de Docker. Lo que hace un Dockerfile es preparar el entorno, build time.  
-Usualmente (o siempre??) el Dockerfile define un ENTRYPOINT, que será el que defina el run time.   
+A **Dockerfile** is a text file that defines **how a Docker image is built**.  
+It describes:
+- The base operating system
+- Which packages are installed
+- Which configuration files are copied
+- Which command is executed when container starts
+A Dockerfile mainly operates at **build time**, preparing the execution environment.
+The **runtime behaviour** of the container is defined by its `ENTRYPOINT` (and optionally `CMD`).
 
-AQUI FALTN EXPLICACIONES
+> In *Inception*, each service uses a **custom Dockerfile**, as required by the subject. 
 
-**Buenas prácticas:**
-- Un contenedor debe ejecutar **un solo servicio**
-- No ejecutar daemons ni bucles infinitos para mantener el contenedor vivo
-- Usar imágenes base ligeras y versionadas
-- Limpiar cachés de paquetes
-- Usar ENTRYPOINT correctamente
-  Usar:
-
-          ENTRYPOINT ["mysql"]
-  Nunca:
-
-          CMD service myswl start && tail -f /dev/null (EN NGINX NO USO ALGO ASÍ???)
-
-
-
-**Imagen -> contenedor en ejecución -> corre un único servicio**.
-En este proyecto se piden tres servicios principales:
-  
-| Servicio | Contenedor | Qué contiene |
+**One service per Container**  
+A core Docker principle is:  
+> **One container = one main service**
+In *Inception*, the architecture is split into three containers:
+| Service | Container | Responsibility |
 |----------|------------|--------------|
-| NGINX | `nginx` | Servidor web con TLS |
-| WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
-| MariaDB | `mariadb` | Database |
+| MariaDB | `mariadb` | Database (data layer) |
+| WordPress+PHP-FPM | `wordpress`| Application logic |
+| NGINX | `nginx` | Web server, TLS, reverse proxy |
 
-EXPLICAR EL DOCKERFILE Y SETUP.SH DE CADA SERVICIO, QUÉ PASA EN EL BUILD TIME Y EN EL RUN TIME DE CADA SERVICIO
+Each container:
+- Runs **one foreground process**
+- Has its own Dockerfile
+- Has a clearly defined responsibility
 
-##### MariaDB
-**MariaDB** es un sistema de bases de datos SQL (es un fork de MySQL). WordPress lo usa para guardar:
-- posts
-- usuarios
-- contrasñeas
-- plugins
-- etc
+#### MariaDB
+**MariaDB** is an SQL database server (a MySQL-compatible fork).  
+WordPress uses it to store:
+- Post and pages
+- Users and passwords
+- Configuration
+- Plugins and metadata
 
-¿Qué ocurre en el Dockerfile de MariaDB - build time?
-- corre una imagen MariaDB propia
-- Instala Mariadb
-- Prepara environment:
-  - sobreescribe la configuración por defecto con la nuestra propia para permitir el acceso a la red de otros contenedores: By default, MariaDB binds only to localhost (127.0.0.1), which would prevent access from other containers. This custom conf enables MariaDB to listen on the Docker network interface, allowing WordPress to connect using the service name 'mariadb' as the database host
-  - copia el script de inicialización, setup.sh, que es responsable de:
-    - starting mariadb service
-    - creating the database and users
-    - applying privileges
-    - handling first-time initialization vs container restart
-- expone el puerto 3306
-- delega la lógica de inicialización al script de runtime setup.sh
-- Ejecuta el setup.sh como`ENTRYPOINT` 
+##### MariaDB - Build time (Dockerfile)
+During image construction, the MariaDB Dockerfile performs the following steps:
+- Uses a minimal Debian base image
+- Installs the MariaDB server packages
+- Copies a custom MariaDB configuration file
+- Copies an initialization script (`setup.sh`)
+- Exposes port `3306` for internal container communication
+- Defines `setup.sh` as the container `ENTRYPOINT`
 
-¿Qué pasa en el setup.sh de mariadb - run time?
-- se ejecuta cada vez que el contenedor mariadb arranca
-- decide si es la primera ejecución (volumen vacío) o un reinicio (datos ya existentes).
-- Inicialización
-- Usuarios
-- Permisos
+**Custom configuration (`my.conf`)**  
+The default MariaDB configuration binds the server to `127.0.0.1`, which would prevent connections from other containers.  
+The custom configuration overrides this behaviour:
+- MariaDB listens on `0.0.0.0`
+- This allows WordPress to connect through the Docker bridge network
+- The database remains inaccessible from the host unless explicitly exposed (???POR ESO PARA ACCEDER A LA DATABASE TENEMOS QUE ENTRAR CON mysql -u root -p??)
+This configuration enables inter-container communication while preserving isolation.  
 
-Papel de my.conf:
-- Permite que MariaDB escuche en la red Docker
-- Hace posible que WordPress se conecte desde otro contenedor
+##### MariaDB - Runtime (setup.sh)
+The `setup.sh` script is executed **every time the MariaDB container starts**, because it is defined as the `ENTRYPOINT`.  
+Its responsibilities are:
+- Prepare required runtime directories
+- Detect whether the database has already been initialized
+- Initialize the database only on the first container startup
+- Create the applciation database and user
+- Start MariaDB as the main foreground process
+This logic is essential when using **persistent volumes**, because containers may be restarted while data must remain intact.  
+
+**Background vs Foreground MariaDB**  
+During the first startup, MariaDB is launched **temporarily in background**:
+- This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`)
+- The server does not need to remain running permanently at this stage
+Once initialization is complete:
+- The temporary MariaDB process is stopped
+- MariaDB is restarted in **foreground mode**
+- The foreground MariaDB process becomes **PID 1**, which is required for Docker to:
+  - Track the container lifecycle
+  - Send signals correctly
+  - Keep the container running
+
 
 ##### WordPress
 
@@ -253,7 +265,7 @@ Papel de my.conf:
 | CMD | Argumentos por defecto del ENTRYPOINT |
 
 
-
+### Container lifecycle, ENTRYPOINT and PID 1
 #### PID 1 y ENTRYPOINT
   ⚠️ HAY QUE HACER ESTE APARTADO MÁS CLARO... RESUMIR Y EXPLICAR BIEN LAS RELACIONES ENTRE LOS DIFERENTES CONTAINERS/SERVICIOS Y SUS ENTRYPOINTS...
 En Linux, **PID 1** es el primer proceso que se ejecuta en el sistema.  
@@ -318,7 +330,6 @@ Docker:
 - Si no responde, envía `SIGKILL`
 
 Si el proceso está en foreground y gestiona señales correctamente, el contenedor se apaga limpiamente.   ⚠️ TODO ESTO SE GESTIONA EN LOS DOCKERFILES, NO???
-
 
 ### Docker Compose
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
@@ -434,6 +445,8 @@ Los contenedores son efímeros: si borras un contenedor, se borra su filesystem,
 Para evitarlo, Docker permite la **persistencia de datos fuera del contenedor** de dos maneras diferentes:
 - Docker volumes
 - Bind mounts
+EXPLICAR BIND MOUNTS
+¿POR QUÉ SI HEMOS GUARDADO TODO EN LOS VOLUMENES PERSISTENTES EN LOCAL, EN LOS SCRIPTS DE SETUP Y EN EL RESTO DEL CÓDIGO HACEMOS REFERENCIA TODO EL RATO A LOS DIRECTORIOS POR DEFECTO DE MARIABD Y WORDPRESS..?
 
 ##### Docker Volumes
 Son espacios de almacenamiento creados y gestionados por Docker, independientes del contenedor. Docker decide dónde vive el host.
@@ -565,15 +578,6 @@ WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos
 
 En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
 
-#### MariaDB
-**MariaDB** es un sistema de bases de datos SQL (alternativa a MySQL, en realidad es un fork de MySQL). WordPress lo usa para guardar:
-- posts
-- usuarios
-- contraseñas
-- configuraciones
-- plugins
-- etc
-Los datos deben persisitir en un volumen, para que no se pierdan al destruir contenedores.
 
 
 ### Cómo se relacionan todos los conceptos
