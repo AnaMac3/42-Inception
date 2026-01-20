@@ -232,6 +232,11 @@ En este proyecto se piden tres servicios principales:
                 FROM nginx:latest
                 FROM mariadb:latest
                 FROM wordpress:latest
+
+CONCEPTO CLAVE -> NO SÉ SI ESTO IRÍA AQUÍ...  
+DOCKER TIENE DOS FASES:
+- BUILD TIME -> DOCKERFILE
+- RUN TIME -> CUANDO EL CONTENEDOR ARRANCA (SETUP.SH???)
   
 #### PID 1 y ENTRYPOINT
   ⚠️ HAY QUE HACER ESTE APARTADO MÁS CLARO... RESUMIR Y EXPLICAR BIEN LAS RELACIONES ENTRE LOS DIFERENTES CONTAINERS/SERVICIOS Y SUS ENTRYPOINTS...
