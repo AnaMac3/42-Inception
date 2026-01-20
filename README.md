@@ -14,7 +14,7 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Build & Run](#build-&-run)
-  - [Networking / SHH tunnel](#networking-ssh-tunnel)
+  - [Stop & Clean](#stop-clean)
 - [Project description](#project-description)
   - [Docker](#docker)
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
@@ -81,14 +81,14 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 ### Installation
    - Clone the repository:
      
-        git clone git@github.com:AnaMac3/42-Inception.git
+            git clone git@github.com:AnaMac3/42-Inception.git
      
      Options:
      - Clone on your local machine and share the folder with the VM via VirtualBox Shared Folders ([see DEV_DOC](./DEV_DOC.MD#shared-folders-between-host-and-vm))
-     - Clone directly inside the VM
+     - Clone directly inside the VM (creo que para esto habrá que instalar git en la VM no?? ⚠️)
 
-   - Create the [`.env` file](./DEV_DOC.md#environment-variables-env-file) in `srcs/`
-   - Create the persistent volume folders:
+   - Create the [`.env`](./DEV_DOC.md#environment-variables-env-file) file in `srcs/`
+   - Create the persistent volume folders in the VM:
 
          mkdir -p /home/<login>/data/mariadb
          mkdir -p /home/<login>/data/wordpress
@@ -100,25 +100,25 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
   > Note: `make` builds thee Docker images and starts all containers in the stack.
 
-### Networking / SSH tunnel
-As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.  
-Doman configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configuration-and-ssh-tunneling).
+  - Networking / SHH tunneling (⚠️NO SÉ SI ESTE ES EL NOMBRE ADECUADO PARA ESTE PUNTO!!):
+    - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
+    - Domain configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configuration-and-ssh-tunneling).
 
-> ⚠️ Keep the terminal open while accessing the site.
-
-5. Access to the website
-   - Open in your browser:
+   - Access to the website
+     - Open in your browser:
 
                https://<login>.42.fr
 
-6. Stop / Clean
+### Stop & Clean
 
-| Command | What it does |
+| Makefile command | Description |
 |---------|--------------|
-| `make stop` | Stops the containers, without deleting anything.|
-| `make down` | Stops and removes containers and networks, but keeps persistent data in the mounted folders. |
-| `make clean` | Stops and removes containers, networks, and internal Docker volumes, and deletes generated images, but does not remove persistent data in `/home/<login>/data/...`.|
-| `make fclean` | Performs `clean` and also deletes all persistent data in `/home/<login>/data/...`. ⚠️ Completely resets the project. |
+| `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
+| `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
+| `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
+| `male clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+
 
 ## Project description
 ### Docker
