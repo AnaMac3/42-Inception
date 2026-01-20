@@ -22,6 +22,7 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Images](#images)
     - [Dockerfile](#dockerfile)
   - [Docker Compose](#docker-compose)
+    - [The `docker-compose.yml` file in *Inception*](#the-dockercomposeyml-file-in-inception)
   - [Data Persistence](#volúmenes---persistencia-de-datos)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
