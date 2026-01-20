@@ -25,7 +25,7 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [The `docker-compose.yml` file in *Inception*](#the-docker-composeyml-file-in-inception)
   - [Data Persistence](#volúmenes---persistencia-de-datos)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
-  - [Docker Network - cómo se comunican los contenedores](docker-network-cómo-se-comunican-los-contenedores)
+  - [Docker Network](docker-network)
     - [Docker Network vs Host Network](#docker-network-vs-host-network)
   - [Variables de entorno y secretos](#variables-de-entorno-y-secretos)
     - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
@@ -174,31 +174,10 @@ Una **imagen Docker** es una **plantilla inmutable** de un sistema que contiene:
 | Sin estado | Con estado temporal (se pierde al destruirse) |
 
 #### Dockerfile
-Un **Dockerfile** es archivo que define cómo construir una imagen de Docker. 
+Un **Dockerfile** es archivo que define cómo construir una imagen de Docker. Lo que hace un Dockerfile es preparar el entorno, build time.  
+Usualmente (o siempre??) el Dockerfile define un ENTRYPOINT, que será el que defina el run time.   
 
-Ejemplo simplificado para NGINX:
-
-      # Imagen base del contenedor: todo se construye sobre bookworm
-      FROM debian:bookworm
-      # Instala paquete nginx
-      RUN apt update && apt install -y nginx
-      # Copia la configuración personalizada, sustituyendo la configuración por defecto
-      COPY ./config/default.conf /etc/nginx/conf.d/
-      # Define el entrypoint
-      ENTRYPOINT ["nginx", "-g", "daemon off;"]
-
-  ⚠️ EXPLICAR QUÉ HACE CADA LÍNEA !!!
-  ⚠️ NO SÉ SI ESTO DEBERIA IR EN EL README O EN EL DEV_DOC O SIMPLEMENTE SON DETALLES PARA MI QUE NO DEBERIAN IR EN NINGÚN LADO...
-
-**Instrucciones principales de Dockerfile**
-| Keyword | Definition |
-|---------|------------|
-| FROM | Indica a Docker en qué sistema operativo debe ejecutarse tu máquina virtual. Serán `debian:buster?bookworm?` para Debian o `alpine:x:xx` para Linux. |
-| RUM | Eejcuta un comando en tu máquina virtual. Equivale a conectarse por SSH y escribir un comando bash. |
-| COPY | Copia un archivo. Especificar la ubicación del archivo a copiar desde el directorio que contiene tu Dockerfile y luego especificar dónde se quiere copiar dentro de la máquina virtual.  |
-| EXPOSE | Indica los puertos de red específicos en los que se escucha durante la ejecución. No permite que el host acceda a los puertos del contenedor; expone el puerto especificado y lo hace disponible solo para la comunicación entre contenedores.  |
-| ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
-| CMD | Argumentos por defecto del ENTRYPOINT |
+AQUI FALTN EXPLICACIONES
 
 **Buenas prácticas:**
 - Un contenedor debe ejecutar **un solo servicio**
@@ -211,7 +190,9 @@ Ejemplo simplificado para NGINX:
           ENTRYPOINT ["mysql"]
   Nunca:
 
-          CMD service myswl start && tail -f /dev/null
+          CMD service myswl start && tail -f /dev/null (EN NGINX NO USO ALGO ASÍ???)
+
+
 
 **Imagen -> contenedor en ejecución -> corre un único servicio**.
 En este proyecto se piden tres servicios principales:
@@ -222,23 +203,57 @@ En este proyecto se piden tres servicios principales:
 | WordPress+PHP-FPM | `wordpress`| PHP + WordPress, sin nignx |
 | MariaDB | `mariadb` | Database |
 
-**Debian vs Alpine**: explicar por qué uso debian en vez de alpine: porque es más fácil para empezar... y por qué más?
+EXPLICAR EL DOCKERFILE Y SETUP.SH DE CADA SERVICIO, QUÉ PASA EN EL BUILD TIME Y EN EL RUN TIME DE CADA SERVICIO
 
- > En este proyecto, como base de cada imagen, se puede usar:  
-          - **Debian**: FROM debian:bookworm  
-          - **Alpine**: FROM alpine:3.18  
-  
-          En *Inception* está prohibido usar imágenes prefabricadas como:
-          
-                FROM nginx:latest
-                FROM mariadb:latest
-                FROM wordpress:latest
+##### MariaDB
+**MariaDB** es un sistema de bases de datos SQL (es un fork de MySQL). WordPress lo usa para guardar:
+- posts
+- usuarios
+- contrasñeas
+- plugins
+- etc
 
-CONCEPTO CLAVE -> NO SÉ SI ESTO IRÍA AQUÍ...  
-DOCKER TIENE DOS FASES:
-- BUILD TIME -> DOCKERFILE
-- RUN TIME -> CUANDO EL CONTENEDOR ARRANCA (SETUP.SH???)
-  
+¿Qué ocurre en el Dockerfile de MariaDB - build time?
+- corre una imagen MariaDB propia
+- Instala Mariadb
+- Prepara environment:
+  - sobreescribe la configuración por defecto con la nuestra propia para permitir el acceso a la red de otros contenedores: By default, MariaDB binds only to localhost (127.0.0.1), which would prevent access from other containers. This custom conf enables MariaDB to listen on the Docker network interface, allowing WordPress to connect using the service name 'mariadb' as the database host
+  - copia el script de inicialización, setup.sh, que es responsable de:
+    - starting mariadb service
+    - creating the database and users
+    - applying privileges
+    - handling first-time initialization vs container restart
+- expone el puerto 3306
+- delega la lógica de inicialización al script de runtime setup.sh
+- Ejecuta el setup.sh como`ENTRYPOINT` 
+
+¿Qué pasa en el setup.sh de mariadb - run time?
+- se ejecuta cada vez que el contenedor mariadb arranca
+- decide si es la primera ejecución (volumen vacío) o un reinicio (datos ya existentes).
+- Inicialización
+- Usuarios
+- Permisos
+
+Papel de my.conf:
+- Permite que MariaDB escuche en la red Docker
+- Hace posible que WordPress se conecte desde otro contenedor
+
+##### WordPress
+
+##### NGINX
+
+**Instrucciones principales de Dockerfile**
+| Keyword | Definition |
+|---------|------------|
+| FROM | Indica a Docker en qué sistema operativo debe ejecutarse tu máquina virtual. Serán `debian:buster?bookworm?` para Debian o `alpine:x:xx` para Linux. |
+| RUM | Eejcuta un comando en tu máquina virtual. Equivale a conectarse por SSH y escribir un comando bash. |
+| COPY | Copia un archivo. Especificar la ubicación del archivo a copiar desde el directorio que contiene tu Dockerfile y luego especificar dónde se quiere copiar dentro de la máquina virtual.  |
+| EXPOSE | Indica los puertos de red específicos en los que se escucha durante la ejecución. No permite que el host acceda a los puertos del contenedor; expone el puerto especificado y lo hace disponible solo para la comunicación entre contenedores.  |
+| ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
+| CMD | Argumentos por defecto del ENTRYPOINT |
+
+
+
 #### PID 1 y ENTRYPOINT
   ⚠️ HAY QUE HACER ESTE APARTADO MÁS CLARO... RESUMIR Y EXPLICAR BIEN LAS RELACIONES ENTRE LOS DIFERENTES CONTAINERS/SERVICIOS Y SUS ENTRYPOINTS...
 En Linux, **PID 1** es el primer proceso que se ejecuta en el sistema.  
