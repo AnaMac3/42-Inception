@@ -1,4 +1,32 @@
+# docker-compose.yml
+#
+# This file defines the full architecture of the Inception project.
+# It orchestrates multiple Docker containers that together form a
+# complete web stack composed of:
+# - NGINX (reverse proxy + TLS termination)
+# - WordPress (PHP application)
+# - MariaDB (database)
+#
+# All services communicate through a private Docker bridge network
+# and use persistent volumes to ensure data durability.
+
 services:
+  # ==================================================================
+  # NGINX 
+  # - Builds the NGINX image from the custom Dockerfile
+  # - Uses explicit container name 
+  # - Loads env variables (domain name)
+  # - Exposes HTTPS port 443 to the host machine. This is the only
+  # public entry point of the architecture
+  # - Mounts the wordpress files into the container. NGINX 
+  # needs access to these files to serve static content and forward PHP
+  # requests to the wordpress container
+  # - 'depends_on' ensures that the wordpress container is
+  # started before NGINX. This does NOT guarantee WordPress readiness,
+  # only startup order.
+  # - Connects NGINX to the internal Docker network
+  # - Automatically restarts the container if it crashes
+  # ==================================================================
   nginx:
     build: ./requeriments/nginx
     container_name: nginx
@@ -13,7 +41,21 @@ services:
     networks: 
       - inceptionnet
     restart: always
-
+  # ==================================================================
+  # WORDPRESS
+  # - Builds the WordPress image from the custom Dockerfile
+  # - Uses an explicit container name 
+  # - Loads env variables related to database conecction (name, user, 
+  # passwords, host) and WordPress site configuration (title, admin 
+  # and user accounts)
+  # - Mounts the WordPress volume to persist website files,
+  # themes, plugins, and uploads across container restarts
+  # - 'depends_on' ensures MariaDB starts before WordPress. WordPress
+  # later connects to the database using the service name "mariadb"
+  # as the host (defined in wp-config.php)
+  # - Connects WordPress to the internal Docker network
+  # - Restarts automatically in case of failure
+  # ==================================================================
   wordpress:
     build: ./requeriments/wordpress
     container_name: wordpress
@@ -27,6 +69,17 @@ services:
       - inceptionnet
     restart: always
 
+  # ==================================================================
+  # MARIADB
+  # - Builds the MariaDB image from the custom Dockerfile
+  # - Uses an explicit container name
+  # - Loads env variables (database name, user, passwords, and root
+  # credentials)
+  # - Mounts the MariaDB data directory to the host. This
+  # ensures full persistence of database data
+  # - Connects MariaDB to the internal network
+  # - Automatically restarts if needed
+  # ==================================================================
   mariadb:
     build: ./requeriments/mariadb
     container_name: mariadb
@@ -38,6 +91,12 @@ services:
       - inceptionnet
     restart: always
 
+# ==================================================================
+# NETWORK DEFINITION
+# Uses the default Docker bridge driver.
+# This creates a private internal network where containers can
+# communicate securely
+# ==================================================================
 networks:
   inceptionnet:
     driver: bridge
