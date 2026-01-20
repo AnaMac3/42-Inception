@@ -111,8 +111,9 @@ After instalation, reboot the VM.
 | Reboot VM | `reboot`|
 | Get VM IP address | `ip a` |
 | SSH from host | `ssh <login>@<IP_VM>` |
+| SSH and domain .... ¿COMO LLAMO A ESTO?? ... from host | `ssh -L 443:localhost:443 <login>@<IP_VM>` |
 | Switch to root | `su -` |
-| Return to user | `su - <login> |
+| Return to user | `su - <login>` |
 
 ⚠️ AÑADIR MÁS COSAS ÚTILES!!
 
@@ -325,6 +326,11 @@ This section lists useful **Docker and Docker Compose commands** for inspecting,
 | `docker ps -a` | Lists all containers, including stopped ones |
 | `docker logs` | Displays logs from the different containers |
 | `docker inspect <container>` | Shows low-level container configuration and runtime details | 
+
+HABRIA QUE EXPLICAR QUÉ HACEN COMANDOS COMO:
+- DOCKER KILL
+- DOCKER STOP
+- ...
 
 ### Entering containers (interactive debugging)
 | Command | Purpose |
