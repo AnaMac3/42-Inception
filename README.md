@@ -21,10 +21,11 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
     - [Images](#images)
     - [Dockerfile](#dockerfile)
-      - [MariaDB](#mariadb)
-      - [WordPress](#wordpress)
-      - [NGINX](#nginx)
   - [Container lifecycle, ENTRYPOINT and PID 1](#container-lyfecicle-entrypoint-and-pid-1)
+  - [Service Architecture](#service-architecture)
+    - [MariaDB](#mariadb)
+    - [WordPress](#wordpress)
+    - [NGINX](#nginx)
   - [Docker Compose](#docker-compose)
     - [The `docker-compose.yml` file in *Inception*](#the-docker-composeyml-file-in-inception)
   - [Data Persistence](#volúmenes---persistencia-de-datos)
@@ -185,12 +186,11 @@ It describes:
 A Dockerfile mainly operates at **build time**, preparing the execution environment.
 The **runtime behaviour** of the container is defined by its `ENTRYPOINT` (and optionally `CMD`).
 
-> In *Inception*, each service uses a **custom Dockerfile**, as required by the subject. 
+> In *Inception*, each service uses a **custom Dockerfile**, as required by the subject.  
 
-**One service per Container**  
-A core Docker principle is:  
-> **One container = one main service**
-In *Inception*, the architecture is split into three containers:
+A core Docker principle is: **One container = one main service**
+
+In *Inception*, the architecture is split into three containers:  
 | Service | Container | Responsibility |
 |----------|------------|--------------|
 | MariaDB | `mariadb` | Database (data layer) |
@@ -202,6 +202,150 @@ Each container:
 - Has its own Dockerfile
 - Has a clearly defined responsibility
 
+##### Dockerfile keywords
+| Keyword | Definition |
+|---------|------------|
+| FROM | Defines the base image used to build the Docker image. This specifies the operating system and initial environment (e.g. `debian:bookworm`, `alpine:3.19`) |
+| RUM | Executes a command **at build time** inside the image. Each `RUN` instruction creates a new image layer. It is similar to running a command in a shell during image creation |
+| COPY | Copies files or directories from the build context (the directory containing the Dockerfile) into the image filesystem |
+| EXPOSE | Documents which network ports the container listens on at runtime. It does **not** publish the port to the host, but makes it available for inter-container communication |
+| ENTRYPOINT | Defines the executable that is run when the container starts. It is typically used to define the main service of the container |
+| CMD | Provides default arguments to `ENTRYPOINT`, or defines the startup command if no `ENTRYPOINT` is specified |
+
+### Container lifecycle, ENTRYPOINT and PID 1
+
+#### Containers and Processes
+A Docker container is **not a virtual machine**.  
+It does not run a full system, nor multiple independent services.  
+Instead, a container lives **as long as its main process is running**.  
+Tha main process is called **PID 1**.  
+
+#### PID 1 in Linux and Docker
+In a Linux system, **PID 1** is the first process started by the kernel.  
+It has special responsibilities:
+- Receiving and handling system signals
+- Reaping zombie processes
+- Managing child processes
+In Docker, **each container has its own isolated PID namespace**, and therefore its **own PID 1**.  
+What defines PID 1 in a container?
+- The command defined by `ENTRYPOINT
+- Or by `CMD` if no `ENTRYPOINT` is provided
+
+#### PID 1 and Container Lifetime
+- The process running as PID 1 **keeps the container alive**
+- If PID 1 exits, the container stops
+- Docker monitors only PID 1
+Because of this:
+- Running processes in background
+- Exiting the startup script
+- Using fake "keep-alive" loops  
+will cause **incorrect container behavior**.
+
+#### Why infinite loops are forbidden  
+A common anti-pattern is:
+
+          service mysql start
+          while true; do sleep 1; done
+
+This is **explicitly forbidden** in *Inception*.  
+- The loop becomes PID 1 instead of the real service
+- Signals sent by Docker are not forwarded correctly
+- The real service cannot shut down cleanly
+- Zombie processes may accumulate
+
+#### Foreground vs background
+A process running in **foreground**:
+- Is not started with `&`
+- Does not return control to the shell
+- Remains attached to PID 1
+- Keeps the container alive
+A process running in **background**
+- Is started with `&`
+- Allows the script to continue and exit
+- Is **not** PID 1
+- Will be terminated when the container stops
+If the startup script finishes and no foreground process remains, the container exits.
+
+#### Why `exec` is mandatory
+To correctly run a service as PID 1, Dockerfiles and startup scripts use `exec`.  
+Example: 
+
+      exec mysql
+      exec pgp-fpm -F
+      exec nginx -g "daemon off;"
+
+⚠️⚠️ DUDAS: MI DOCKERFILE DE NGINX NO USA EXEC, USA CMD... POR QUÉ?? ESTÁ ESTO MAL??? REPASAR
+
+What `exec` does:
+- Replaces the current shell process
+- Turns the executed program into **PID 1**
+- Allows Docker to send signals directly to the service
+- Ensures proper shutdown behavior
+Without `exec`, the shell remains PID 1 and the service becomes a child process, which breaks signal handling.  
+
+#### One main process per container
+Docker containers are designed to run a single main proces.  
+In *Inception*:
+
+| Container | PID 1 process |
+|------------|---------------|
+| mariadb | MariaDB server |
+| wordpress | php-fpm |
+| nginx | nginx |
+
+Each container:
+- Runs exactly one service
+- Keeps that service in foreground
+- Uses `exec` to make it PID 1 -> ⚠️MENTIRA ! MI CÓDIGO DE NGINX NO USA EXEC... NO SÉ SI ESTO ESTÁ BIEN!! -> CREO QUE SÍ QUE ESTÁ BIEN... con `CMD["nginx", "-g", "daemon off;"], no hay shell, no hay script, nginx ya es PID 1... no necesita exec porque no hay nada que reemplazar. regla mental: exec es obligatorio solo cuando hay un shell o script delante.  
+
+#### Container Shutdown
+When running:
+
+          docker compose stop
+
+Docker performs the following steps:
+1. Sends `SIGTERM` to PID 1
+2. Wits a short grace period
+3. Sends `SIGKILL` if the process does not exit
+
+-> Los PID 1 se paran por señal. El programa que corre como PID 1 ya sabe cómo pararse.
+- `mysql` sabe cerrar conexiones y escribir en disco
+- `php-fpm` sabe matar workers
+- `nginx` sabe cerrar sockets...
+Por eso es importante que sean PID 1!! Si el servicio está bien lanzado, no se necesita escribir nada más. Se cierra por señal. 
+
+If the process:
+- Runs in foreground
+- Is PID 1
+- Handles signals correctly  
+then, the container shuts down cleanly.  
+
+⚠️ CÓMO COMPROBAR QUE ESTOY SALIENDO LIMPIEAMENTE DE TODAS PARTES???  
+Hacer:
+
+          docker compose stop
+          docker compose logs mariadb
+
+  Y buscar:
+  - mensahes de shutdown
+  - ausencia de killed
+  - ausencia de errores
+
+o->
+
+        docker inspect <container> | grep ExitCode
+
+    0 -> salida limpia
+    137 -> SIGKILL (mal)
+
+#### Relation to Dockerfile and Services
+These concepts directly influence how each service is implemented:
+- **MariaDB** starts temporarily in background only for initialiation, then runs in foreground as PID 1
+- **WordPress** runs PHP-FPM in foreground
+- **NGINX** runs with daemon mode disabled (⚠️ WHY??? -> NGINX, por defecto, corre en background y se daemoniza a si mismo (???), y esto es incompatible con Docker, porque entonces PID 1 seria el shell, NGINX quedaria en background, el contenedor se cerraria, por eso se hace daemon off y se queda en foreground)
+All lifecycle behavior is defined in the **Dockerfiles and entrypoint scripts**.  
+
+### Service Architecture
 #### MariaDB
 **MariaDB** is an SQL database server (a MySQL-compatible fork).  
 WordPress uses it to store:
@@ -249,87 +393,9 @@ Once initialization is complete:
   - Send signals correctly
   - Keep the container running
 
+#### WordPress
 
-##### WordPress
-
-##### NGINX
-
-**Instrucciones principales de Dockerfile**
-| Keyword | Definition |
-|---------|------------|
-| FROM | Indica a Docker en qué sistema operativo debe ejecutarse tu máquina virtual. Serán `debian:buster?bookworm?` para Debian o `alpine:x:xx` para Linux. |
-| RUM | Eejcuta un comando en tu máquina virtual. Equivale a conectarse por SSH y escribir un comando bash. |
-| COPY | Copia un archivo. Especificar la ubicación del archivo a copiar desde el directorio que contiene tu Dockerfile y luego especificar dónde se quiere copiar dentro de la máquina virtual.  |
-| EXPOSE | Indica los puertos de red específicos en los que se escucha durante la ejecución. No permite que el host acceda a los puertos del contenedor; expone el puerto especificado y lo hace disponible solo para la comunicación entre contenedores.  |
-| ENTRYPOINT | Especifica el comando para iniciar el contenedor. |
-| CMD | Argumentos por defecto del ENTRYPOINT |
-
-
-### Container lifecycle, ENTRYPOINT and PID 1
-#### PID 1 y ENTRYPOINT
-  ⚠️ HAY QUE HACER ESTE APARTADO MÁS CLARO... RESUMIR Y EXPLICAR BIEN LAS RELACIONES ENTRE LOS DIFERENTES CONTAINERS/SERVICIOS Y SUS ENTRYPOINTS...
-En Linux, **PID 1** es el primer proceso que se ejecuta en el sistema.  
-Es responsable de:
-- gestionar señales
-- reaprovechar procesos zombie
-
-En Docker, **cada contenedor tiene su propio PID 1**, que es proceso definido en el Dockerfile por:
-- `ENTRYPOINT`
-- `CMD`, si no hay `ENTRYPOINT`
-
-**Relación PID 1 <-> contenedor**
-- El proceso que se ejecuta como PID 1 mantiene vivo el contenedor
-- Si ese proceso termina, el contenedor se muere
-- Algunos programas necesitan ajustes para funcionar correctamente como PID1, lo que causa:
-  - Contenedores que no se detienen correctamente con `docker stop`
-  - Procesos zombie
-  - señales que no se gestionan correctamente
-  - contenedores que se cierran solos o crashean
-- Por eso en *Inception* está prohibido usar bucles infinitos. Tampoco se deben lanzar procesos en background y salir del script. ???
-
-**Foreground vs background**  
-Un proceso en **foreground**:
-- No se ejecuta con `&`
-- No termina
-- Mantiene vivo el contenedor
-Un proceso en **background**
-- Se lanza con `&`
-- El script puede terminar
-- El contenedor se cierra  
-**¿Cómo se consigue un proceso en foreground?**   
-Se usa `exec`:
-
-      exec mysql_safe
-      exec pgp-fpm -F
-      exec nginx -g "daemon off;"
-
-`exec`:
-- reemplaza el proceso del script
-- convierte ese proceso en **PID 1**
-- permite que Docker envíe señales correctamente
-
-**Un proceso principal por contenedor**
-- Cada contenedor debe tener **un solo proceso principal**
-- Ese proceso vive en foreground
-- El contenedor vive mientras el proceso viva
-
-| Contenedor | Proceso PID 1 |
-|------------|---------------|
-| mariadb | mysql_safe |
-| wordpress | php-fpm (⚠️ PROFUNDICAR EN QUÉ ES ESTO, QUÉ ES PHP-FPM, QUÉ ES CADA ENTRYPOINT DE CADA CONTAINER!)|
-| nginx | nginx |
-
-**Apagado limpio de contenedores**  
-Cuando se ejecuta 
-
-    docker compose stop
-
-Docker:
-- Envía `SIGTERM` al PID 1
-- Espera unos segundos
-- Si no responde, envía `SIGKILL`
-
-Si el proceso está en foreground y gestiona señales correctamente, el contenedor se apaga limpiamente.   ⚠️ TODO ESTO SE GESTIONA EN LOS DOCKERFILES, NO???
+#### NGINX
 
 ### Docker Compose
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
