@@ -322,18 +322,18 @@ The system is composed of three services:
 - `mariadb` -> data layer (database)
 - `wordpress` -> application layer (PHP)
 - `nginx` -> entry layer (reverse proxy + TLS)
-Each service corresponds to one Docker container vuilt from a custom Dockerfile.
+Each service corresponds to one Docker container built from a custom Dockerfile.
 
 ##### Network
-A single internal Docker network is defined: `inceptionnet`.  
-This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
+A single internal Docker network is defined. This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
 
+> Note: unlike the `host` network mode, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures. For more infor, [see Docker Network](#docker-network).
 
 ##### Volumes and data persistence
-Two persistent volues are used:
+Two persistent volumes are used:
 - WordPress (`/var/www/html`)
-- MariaDB (`/var/lib/mysql`)
-This volumes are implemented as [**bind mounts**](#data-persistence) to the host filesystem.
+- MariaDB (`/var/lib/mysql`)  
+These volumes are implemented as [**bind mounts**](#data-persistence) to the host filesystem.
 
               /home/login/data/wordpress
               /home/login/data/mariadb
@@ -349,11 +349,11 @@ This ensures that:
 | `services` | Defines the containers that compose the application (`nginx`, `wordpress`, `mariadb`). |
 |  `build` | Specifies the path to the Dockerfile used to build the image. |
 | `container_name` | Assigns a specific name to the container created from the service. |
-| `env_file` | |
+| `env_file` | Specifies a file containing environment variables that are injected into the container at runtime. |
 | `image` | Specifies an existing image to use. In *Inception*, custom images are built instead, as required by the subject. |
 | `ports` | Maps ports from the host to the container (`HOST_PORT:CONTAINER_PORT`) |
 | `volumes` | Defines persistent storage by mounting host directories into containers. |
-| `depends_on` | |
+| `depends_on` | Defines startup order between services, but does not ensure service readiness. |
 | `networks` | Specifies the networks the container is connected to. |
 | `restart` | Defines the container restart policy in case of failure. |
 | `bridge` driver | Allows containers on the same host to communicate through an isolated internal network. |
@@ -371,18 +371,22 @@ Docker performs the following steps:
    - `wordpress`
    - `nginx`
    
-   > ⚠️ The `depends_on` directive only ensures startup order. Ir does **NOT** guarantee that service is ready to accept connections.
-   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure that MariaDB is available before continuing the installation process. NGINX does not need it, because it only has to stay listening to the port 443. It tries to connect to wordpress:9000 if it receives a request PHP, and if it tries the conection and wordpress does not respond, it will return a temporary error.
+   > ⚠️ The `depends_on` directive only ensures startup order. It does **NOT** guarantee that service is ready to accept connections.
+   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure MariaDB is available before continuing the installation process.
+   > NGINX does not require such a mechanism, as it only needs to listen on port 443. When a PHP request is received, NGINX attempts to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.  
 
-
-##### Comunication between services
+##### Communication between services
 Thanks to the internal Docker network:  
 - WordPress connects to MariaDB using `mariadb` as the database host (defined in `wp-config.php`)
-- NGINXforwards PHP requests to Wordpress using `fastcgi_pass wordpress:9000` (`/nginx/conf/nginx.conf`)
+- NGINXforwards PHP requests to Wordpress using:
+
+                fastcgi_pass wordpress:9000
+
+( defined in `/nginx/conf/nginx.conf`)
 
 Overall request flow:
 
-          Internet -> NGINX -> WordPress -> MariaDB
+          Internet → NGINX → WordPress → MariaDB
 
 
 ### Data Persistence
