@@ -23,6 +23,7 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Dockerfile](#dockerfile)
   - [Container lifecycle, ENTRYPOINT and PID 1](#container-lyfecicle-entrypoint-and-pid-1)
   - [Service Architecture](#service-architecture)
+    - [Request flow and PHP execution](#request-flow-and-php-execution)
     - [MariaDB](#mariadb)
     - [WordPress](#wordpress)
     - [NGINX](#nginx)
@@ -348,6 +349,22 @@ These concepts directly influence how each service is implemented:
 All lifecycle behavior is defined in the **Dockerfiles and entrypoint scripts**.  
 
 ### Service Architecture
+NO ESTOY TAN SEGURA DE SI ESTO TIENE QUE IR ANTES DE EXPLICAR LOS SERVICIOS O DESPUÉS....
+#### Request flow and PHP execution
+##### Request Flow
+
+        Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
+
+- **NGINX** acts as a reverse proxy and TLS terminator
+- **PHP-FPM** handles execution of PHP scripts
+- **WordPress** processes the PHP scripts and queries the database
+- **MariaDB** stores WordPress data
+- **FastCGI**: protocol used by NGINX to send PHP request to PHP-FPM
+- **PHP-FPM** (FastCGI Process Manager for PHP):
+  - Manages PHP worker processes in foreground
+  - Listens for request from NGINX on port `9000`
+  - Keeps PHP ready to handle incoming requests
+
 #### MariaDB
 **MariaDB** is an SQL database server (a MySQL-compatible fork).  
 WordPress uses it to store:
@@ -396,57 +413,47 @@ Once initialization is complete:
   - Keep the container running
 
 #### WordPress
-**WordPress** es un CMS (Content Management System) escrito en PHP. Permite crear con facilidad:
-- páginas
-- blogs
-- usuarios
-- plugins
-- temas
-En este proyecto debe ejecutarse con PHP-FPM (no con Apache) porque:
-- NGINX no ejecuta PHP directamente
-- PHP-FPM gestiona procesos PHP como un servicio separado. PHP-FPM es el proceso que ejecuta PHP y espera repeticiones.
-
-
-El flujo es:
-
-Navegador -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
-
-WP-CLI: herramienta oficial de wordpress para administrar por línea de comandos. Con WP-CLI se pueden hacer cosas como:
-- descargar wordpress
-- crear wp-config.php
-- instalar wordpress
-- crear usuarios
-- activar plugins / themes...
-
-En este proyecto no se puede usar el navegador para instalar wordpress, todo debe hacerse automáticamente, con wp-cli.
-
+**WordPress** is a PHP-based **Content Management System (CMS)**.  
+It allows easy creation and management of:
+- Pages and posts
+- Blogs
+- Users and roles
+- Plugins and themes
+In this project, WordPress runs with **PHP-FPM** (not Apache). For details about how PHP requests are processed, [see Request flow and PHP execution](#request-flow-and-php-execution).
 
 ##### WordPress - Build time (Dockerfile)
-- Durante el build time no se installa WordPress, por qué no??
-  - creo que porque si se reinstalase wordpress sin comprobar si es o no la primera vez que se lanza el container, podría sobreescribir cosas o algo así (?)
-  - EL Dockerfile no debe crear estado de aplicación, el estado pertenece al runtime, no al buildtime
-  - Prepara una máquina capaz de ejecutar wordpress, no instala wordpress como una app concreta.
-  - sis e instalase wordpress en el dockerfile, este quedaría congelado en la imagen: los archivos pasarian a formar parte de la imagen, no del volumen, no se adpatarian... se rompe la persistencia de datos
-  - wordpress se instala en setup.sh porque es ESTADO de aplicación. Incluye archivos modificables, configuraciones específicas, dependeincia directa de la base de datos... esto no es infraestructura, es estado. y el estado vive en los volúmenes...
-- Si no que se instalan / preparan las herramientas y dependencias necesarias para que en el script de setup pueda instalarse y configurarse wordpress, en runtime
-- Herramientas que se preparan:
-   - PHP y PHP-FPM
-   - WP-CLI
- 
- 
-- Copiar configuraciones
-- Preparar entorno
+During **image construction**, the WordPress Dockerfile does **not install WordPress** itself. Instead, it prepares an environment capable of running WordPress.  
+Reasoning:
+- Installing WordPress at build time would embed application state into the image:
+  - Files and configuration would become part of the image, not stored in persistent volumes
+  - Updates or database.specific configuration could be overwritten on container restart
+  - Persistence would break: WordPress state (plugins, uploads, settings) must live in volumes, not the image
+    
+Build time prepares **tools and environment only**:
+  - **PHP and PHP-FPM**
+  - **WP-CLI** (WordPress Command-Line Interface):
+    - Used to download WordPress core
+    - Create `wp-config.php`
+    - Install WordPress automatically
+    - Create admin and additional users
+    - Manage plugins and themes
+  - Custom PHP-FPM configuration (`www.conf`)
+  - Runtime directory for PHP-FPM
+  - The setup script (`setup.sh`)  
+The Dockerfile sets `ENTRYPOINT` to `setup.sh`, which will handle application state at runtime  
 
-!! explicar qué es FastCGI, PHP, PHP-FPM y WP-CLI y cómo se relacionan con wordpress...
+> Key principle:  
+> - **Build time = infrastructure**
+> - **Runtime = application state**
+> WordPress installation is application state, so it occurs at runtime.
 
 ##### WordPress - Runtime (setup.sh)
-- Waiting for the MariaDB service to become available
-#	- Installing and configuring WordPress on first startup only
-- genera wp-config.php
-- crea admin y usuarios
-- se conecta con mariadb???
-#	- Preserving data on container restarts when using volumes
-#	- Starting PHP-FPM in foreground mode	
+The `setup.sh` script is executed **every time the container starts**. Its responsibilities are:
+- File permissions: ensures `/var/www/html` is owned by `www-data` and has correct permissions
+- Wait for MariaDB
+- First-time WordPress installation: checks for `wp-config.php`; if missing, runs installation commands
+- Preserve state: if the container restarts, skips installation, leaving volumes untouched
+- Start PHP-FPM: runs in **foreground** using `exec`, makinf PHP-FPM **PID 1**. This ensures Docker can manage container lifecycle and signals correctly.
 
 #### NGINX
 
@@ -557,7 +564,12 @@ Si destruyes el contenedor y lo vuelves a levantar:
       docker compose up --build
 
 Tus datos siguen ahí.  
-Estos datos se borran con ... ⚠️ : 
+Estos datos se borran con ... ⚠️ : docker-compose... con el MAKE FCLEAN
+
++ APARTE DE CON LA CREACION DE LAS VOLUMENES, QUÉ MÁS COSAS HACEMOS PARA ASEGURAR LA PERSISTENCIA DE DATOS?
++ DOCKERFILES -> WORDPRESS NO SE INSTALA EN EL DOCKERFILE, PORQUE SI NO SU ESTADO SERIA PARTE DE LA IMAGEN, SE INSTALA EN EL SCRIPT
++ DOCKERFILE -> TB HACEMOS ALGO EN EL DE MARIADB... (CREO QUE COMPROBAR SI EXISTE EL VOLUMEN, SI EXISTE NO REINSTALAMOS, O ALGO ASÍ, NO?)
++ en los setups ->  la filosofia de first container startup only tb aboga por la persistencia de volumenes de datos.
 
 #### Docker Volumes vs Bind Mounts
 Los contenedores son efímeros: si borras un contenedor, se borra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
