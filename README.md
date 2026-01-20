@@ -73,6 +73,7 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 -------------------------------------
 
 ## Instructions
+This sections explains ....   
 
 ### Prerequisites:
   - Acces to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
@@ -121,6 +122,7 @@ Puedes guardar tus variables (como domain name) en un archivo de variables de en
 
 
 ## Project description
+This sections explains ....   
 NO SÉ SI ESTO PEGA AQUÍ O EN OTRO LUGAR, PERO PARA EXPLICAR EL CÓDIGO, EL PROYECTO ENTERO, EN ORDEN, LO IDEAL SERIA SEGUIR ESTA ESTRUCTURA:
 - DOCKER_COMPOSE.YML -> ARQUITECTURA GLOBAL, FLUJO DE ARRANQUE, RELACIÓN ENTRE SERVICIOS
 - DOCKERFILES -> QUÉ SE INSTALA, QUÉ SE COPIA... CÓMO SE CONSTRUYE CADA IMAGEN
@@ -576,9 +578,9 @@ Los contenedores se buscan por su nombre de servicio:
 QUÉ SON LOS HOST NETWORKS???
 
 #### Docker Network vs Host Network
-?????
+Unlike the `host` network mode, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures. 
 
-### Variables de entorno y secretos
+### Secrets vs Environment Variables
 Nunca se deben poner contraseñas en el repositorio.
 Usar `.env` para:
 
@@ -597,7 +599,7 @@ Usar secrets para...: ⚠️⚠️⚠️⚠️
     - archivo .env si contene contraseñas -> debe estar en .gitignore
     - certificados TLS generados
    
-#### Secrets vs Environment Variables
+ 
    
 ### NGINX, WordPress and MariaDB
 Aunque el foco del proyecto es **Docker y la infraestructura**, es importante entender qué servicios estamos containerizando:
