@@ -312,14 +312,19 @@ Si el proceso está en foreground y gestiona señales correctamente, el contened
 
 El Makefile ejecuta el `docker-compose.yml`.   
 
-En el proyecto *Inception* se requieren varios contenedores conectados entre sí:
+#### Explicación del `docker-compose.yml` de *Inception* 
+Este archivo define toda la arquitectura del proyecto:
+- 3 servicios:
+  - `mariadb` -> capa de datos
+  - `wordpress` -> capa de aplicación (PHP)
+  - `nginx` -> capa de entrada (reverse proxy + TLS)          
+- 1 red interna:
+  - `inceptionnet` -> permite que los contenedores se comuniquen por nombre
+- 2 volúmenes persistentes:
+  - WordPress (`/var/www/html`)
+  - MariaDB (`/var/lib/mysql`)
 
-      Internet -> NGINX -> WORDPRESS -> MARIADB
-
-  ⚠️ DÓNDE DEBERIA EXPLCIAR TODO ESTO?? EN DEV_DOC??   
-**Archivo yml**: es un archivo de configuración utilizado para definir y gestionar múltiples contenedores en un entorno Docker. Permite describir las relaciones, configuraciones y servicios que compondrán una aplicación o conjunto de servicios interconectados.  
-Ejemplo simplificado:
-
+##### Ejemplo simplificado:
 
         services:
           nginx:
@@ -348,19 +353,43 @@ Ejemplo simplificado:
           db_data:
         
         networks:
-          inception:
+          inceptionnet:
 
+| keyword o como llamar a esto? | Description |
+|-----|------|
+| `services` | definen los servicios que ejecutarán los contenedores. Servicios que tenemos: `nginx`, `wordpress`, `mariadb`. |
+| `container_name` | asigna un nombre específico al contenedor que se crea a partir de este servicio |
+|  `build` | indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor |
+| `image` | indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR) |
+| `ports` | mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR |
+| `volumes` | creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES... |
+| `restart` | indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar |
+| `networks` | especifica a qué redes tiene que estar conectado el contenedor |
+| controlador de red `bridge` | permite a los contenedores comunicarse entre sí en el mismo host |
+ 
 
-- `services`: se definen los servicios que ejecutarán los contenedores. Servicios que tenemos: `nginx`, `wordpress`, `mariadb`.
-  - `container_name`: asigna un nombre específico al contenedor que se crea a partir de este servicio
-  - `build`: indica la ubicación del Dockerfile y los archivos necesarios para construir la imagen del contenedor
-  - `image`: indica qué imagen debe usarse como base para el servicio que estás definiendo. Si la imagen no se encuentra a nivel local en el sistema docker, la descargará automaticamente (CREO QUE ESTO ES ALGO QUE HAY QUE EVITAR).
-  - `ports`: mapeo de puertos. PUERTO_HOST:PUERTO_CONTENEDOR
-  - `volumes`: creamos un volumen en el host al directorio que especifiquemos en el contenedor. EXPLICAR QUÉ SON LOS VOLUMES...
-  - `restart`: indica cómo debe comportarse el contenedor en caso de que se detenga. Indicamos que tiene que reiniciar.
-  - `networks`: especifica a qué redes tiene que estar conectado el contenedor.
-  - red llamada amacarulnet....   ⚠️ ACTUALIZAR VERSIÓN DEL .YML
-  - controlador de red `bridge`: permite a los contenedores comunicarse entre sí en el mismo host
+##### Flujo de arranque:  
+Cuando ejecutas `docker-compose up`, ocurre lo siguiente:
+1. Docker crea la red `inceptionnet`
+2. Docker construye las imágenes (si no existen)
+3. Docker arranca los contenedores, respetand:
+   - `mariadb` primero
+   - luego `wordpress`
+   - finalmente `nginx`
+   ⚠️ `depends_on` **NO garantiza** que el servicio esté listo, solo que el contenedor haya arrancado. Por eso luego se utilizan scripts de espera (`sleep`) ⚠️⚠️⚠️⚠️ REPASAR QUE ESOS SCRIPTS DE ESPERA NO SEAN LOS PROHIBIDOS POR EL SUBJECT!!!
+
+##### Comunicación entre servicios
+La red `inceptionnet` permite que:
+- WordPress se conecta a MariaDB usando `host = mariadb` DÓNDE PASA ESTO???
+- Nginx se conecta a WordPress usando `fastcgi_pass wordpress:9000` (`/nginx/conf/nginx.conf`)
+
+          Internet -> NGINX -> WordPress -> MariaDB
+
+##### Persistencia de datos
+Se utilizan bind mounts
+
+        /home/login/data/wordpress
+        /home/login/data/mariadb
 
 ### Volúmenes - Persistencia de datos
 Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
