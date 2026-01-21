@@ -21,4 +21,3 @@ EXPOSE 443
 
 # NGINX debe ejecutarse en primer plano para que el contenedor no se detenga
 CMD ["nginx", "-g", "daemon off;"]
-
