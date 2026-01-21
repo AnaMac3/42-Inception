@@ -19,7 +19,8 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Docker](#docker)
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
-    - [Images](#images)
+    - [Docker Images](#docker-images)
+      - [Image vs Container](#image-vs-container)
     - [Dockerfile](#dockerfile)
   - [Container lifecycle, ENTRYPOINT and PID 1](#container-lyfecicle-entrypoint-and-pid-1)
   - [Service Architecture](#service-architecture)
@@ -169,17 +170,33 @@ A **Docker image** is an **inmutable blueprint** used to create containers. It c
 - Startup instructions  
 Images are built once and reused to create one or multiple containers.  
 
-**Image vs Container**
+##### Image vs Container
 | Image | Container |
 |--------|------------|
-| Inmutable template | Running instance of an image |
+| Immutable template | Running instance of an image |
 | Built at build time | Exists at runtime |
-| Stateless | Has temporary state |
-| Cannot change | Can modify its lifesystem during execution |
+| Stateless | Has runtime state |
+| Cannot change | Can modify its filesystem during execution |
 
 When a container is removed, all its runtime state is lost unless persistent volumes are used.  
 
 #### Dockerfile
+
+> ⚠️ -> HAY QUE RESUMIR ESTO EN EL README, PASAR COSAS A DEV_DOC...
+> README:
+> - Arquitectura general
+> - request flow
+> - explicación de PID 1 / exec resumida
+> - qué hace cada servicio
+> DEV_DOC
+> - PID 1 en profundidad
+> - Shell vs exec form
+> - Señales
+> - inicialización vs runtime
+> - wp-config.php y modelo de datos
+> - decisiones de diseño
+
+
 A **Dockerfile** is a text file that defines **how a Docker image is built**.  
 It describes:
 - The base operating system
@@ -191,14 +208,10 @@ The **runtime behaviour** of the container is defined by its `ENTRYPOINT` (and o
 
 > In *Inception*, each service uses a **custom Dockerfile**, as required by the subject.  
 
-A core Docker principle is: **One container = one main service**
+A core Docker principle is: 
+> **One container = one main service**
 
-In *Inception*, the architecture is split into three containers:  
-| Service | Container | Responsibility |
-|----------|------------|--------------|
-| MariaDB | `mariadb` | Database (data layer) |
-| WordPress+PHP-FPM | `wordpress`| Application logic |
-| NGINX | `nginx` | Web server, TLS, reverse proxy |
+In *Inception*, the architecture is split into three containers: `mariadb`, `wordpress`, `nginx` ([see Service Architecture](#service-architecture)).
 
 Each container:
 - Runs **one foreground process**
@@ -209,42 +222,43 @@ Each container:
 | Keyword | Definition |
 |---------|------------|
 | FROM | Defines the base image used to build the Docker image. This specifies the operating system and initial environment (e.g. `debian:bookworm`, `alpine:3.19`) |
-| RUM | Executes a command **at build time** inside the image. Each `RUN` instruction creates a new image layer. It is similar to running a command in a shell during image creation |
+| RUN | Executes a command **at build time** inside the image. Each `RUN` instruction creates a new image layer. It is similar to running a command in a shell during image creation |
 | COPY | Copies files or directories from the build context (the directory containing the Dockerfile) into the image filesystem |
 | EXPOSE | Documents which network ports the container listens on at runtime. It does **not** publish the port to the host, but makes it available for inter-container communication |
 | ENTRYPOINT | Defines the executable that is run when the container starts. It is typically used to define the main service of the container |
 | CMD | Provides default arguments to `ENTRYPOINT`, or defines the startup command if no `ENTRYPOINT` is specified |
 
 ### Container lifecycle, ENTRYPOINT and PID 1
-
+⚠️ SE PUEDEN ACORTAR O JUNTAR APARTADOS? SON DEMASIADOS APARTADOS Y MUY CORTOS... O SPLITEAR EL RESTO DE APARTADOS, PARA QUE TODO QUEDE CON ESTÉTICA SIMILAR
 #### Containers and Processes
 A Docker container is **not a virtual machine**.  
 It does not run a full system, nor multiple independent services.  
-Instead, a container lives **as long as its main process is running**.  
-Tha main process is called **PID 1**.  
+A container lives **as long as its main process is running**.  
+This main process is called **PID 1**.  
 
 #### PID 1 in Linux and Docker
-In a Linux system, **PID 1** is the first process started by the kernel.  
+In Linux, **PID 1** is the first process started by the kernel.  
 It has special responsibilities:
 - Receiving and handling system signals
 - Reaping zombie processes
 - Managing child processes
-In Docker, **each container has its own isolated PID namespace**, and therefore its **own PID 1**.  
-What defines PID 1 in a container?
-- The command defined by `ENTRYPOINT
+In Docker:
+- Each container has its own **isolated PID namespace**
+- Each container therefore has its **own PID 1**.  
+PID 1 is defined by:  
+- The command specified by `ENTRYPOINT`
 - Or by `CMD` if no `ENTRYPOINT` is provided
 
 #### PID 1 and Container Lifetime
 - The process running as PID 1 **keeps the container alive**
 - If PID 1 exits, the container stops
-- Docker monitors only PID 1
-Because of this:
-- Running processes in background
-- Exiting the startup script
+- Docker monitors **only PID 1**  
+Because of this, the following patterns cause **incorrect behaviour**:
+- Running the real service in background
+- Letting the startup script exit
 - Using fake "keep-alive" loops  
-will cause **incorrect container behavior**.
 
-#### Why infinite loops are forbidden  
+##### Why infinite loops are forbidden  
 A common anti-pattern is:
 
           service mysql start
@@ -269,22 +283,36 @@ A process running in **background**
 - Will be terminated when the container stops
 If the startup script finishes and no foreground process remains, the container exits.
 
-#### Why `exec` is mandatory
-To correctly run a service as PID 1, Dockerfiles and startup scripts use `exec`.  
+#### `exec`, PID 1 and service startup
+When a container starts a **shell or a script** (for example via `ENTRYPOINT ["setup.sh"]), the shell becomes PID 1 by default.  
+In this case, using `exec` INSIDE THE STARTED SHELL O SCRIPT is **mandatory** to replace the shell process with the real service.  
+
 Example: 
 
       exec mysql
-      exec pgp-fpm -F
-      exec nginx -g "daemon off;"
-
-⚠️⚠️ DUDAS: MI DOCKERFILE DE NGINX NO USA EXEC, USA CMD... POR QUÉ?? ESTÁ ESTO MAL??? REPASAR
+      exec php-fpm -F
 
 What `exec` does:
 - Replaces the current shell process
 - Turns the executed program into **PID 1**
 - Allows Docker to send signals directly to the service
 - Ensures proper shutdown behavior
-Without `exec`, the shell remains PID 1 and the service becomes a child process, which breaks signal handling.  
+
+Without `exec`, the shell remains PID 1 and the real service runs as a child process, which breaks signal handling.
+
+##### When `exec` is NOT required
+If the container starts the binary **directly**, this is the **exec form** of `CMD` or `ENTRYPOINT`, no shell is involved.  
+
+In the NGINX container, the service is started IN THE DOCKERFILE as:
+
+        CMD ["nginx", "-g", "daemon off;"]
+
+This is the exec form of `CMD`, which means:
+- No shell is spawned
+- `nginx`  becomes PID 1 directly
+- Signal handling works correctly
+
+> `ENTRYPOINT["nginx", "-g", "daemon off;"]` would also be valid, but `CMD` is sufficient here.
 
 #### One main process per container
 Docker containers are designed to run a single main proces.  
@@ -292,14 +320,20 @@ In *Inception*:
 
 | Container | PID 1 process |
 |------------|---------------|
-| mariadb | MariaDB server |
-| wordpress | php-fpm |
-| nginx | nginx |
+| `mariadb` | MariaDB server |
+| `wordpress` | php-fpm |
+| `nginx` | nginx |
 
-Each container:
-- Runs exactly one service
-- Keeps that service in foreground
-- Uses `exec` to make it PID 1 -> ⚠️MENTIRA ! MI CÓDIGO DE NGINX NO USA EXEC... NO SÉ SI ESTO ESTÁ BIEN!! -> CREO QUE SÍ QUE ESTÁ BIEN... con `CMD["nginx", "-g", "daemon off;"], no hay shell, no hay script, nginx ya es PID 1... no necesita exec porque no hay nada que reemplazar. regla mental: exec es obligatorio solo cuando hay un shell o script delante.  
+Some containers require an **initialization phase** before starting the main service:
+- **MariaDB** initializes databases and users
+- **WordPress** generates configuration and installs the application
+These containers use setup scripts as `ENTRYPOINT`.
+Once initialization is complete, the real service is started with `exec`.
+NGINX does not require initialization:
+- No application state
+- No database dependency
+- No runtime configuration generation  
+It can therefore start directly as PID 1.  
 
 #### Container Shutdown
 When running:
@@ -311,11 +345,10 @@ Docker performs the following steps:
 2. Wits a short grace period
 3. Sends `SIGKILL` if the process does not exit
 
--> Los PID 1 se paran por señal. El programa que corre como PID 1 ya sabe cómo pararse.
-- `mysql` sabe cerrar conexiones y escribir en disco
-- `php-fpm` sabe matar workers
-- `nginx` sabe cerrar sockets...
-Por eso es importante que sean PID 1!! Si el servicio está bien lanzado, no se necesita escribir nada más. Se cierra por señal. 
+Services handle shutdown internally:
+- MariaDB closes connections and flushes data
+- PHP-FPM stops workers
+- NGINX closes sockets
 
 If the process:
 - Runs in foreground
@@ -323,47 +356,32 @@ If the process:
 - Handles signals correctly  
 then, the container shuts down cleanly.  
 
-⚠️ CÓMO COMPROBAR QUE ESTOY SALIENDO LIMPIEAMENTE DE TODAS PARTES???  
-Hacer:
-
-          docker compose stop
-          docker compose logs mariadb
-
-  Y buscar:
-  - mensahes de shutdown
-  - ausencia de killed
-  - ausencia de errores
-
-o->
+⚠️ ESTA VERIFICACIÓN DEBERIA IR EN ALGUNA OTRA PARTE...
+To verify clean shutdown:  
 
         docker inspect <container> | grep ExitCode
 
-    0 -> salida limpia
-    137 -> SIGKILL (mal)
-
-#### Relation to Dockerfile and Services
-These concepts directly influence how each service is implemented:
-- **MariaDB** starts temporarily in background only for initialiation, then runs in foreground as PID 1
-- **WordPress** runs PHP-FPM in foreground
-- **NGINX** runs with daemon mode disabled (⚠️ WHY??? -> NGINX, por defecto, corre en background y se daemoniza a si mismo (???), y esto es incompatible con Docker, porque entonces PID 1 seria el shell, NGINX quedaria en background, el contenedor se cerraria, por eso se hace daemon off y se queda en foreground)
-All lifecycle behavior is defined in the **Dockerfiles and entrypoint scripts**.  
+- `0` -> clean exit
+- `137` -> SIGKILL (bad) 
 
 ### Service Architecture
-NO ESTOY TAN SEGURA DE SI ESTO TIENE QUE IR ANTES DE EXPLICAR LOS SERVICIOS O DESPUÉS....
+The project is composed of **three isolated services**, each running in its own container and connected through a Docker network.  
+| Service | Container |  Role | Exposed port |
+|---------|-----------|-------|--------------|
+| NGINX | `mariadb` | TLS termination, reverse proxy | 443 |
+| WordPress (PHP-FPM) | `wordpress` | Application logic, PHP execution | 9000 |
+| MariaDB | `nginx`| Persistent data storage | 3306 |  
+
+Each service has a single responsibility and communicates with the others through a well defined network interfaces.  
 #### Request flow and PHP execution
-##### Request Flow
 
         Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
 
-- **NGINX** acts as a reverse proxy and TLS terminator
-- **PHP-FPM** handles execution of PHP scripts
+- **NGINX** handles HTTPS and forwards PHP requests
+- **FastCGI** is protocol used by NGINX to send PHP request to PHP-FPM
+- **PHP-FPM** executes PHP scripts
 - **WordPress** processes the PHP scripts and queries the database
 - **MariaDB** stores WordPress data
-- **FastCGI**: protocol used by NGINX to send PHP request to PHP-FPM
-- **PHP-FPM** (FastCGI Process Manager for PHP):
-  - Manages PHP worker processes in foreground
-  - Listens for request from NGINX on port `9000`
-  - Keeps PHP ready to handle incoming requests
 
 #### MariaDB
 **MariaDB** is an SQL database server (a MySQL-compatible fork).  
@@ -382,14 +400,13 @@ During image construction, the MariaDB Dockerfile performs the following steps:
 - Exposes port `3306` for internal container communication
 - Defines `setup.sh` as the container `ENTRYPOINT`
 
-**Custom configuration (`my.conf`)**  
+###### Custom configuration (`my.conf`)
 The default MariaDB configuration binds the server to `127.0.0.1`, which would prevent connections from other containers.  
 The custom configuration overrides this behaviour:
 - MariaDB listens on `0.0.0.0`
 - This allows WordPress to connect through the Docker bridge network
 - The database remains inaccessible from the host unless explicitly exposed (???POR ESO PARA ACCEDER A LA DATABASE TENEMOS QUE ENTRAR CON mysql -u root -p??)
 This configuration enables inter-container communication while preserving isolation.  
-
 ##### MariaDB - Runtime (setup.sh)
 The `setup.sh` script is executed **every time the MariaDB container starts**, because it is defined as the `ENTRYPOINT`.  
 Its responsibilities are:
@@ -400,7 +417,7 @@ Its responsibilities are:
 - Start MariaDB as the main foreground process
 This logic is essential when using **persistent volumes**, because containers may be restarted while data must remain intact.  
 
-**Background vs Foreground MariaDB**  
+###### Background vs Foreground MariaDB
 During the first startup, MariaDB is launched **temporarily in background**:
 - This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`)
 - The server does not need to remain running permanently at this stage
@@ -447,6 +464,16 @@ The Dockerfile sets `ENTRYPOINT` to `setup.sh`, which will handle application st
 > - **Runtime = application state**
 > WordPress installation is application state, so it occurs at runtime.
 
+###### PHP-FPM configuration (`www.conf`)
+The PHP-FPM pool configuration is provided at build time via custom `www.conf` file. This file defines how PHP-FPM listens for incoming requests and how worker processes are managed.  
+Key aspects of the configuration:
+- PHP-FPM runs under the `www-data` user and group, matching NGINX expectations
+- Listens on port `9000` for FastCGI request from NGINX
+- Uses a dynamic process manager (`pm = dynamic`)
+- Limits the number of PHP worker proesses to avoid resource exhaustion
+- Keeps env variables (`clear_env =  no`) so that configuration passed through Docker environment variables is available to PHP.
+This configuration is part of the infraestructure and does not change at runtime, which is why it is defined during image build.  
+
 ##### WordPress - Runtime (setup.sh)
 The `setup.sh` script is executed **every time the container starts**. Its responsibilities are:
 - File permissions: ensures `/var/www/html` is owned by `www-data` and has correct permissions
@@ -454,6 +481,16 @@ The `setup.sh` script is executed **every time the container starts**. Its respo
 - First-time WordPress installation: checks for `wp-config.php`; if missing, runs installation commands
 - Preserve state: if the container restarts, skips installation, leaving volumes untouched
 - Start PHP-FPM: runs in **foreground** using `exec`, makinf PHP-FPM **PID 1**. This ensures Docker can manage container lifecycle and signals correctly.
+
+##### `wp-config.php` 
+At runtime, PHP-FPM uses the previously defined pool configuration and focuses on executing PHP scripts.  
+Application-specific configuration, such as database credentials and WordPress settings, is not handled by PHP-FPM itself but by WordPress through `wp-config.php`, which is generated dynamically at container startup.  
+`wp-config.php` contains the runtime configuration of WordPress, including:
+- Database connection parameters
+- Authentication keys and salts
+- Table prefix and environment-specific settings
+
+`wp-config.php` is generated at runtime, durinf the first container startup, in `setup.sh` using WP-CLI and environment variables, ensuring that sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
 
 #### NGINX
 
