@@ -366,194 +366,64 @@ To verify clean shutdown:
 
 ### Service Architecture
 The project is composed of **three isolated services**, each running in its own container and connected through a Docker network.  
+Each service has a **single responsibility** and communicates with the others through a Docker network.  
+
 | Service | Container |  Role | Exposed port |
 |---------|-----------|-------|--------------|
-| NGINX | `mariadb` | TLS termination, reverse proxy | 443 |
+| NGINX | `nginx` | TLS termination, reverse proxy | 443 |
 | WordPress (PHP-FPM) | `wordpress` | Application logic, PHP execution | 9000 |
-| MariaDB | `nginx`| Persistent data storage | 3306 |  
+| MariaDB | `mariadb`| Persistent data storage | 3306 |  
 
-Each service has a single responsibility and communicates with the others through a well defined network interfaces.  
 #### Request flow and PHP execution
 
         Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
 
-- **NGINX** handles HTTPS and forwards PHP requests
-- **FastCGI** is protocol used by NGINX to send PHP request to PHP-FPM
+- **NGINX** receives all incoming HTTPS requests  
+- **FastCGI** is a protocol used to forward PHP request from NGINX to PHP-FPM
 - **PHP-FPM** executes PHP scripts
 - **WordPress** processes the PHP scripts and queries the database
-- **MariaDB** stores WordPress data
+- **MariaDB** stores and retrieves persistent application data
 
-⚠️ AÑADIR PÁRRAFO EXPLICATIVO SENCILLO EJEMPLIFICANDO CÓMO INTERACTUAN LOS SERVICIOS ENTRE SÍ. EJ: NGINX RECIBE / REGISTRA UNA REQUEST (EJEMPLO: ALGUIEN QUIERE ACCEDER A LA WEB O A X PÁGINA...) -> ESTA REQUEST SE TRANSPITE / TRADUCE CON ... -> PHP SCRIPT  QUE PASA A WORDPRESS -> WORDPRESS QUERIES THE DATABASE (ESTO QUÉ SIGNIFICA? QUE HACE UNA CONSULTA SQL A MARIADB?) -> MARIADB TIENE LAS DATABASES CON LA DATA... NO ENTIENDO MUY BIEN CÓMO VA ESTO...
+> ⚠️ definir php-fpm, fastcgi, https...
+
+Simplified example:  
+1. A user visits `https://login.42.fr`
+2. The browser sends an HTTPS request to **NGINX**
+3. NGINX:
+   - Serves static files if they exist (CSS, images, JS)
+   - Forwards `.php` request to **PHP-FPM**
+4. PHP-FPM executes the requested PHP script
+5. WordPress login runs:
+    - Determines which page/post is requested
+    - **Queries the database** (executes SQL queries) to retrieve content
+6. MariaDB returns the requested data
+7. WordPress generates HTML
+8. NGINX sends the final response back to the browser
 
 #### MariaDB
-**MariaDB** is an SQL database server (a MySQL-compatible fork).  
+**MariaDB** is a relational SQL database server (MySQL-compatible).  
 WordPress uses it to store:
 - Post and pages
 - Users and passwords
 - Configuration
 - Plugins and metadata
-
-⚠️ CREO QUE TODA ESTA PARTE DEL BUILD TIME / RUNTIME YA ES ALGO QUE DEBERIA IR EN DEV_DOC.MD
-##### MariaDB - Build time (Dockerfile)
-During image construction, the MariaDB Dockerfile performs the following steps:
-- Uses a minimal Debian base image
-- Installs the MariaDB server packages
-- Copies a custom MariaDB configuration file
-- Copies an initialization script (`setup.sh`)
-- Exposes port `3306` for internal container communication
-- Defines `setup.sh` as the container `ENTRYPOINT`
-
-###### Custom configuration (`my.conf`)
-The default MariaDB configuration binds the server to `127.0.0.1`, which would prevent connections from other containers.  
-The custom configuration overrides this behaviour:
-- MariaDB listens on `0.0.0.0`
-- This allows WordPress to connect through the Docker bridge network
-- The database remains inaccessible from the host unless explicitly exposed (???POR ESO PARA ACCEDER A LA DATABASE TENEMOS QUE ENTRAR CON mysql -u root -p??)
-This configuration enables inter-container communication while preserving isolation.  
-##### MariaDB - Runtime (setup.sh)
-The `setup.sh` script is executed **every time the MariaDB container starts**, because it is defined as the `ENTRYPOINT`.  
-Its responsibilities are:
-- Prepare required runtime directories
-- Detect whether the database has already been initialized
-- Initialize the database only on the first container startup
-- Create the applciation database and user
-- Start MariaDB as the main foreground process
-This logic is essential when using **persistent volumes**, because containers may be restarted while data must remain intact.  
-
-###### Background vs Foreground MariaDB
-During the first startup, MariaDB is launched **temporarily in background**:
-- This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`)
-- The server does not need to remain running permanently at this stage
-Once initialization is complete:
-- The temporary MariaDB process is stopped
-- MariaDB is restarted in **foreground mode**
-- The foreground MariaDB process becomes **PID 1**, which is required for Docker to:
-  - Track the container lifecycle
-  - Send signals correctly
-  - Keep the container running
+MariaDB does not serve HTTP requests and is never exposed directly to the user.  
 
 #### WordPress
 **WordPress** is a PHP-based **Content Management System (CMS)**.  
-It allows easy creation and management of:
-- Pages and posts
-- Blogs
-- Users and roles
-- Plugins and themes
-In this project, WordPress runs with **PHP-FPM** (not Apache). For details about how PHP requests are processed, [see Request flow and PHP execution](#request-flow-and-php-execution).
-
-⚠️ CREO QUE TODA ESTA PARTE DEL BUILD TIME / RUNTIME YA ES ALGO QUE DEBERIA IR EN DEV_DOC.MD
-##### WordPress - Build time (Dockerfile)
-During **image construction**, the WordPress Dockerfile does **not install WordPress** itself. Instead, it prepares an environment capable of running WordPress.  
-Reasoning:
-- Installing WordPress at build time would embed application state into the image:
-  - Files and configuration would become part of the image, not stored in persistent volumes
-  - Updates or database.specific configuration could be overwritten on container restart
-  - Persistence would break: WordPress state (plugins, uploads, settings) must live in volumes, not the image
-    
-Build time prepares **tools and environment only**:
-  - **PHP and PHP-FPM**
-  - **WP-CLI** (WordPress Command-Line Interface):
-    - Used to download WordPress core
-    - Create `wp-config.php`
-    - Install WordPress automatically
-    - Create admin and additional users
-    - Manage plugins and themes
-  - Custom PHP-FPM configuration (`www.conf`)
-  - Runtime directory for PHP-FPM
-  - The setup script (`setup.sh`)  
-The Dockerfile sets `ENTRYPOINT` to `setup.sh`, which will handle application state at runtime  
-
-> Key principle:  
-> - **Build time = infrastructure**
-> - **Runtime = application state**
-> WordPress installation is application state, so it occurs at runtime.
-
-###### PHP-FPM configuration (`www.conf`)
-The PHP-FPM pool configuration is provided at build time via custom `www.conf` file. This file defines how PHP-FPM listens for incoming requests and how worker processes are managed.  
-Key aspects of the configuration:
-- PHP-FPM runs under the `www-data` user and group, matching NGINX expectations
-- Listens on port `9000` for FastCGI request from NGINX
-- Uses a dynamic process manager (`pm = dynamic`)
-- Limits the number of PHP worker proesses to avoid resource exhaustion
-- Keeps env variables (`clear_env =  no`) so that configuration passed through Docker environment variables is available to PHP.
-This configuration is part of the infraestructure and does not change at runtime, which is why it is defined during image build.  
-
-##### WordPress - Runtime (setup.sh)
-The `setup.sh` script is executed **every time the container starts**. Its responsibilities are:
-- File permissions: ensures `/var/www/html` is owned by `www-data` and has correct permissions
-- Wait for MariaDB
-- First-time WordPress installation: checks for `wp-config.php`; if missing, runs installation commands
-- Preserve state: if the container restarts, skips installation, leaving volumes untouched
-- Start PHP-FPM: runs in **foreground** using `exec`, makinf PHP-FPM **PID 1**. This ensures Docker can manage container lifecycle and signals correctly.
-
-##### `wp-config.php` 
-At runtime, PHP-FPM uses the previously defined pool configuration and focuses on executing PHP scripts.  
-Application-specific configuration, such as database credentials and WordPress settings, is not handled by PHP-FPM itself but by WordPress through `wp-config.php`, which is generated dynamically at container startup.  
-`wp-config.php` contains the runtime configuration of WordPress, including:
-- Database connection parameters
-- Authentication keys and salts
-- Table prefix and environment-specific settings
-
-`wp-config.php` is generated at runtime, durinf the first container startup, in `setup.sh` using WP-CLI and environment variables, ensuring that sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
+It allows easy creation and management of websites, blogs, users, plugins, and themes.  
+In this project, WordPress does not handle HTTP requests directly via Apache. Isntead, it runs with **PHP-FPM**, while **NGINX** acts as the web server and reverse proxy.  
+- **PHP-FPM (PHP FastCGI Process Manage)** is a service that executes PHP scripts and manages PHP worker processes. It receives PHP requests from NGINX using the FastCGI protocol and returns the generated reponse.
+- **WP-CLI (WordPress Command-Line Interface)** is a command-line tool used to install, configure, and manage WordPress. In this project, WP-CLI is used at container startup tp perform the initial WordPress installation and configuration automatically.  
 
 #### NGINX
-**NGINX** is a high-performance web server and reverse proxy. In this project, it handles:  
+**NGINX** is a high-performance web server and reverse proxy.  
+In this project, it handles:  
 - TLS termination (HTTPS)
-- Routing requests to PHP-FPM
+- Routing requests to PHP-FPM, proxying PHP requests to PHP-FPM
 - Serving static files
 
 NGINX runs as a **single, foreground process** inside its container. It does not manage application state or interact directly with the database. This separation allows NGINX to start directly as PID 1 without requiring intermediate setup scripts.  
-##### NGINX - Build time (Dockerfile)
-During **image construction**, the NGINX Dockerfile sets up the environment required to serve WordPress:
-- Installs **nginx** and **openssl**:
-  - `nginx`: the web server and reverse proxy
-  - `openssl`: generates TLS certificates
-- Creates the folder for SSL certificates: `/etc/nginx/ssl`
-- Generates a **self-signed certificate** for development:
-  - 2048-bit RSA key
-  - Valid for 365 days
-  - Distinguished Name set for the local domain
-  ... si no me equivoco, es aquií dónde estamos creando certificado y clave privada a través de un certificado auto-firmado de docker, para no depender de una CA, que sería lo suyo en uun entorno de producción
-- Overrides the configuration
-- Exposes port `443` for HTTPS communication
-
-Key principle:
-> - **Build time = infraestructur**
-> - **Runtime = service execution**
-
-All configuration and certificates are part of the **infraestructure**, defined during image build.  
-
-###### `nginx.conf` 
-- Escucha en conexiones IPv4 e IPv6 a tra´ves del puerto 443 usando HTTPS
-- Configuración TLS/SSL: establece protocolos TLSv1.2 y TLSv1.3.
-  > TLS (Transport Layer Security): protocolo que cifra la comunicación entre navegador y servidor.
-- Establece las rutas del certificado (`.crt`) y la clave privada (`.key`) creadas en el Dockerfile, para que se pueda establecer esa conexión segura. 
-- Document root and default index files: Se establece dónde están los archivos que se van a servir (los archivos de WordPess-> root /var/www/html). Si un usuario entra a una carpeta en la URL, NGINX busca primero index.php y si no existe, index.html
-- Location block for static files:
-  - URI: la parte de la URL después del dominio. Ejemplo: `https://login.42.fr/wp-admin` -> la URI es `/wp-admin`
-  - `try_files $uri $uri/ /index.php?$args;` -> le dice a NGINX:
-    - primero intenta servir un archivo que coincida con la URI: `wp-admin` busca `/var/www/html/wp-admin`
-    - si no existe, intenta tratar la uri como una carpeta (`$uri/`)
-    - si no existe, redirige todas las peticiones a `index.php` pasando los parámetros de la URL (`$args`) a PHP
-  - Esto permite que WordPress maneje las URLS bonitas (https://amacarul.42.fr/my-post) incluso si no hay un archivo físico llamado my-post
-- Location block for php procesing: este bloque se activa solo para archivos que terminen en `.php`
-  - `fastcgi_split_path_info`: divide la URL en el archivo PHP real y la parte extra de la ruta 
-
-##### NGINX - Runtime
-A DIFERENCIA DE MARIADB Y WORDPRESS, EL RUNTIME OCURRE EN EL MISMO DOCKERFILE, NO HAY UN SETUP.SH -> !!! NO ESTOY DEL TODO SEGURA, ES POSIBLE QUE LO DE CREAR CERTIFICADOS Y CLAVES TENGA QUE IR EN UN SCRIPT APARTE??
-At runtime, the container:
-- Starts NGINX **directly in foreground** using:
-
-          CMD["nginx", "-g", "daemon off;"]
-
-- By keeping NGINX in the foreground, the process becaomes PID 1
-- NGINX cannot run as a daemon inside Docker, because if it forked into background, PID 1 would be a shell process, causing the container to exit immediately.
-
-> Note: explicar qué es todo eso de daemon
-
-- NGINX does not depend on MariaDB or WordPress state; it only requires PHP-FPM to be reachable
-- TLS termination and request proxying are handled immediately upon container start.
-
 
 ### Docker Compose
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
@@ -639,7 +509,6 @@ Overall request flow:
 
           Internet → NGINX → WordPress → MariaDB
 
-
 ### Data Persistence
 Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
 
@@ -651,23 +520,6 @@ Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso e
 
         /home/<login>/data/wordpress
         /home/<login>/data/mariadb
-
-Sirven para:
-- con MariaDB -> persistir la base de datos
-- con WordPress -> guardar plugins, temas, uploads
-
-Si destruyes el contenedor y lo vuelves a levantar:
-
-      docker compose down
-      docker compose up --build
-
-Tus datos siguen ahí.  
-Estos datos se borran con ... ⚠️ : docker-compose... con el MAKE FCLEAN
-
-+ APARTE DE CON LA CREACION DE LAS VOLUMENES, QUÉ MÁS COSAS HACEMOS PARA ASEGURAR LA PERSISTENCIA DE DATOS?
-+ DOCKERFILES -> WORDPRESS NO SE INSTALA EN EL DOCKERFILE, PORQUE SI NO SU ESTADO SERIA PARTE DE LA IMAGEN, SE INSTALA EN EL SCRIPT
-+ DOCKERFILE -> TB HACEMOS ALGO EN EL DE MARIADB... (CREO QUE COMPROBAR SI EXISTE EL VOLUMEN, SI EXISTE NO REINSTALAMOS, O ALGO ASÍ, NO?)
-+ en los setups ->  la filosofia de first container startup only tb aboga por la persistencia de volumenes de datos.
 
 #### Docker Volumes vs Bind Mounts
 Los contenedores son efímeros: si borras un contenedor, se borra su filesystem, es decir, se pierden las bases de datos, uploads, etc.  
