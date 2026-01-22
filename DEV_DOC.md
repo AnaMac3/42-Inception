@@ -22,7 +22,7 @@ This document describes the technical architecture of the *Inception* project. I
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
   - [Core Docker Compose commands](#core-docker-compose-commands)
   - [Makefile shortcuts](#makefile-shortcuts)
-- [Relevant commands to manage the containers and volumes](#relevant-commands-to-manage-the-containers-and-volumes)
+- [Container and volume management](#container-and-volume-management)
   - [Container inspection and logs](#container-inspection-and-logs)
   - [Entering containers (interactive debugging)](#entering-containers-interactive-debugging)
   - [Database inspection](#database-inspection)
@@ -325,9 +325,9 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 ⚠️ **Implication regarding images:**  
 If mages are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
 
-## Relevant commands to manage the containers and volumes
+## Container and volume management
 This section lists useful **Docker and Docker Compose commands** for inspecting, debugging, and maintaining the project during development.   
-
+⚠️ IGUAL DEBERIA EXPLICAR AQUÍ LA ARQUITECTURA DEL SISTEMA?? TRASLADAR AQUI LO QUE HAY QUE QUITAR DEL README??
 ### Container inspection and logs
 | Command | Purpose |
 |----|----|
@@ -374,8 +374,6 @@ This is used to inspect the real persistent WordPress data stored in MariaDB. Fo
 | `docker volume ls` | Lists Docker-managed volumes |
 | `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
 | `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
-
-
 
 ## Project data storage and persistence
 ### Persistent data locations
