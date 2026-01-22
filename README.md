@@ -228,7 +228,7 @@ Each container:
 | ENTRYPOINT | Defines the executable that is run when the container starts. It is typically used to define the main service of the container |
 | CMD | Provides default arguments to `ENTRYPOINT`, or defines the startup command if no `ENTRYPOINT` is specified |
 
-### Container lifecycle, ENTRYPOINT and PID 1
+### Container lifecycle, ENTRYPOINT and PID 1 -> TODO ESTO A DEV_DOC.MD???
 ⚠️ SE PUEDEN ACORTAR O JUNTAR APARTADOS? SON DEMASIADOS APARTADOS Y MUY CORTOS... O SPLITEAR EL RESTO DE APARTADOS, PARA QUE TODO QUEDE CON ESTÉTICA SIMILAR
 #### Containers and Processes
 A Docker container is **not a virtual machine**.  
