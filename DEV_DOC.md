@@ -5,14 +5,23 @@ This document describes the technical architecture of the *Inception* project. I
 ## Table of Contents
 - [Set up the environment from scratch](set-up-the-environment-from-scratch)
   - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian)
-  - [Installing Debian inside the VM](#installing-debian-inside-the-vm)
-  - [Basic VM management](#basic-vm-management)
+    - [Virtualization tool](#virtualization-tool)
+    - [Debian ISO](#debian-iso)
+    - [Creating the Virtual Machine](#creating-the-virtual-machine)
+    - [Installing Debian inside the VM](#installing-debian-inside-the-vm)
+    - [Basic VM management](#basic-vm-management)
   - [Installing Docker, Docker Compose and build tools](#installing-docker-docker-compose-and-build-tools)
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
   - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
+    - [`/etc/hosts`](#etchosts)
+    - [SSH tunneling (VM -> host browser)](#ssh-tunneling-vm-host-browser)
+      - [Windows / WSL](#windows-wsl)
+      - [42 iMacs / Linux - no sudo](#42-imacs-linux-no-sudo)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
+  - [Core Docker Compose commands](#core-docker-compose-commands)
+  - [Makefile shortcuts](#makefile-shortcuts)
 - [Relevant commands to manage the containers and volumes](#relevant-commands-to-manage-the-containers-and-volumes)
   - [Container inspection and logs](#container-inspection-and-logs)
   - [Entering containers (interactive debugging)](#entering-containers-interactive-debugging)
@@ -57,7 +66,6 @@ A [Debian GNU/Linux ISO](https://www.debian.org/download.es.html) is used to ins
 
 The Debian ISO is a disk image containing the full Debian installer. When mounted in VirtualBox, it behaves like a physical installation disk.  
 
-
 #### Creating the Virtual Machine
 In VirtualBox -> `New`:
 - Name: inception
@@ -68,7 +76,7 @@ In VirtualBox -> `New`:
 - RAM: minimum 2048 MB (recommended 4096 MB)
 - Number of CPU: 2
 
-**VM settings before installation**:  
+##### VM settings before installation  
 System -> Motherboard
 - Boot order: Optiocal first (to boot from ISO)
 - Chipset: default
@@ -88,7 +96,7 @@ Network
 - Adapter 1: Bridged Adapter
   This allows the VM to obtain an IP address on the local network and enables SSH access from the host.
 
-### Installing Debian inside the VM
+#### Installing Debian inside the VM
 Start the VM and follow the Debian installer:
 - Language, keyboard, timezone
 - Partitioning: *Guided - use entire disk*
@@ -104,7 +112,7 @@ Start the VM and follow the Debian installer:
 
 After instalation, reboot the VM.
 
-### Basic VM management
+#### Basic VM management
 | Task | Command / Explanation |
 |------|-----------------------|
 | Disable graphical mode permanently | `sudo systemctl set-default multi-user.target`|
@@ -229,6 +237,7 @@ Environment variables are used to configure containers dynamically without modif
 
 ### Domain configuration and SSH tunneling
 ⚠️ PARA PODER ACCEDER DESDE LE NAVEGADOR DEL HOST A HTTPS://LOGIN.42.FR 
+
 #### `/etc/hosts`  
 Inside the VM:
 
@@ -310,7 +319,7 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 | `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `male clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
 | `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 ⚠️ **Implication regarding images:**  
