@@ -497,6 +497,46 @@ Application-specific configuration, such as database credentials and WordPress s
 `wp-config.php` is generated at runtime, durinf the first container startup, in `setup.sh` using WP-CLI and environment variables, ensuring that sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
 
 #### NGINX
+**NGINX** is a high-performance web server and reverse proxy. In this project, it handles:  
+- TLS termination (HTTPS)
+- Routing requests to PHP-FPM
+- Serving static files
+
+NGINX runs as a **single, foreground process** inside its container. It does not manage application state or interact directly with the database. This separation allows NGINX to start directly as PID 1 without requiring intermediate setup scripts.  
+##### NGINX - Build time (Dockerfile)
+During **image construction**, the NGINX Dockerfile sets up the environment required to serve WordPress:
+- Installs **nginx** and **openssl**:
+  - `nginx`: the web server and reverse proxy
+  - `openssl`: generates TLS certificates
+- Creates the folder for SSL certificates: `/etc/nginx/ssl`
+- Generates a **self-signed certificate** for development:
+  - 2048-bit RSA key
+  - Valid for 365 days
+  - Distinguished Name set for the local domain
+- Exposes port `443` for HTTPS communication
+
+Key principle:
+> - **Build time = infraestructur**
+> - **Runtime = service execution**
+
+All configuration and certificates are part of the **infraestructure**, defined during image build.  
+
+##### NGINX - Runtime
+A DIFERENCIA DE MARIADB Y WORDPRESS, EL RUNTIME OCURRE EN EL MISMO DOCKERFILE, NO HAY UN SETUP.SH  
+At runtime, the container:
+- Starts NGINX **directly in foreground** using:
+
+          CMD["nginx", "-g", "daemon off;"]
+
+- By keeping NGINX in the foreground, the process becaomes PID 1
+- NGINX cannot run as a daemon inside Docker, because if it forked into background, PID 1 would be a shell process, causing the container to exit immediately.
+
+> Note: explicar qué es todo eso de daemon
+
+- NGINX does not depend on MariaDB or WordPress state; it only requires PHP-FPM to be reachable
+- TLS termination and request proxying are handled immediately upon container start.
+
+
 
 ### Docker Compose
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
