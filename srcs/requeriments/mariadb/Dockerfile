@@ -31,7 +31,7 @@ FROM debian:bookworm
 # initialization scripts required to run the service.
 # The package list is updated first to ensure the latest metadata.
 RUN apt-get update && \
-apt-get install -y mariadb-server \
+apt-get install -y mariadb-server 
 RUN rm -rf /var/lib/apt/lists/*
 
 # Copy a custom MariaDB configuration file.

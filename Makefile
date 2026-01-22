@@ -11,7 +11,6 @@ build:
 	@echo "$(CYAN)Building images... $(RESET)"
 	docker compose -f $(COMPOSE_FILE) build
 
-
 up:
 	@echo "$(CYAN)Launching containers... $(RESET)"
 	docker compose -f $(COMPOSE_FILE) up -d
@@ -31,7 +30,7 @@ clean:
 	@echo "$(CYAN)Cleaning containers, networks, and volumes... $(RESET)"
 	docker compose -f $(COMPOSE_FILE) down --volumes --rmi all
 
-fclean: clean
+fclean: clean #falta un @echo "$(CYAN)Deleting persistent data... $(RESET) -> DESPUÉS DEL CLEAN"
 	@sudo rm -rf /home/amacarul/data/wordpress/*
 	@sudo rm -rf /home/amacarul/data/mariadb/*
 	@docker system prune -a --force
