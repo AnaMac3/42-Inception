@@ -513,6 +513,8 @@ During **image construction**, the NGINX Dockerfile sets up the environment requ
   - 2048-bit RSA key
   - Valid for 365 days
   - Distinguished Name set for the local domain
+  ... si no me equivoco, es aquií dónde estamos creando certificado y clave privada a través de un certificado auto-firmado de docker, para no depender de una CA, que sería lo suyo en uun entorno de producción
+- Overrides the configuration
 - Exposes port `443` for HTTPS communication
 
 Key principle:
@@ -521,8 +523,24 @@ Key principle:
 
 All configuration and certificates are part of the **infraestructure**, defined during image build.  
 
+###### `nginx.conf` 
+- Escucha en conexiones IPv4 e IPv6 a tra´ves del puerto 443 usando HTTPS
+- Configuración TLS/SSL: establece protocolos TLSv1.2 y TLSv1.3.
+  > TLS (Transport Layer Security): protocolo que cifra la comunicación entre navegador y servidor.
+- Establece las rutas del certificado (`.crt`) y la clave privada (`.key`) creadas en el Dockerfile, para que se pueda establecer esa conexión segura. 
+- Document root and default index files: Se establece dónde están los archivos que se van a servir (los archivos de WordPess-> root /var/www/html). Si un usuario entra a una carpeta en la URL, NGINX busca primero index.php y si no existe, index.html
+- Location block for static files:
+  - URI: la parte de la URL después del dominio. Ejemplo: `https://login.42.fr/wp-admin` -> la URI es `/wp-admin`
+  - `try_files $uri $uri/ /index.php?$args;` -> le dice a NGINX:
+    - primero intenta servir un archivo que coincida con la URI: `wp-admin` busca `/var/www/html/wp-admin`
+    - si no existe, intenta tratar la uri como una carpeta (`$uri/`)
+    - si no existe, redirige todas las peticiones a `index.php` pasando los parámetros de la URL (`$args`) a PHP
+  - Esto permite que WordPress maneje las URLS bonitas (https://amacarul.42.fr/my-post) incluso si no hay un archivo físico llamado my-post
+- Location block for php procesing: este bloque se activa solo para archivos que terminen en `.php`
+  - `fastcgi_split_path_info`: divide la URL en el archivo PHP real y la parte extra de la ruta 
+
 ##### NGINX - Runtime
-A DIFERENCIA DE MARIADB Y WORDPRESS, EL RUNTIME OCURRE EN EL MISMO DOCKERFILE, NO HAY UN SETUP.SH  
+A DIFERENCIA DE MARIADB Y WORDPRESS, EL RUNTIME OCURRE EN EL MISMO DOCKERFILE, NO HAY UN SETUP.SH -> !!! NO ESTOY DEL TODO SEGURA, ES POSIBLE QUE LO DE CREAR CERTIFICADOS Y CLAVES TENGA QUE IR EN UN SCRIPT APARTE??
 At runtime, the container:
 - Starts NGINX **directly in foreground** using:
 
@@ -535,7 +553,6 @@ At runtime, the container:
 
 - NGINX does not depend on MariaDB or WordPress state; it only requires PHP-FPM to be reachable
 - TLS termination and request proxying are handled immediately upon container start.
-
 
 
 ### Docker Compose
