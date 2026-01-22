@@ -50,7 +50,8 @@ RUN apt-get update && apt-get install -y \
 	php8.2-fpm \
 	php-mysql \
 	curl \
-	mariadb-client
+	mariadb-client \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Install WP-CLI
 # WP-CLI is a command-line interface for WordPress administration.
@@ -106,6 +107,5 @@ EXPOSE 9000
 # The setup.sh script is defined as the ENTRYPOINT.
 # It becomes the first process executed when the container starts.
 # The script will eventually replace itself with PHP-FPM via 'exec',
-# making the container's PID 1 and ensuring correct signal handling
-# and clean shutdown
+# making the container's PID 1
 ENTRYPOINT ["setup.sh"]
