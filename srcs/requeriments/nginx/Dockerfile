@@ -50,6 +50,7 @@ RUN mkdir -p /etc/nginx/ssl
 #	- -keyout: path to store the private key
 #	- -out: path to store the certificate
 #	- -subj: certificate subject (DN), including CN = domain name
+# ES POSIBLE QUE LO DE GENERAR EL CERTIFICADO TENGA QUE IR EN UN SCRIPT APARTE??? MIRAR OTROS REPOS
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 	-keyout /etc/nginx/ssl/inception.key \
 	-out /etc/nginx/ssl/inception.crt \
