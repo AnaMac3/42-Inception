@@ -131,20 +131,20 @@ NO SÉ SI ESTO PEGA AQUÍ O EN OTRO LUGAR, PERO PARA EXPLICAR EL CÓDIGO, EL PRO
 - SCRIPTS DE ENTRYPOINTS / SETUP -> QUÉ OCURRE CUANDO EL CONTENEDOR ARRANCA, POR QUÉ NO SE HACE TODO EN EL DOCKERFILE, DIFERENCIA ENTRE BUILD TIME Y RUN TIME
 - CONFIGURACIONES Y .ENV -> VARIABLES, SEGURIDAD, TLS, COMUNICACIÓN INTERNA ENTRE CONTENEDORES
 
-### Docker
+### Docker and Containers
 **Docker** es una herramienta que permite ejecutar aplicaciones en **contenedores**.  
 Un **contenedor** es un entorno aislado y reproducible, es una especie de mini-sistema aislado que ejecuta una aplicación con solo las **dependencias necesarias**. No es una máquina virtual completa: es más ligero y rápido.  
 
 Containers are isolated processes for each of your app's components. Each component runs in its own isolated environment, completely isolated from everything else on your machine.  
 
-**Problemas que resuelve Docker:**
+#### Problemas que resuelve Docker
 - Dependencias que son incompatibles con tu versión de software
 - Dependencias en versiones diferentes
 - Dependencias incompatibles entre proyectos
 - Necesidad de reproducir entornos exactamente iguales
 - Aislamiento de bases de datos, servidores web, etc.
 
-**Qué contiene un contenedor**
+#### Qué contiene un contenedor
 - La aplicación (p.ej. WordPress, NGINX, MariaDB...)
 - Sus dependencias (librerías, binarios)
 - Archivos de configuración
@@ -195,7 +195,7 @@ When a container is removed, all its runtime state is lost unless persistent vol
 > - inicialización vs runtime
 > - wp-config.php y modelo de datos
 > - decisiones de diseño
-
+> - ????
 
 A **Dockerfile** is a text file that defines **how a Docker image is built**.  
 It describes:
@@ -383,6 +383,8 @@ Each service has a single responsibility and communicates with the others throug
 - **WordPress** processes the PHP scripts and queries the database
 - **MariaDB** stores WordPress data
 
+⚠️ AÑADIR PÁRRAFO EXPLICATIVO SENCILLO EJEMPLIFICANDO CÓMO INTERACTUAN LOS SERVICIOS ENTRE SÍ. EJ: NGINX RECIBE / REGISTRA UNA REQUEST (EJEMPLO: ALGUIEN QUIERE ACCEDER A LA WEB O A X PÁGINA...) -> ESTA REQUEST SE TRANSPITE / TRADUCE CON ... -> PHP SCRIPT  QUE PASA A WORDPRESS -> WORDPRESS QUERIES THE DATABASE (ESTO QUÉ SIGNIFICA? QUE HACE UNA CONSULTA SQL A MARIADB?) -> MARIADB TIENE LAS DATABASES CON LA DATA... NO ENTIENDO MUY BIEN CÓMO VA ESTO...
+
 #### MariaDB
 **MariaDB** is an SQL database server (a MySQL-compatible fork).  
 WordPress uses it to store:
@@ -391,6 +393,7 @@ WordPress uses it to store:
 - Configuration
 - Plugins and metadata
 
+⚠️ CREO QUE TODA ESTA PARTE DEL BUILD TIME / RUNTIME YA ES ALGO QUE DEBERIA IR EN DEV_DOC.MD
 ##### MariaDB - Build time (Dockerfile)
 During image construction, the MariaDB Dockerfile performs the following steps:
 - Uses a minimal Debian base image
@@ -438,6 +441,7 @@ It allows easy creation and management of:
 - Plugins and themes
 In this project, WordPress runs with **PHP-FPM** (not Apache). For details about how PHP requests are processed, [see Request flow and PHP execution](#request-flow-and-php-execution).
 
+⚠️ CREO QUE TODA ESTA PARTE DEL BUILD TIME / RUNTIME YA ES ALGO QUE DEBERIA IR EN DEV_DOC.MD
 ##### WordPress - Build time (Dockerfile)
 During **image construction**, the WordPress Dockerfile does **not install WordPress** itself. Instead, it prepares an environment capable of running WordPress.  
 Reasoning:
