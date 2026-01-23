@@ -174,6 +174,20 @@ The project stack consists of three isolated services, each running its own cont
 | WordPress (PHP-FPM) | `wordpress` | Application logic, PHP execution - application layer | 9000 |
 | MariaDB | `mariadb`| Persistent data storage - data layer | 3306 |  
 
+-------------------
+VERSION LARGA - DEV_DOC (QUE IGUAL HAY QUE TRASLADAR AQUI)
+###
+This project follows a **multi-container architecture**, where each service runs inside its **own isolated container** with a **single responsibility**.  
+- **NGINX** handles HTTPS connections and acts as reverse proxy (entry layer)
+- **WordPress (PHP-FPM)** executes PHP application logic (application layer)
+- **MariaDB** stores persistent application data (data layer)
+
+Each container runs **one main process only**, and containers communicate through a **private Docker bridge network**. 
+
+Persistent application state is stored outside containers using **bind-mounted volumes** on the host system.  
+
+------------------------------
+
 ##### MariaDB
 **MariaDB** is a relational SQL database server (MySQL-compatible).  
 WordPress uses it to store:
