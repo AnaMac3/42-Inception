@@ -17,22 +17,18 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Stop & Clean](#stop--clean)
 - [Project description](#project-description)
   - [Docker and Containers](#docker-and-containers)
+    - [Why Docker?](#why-docker?)
+    - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
-    - [Docker Images](#docker-images)
-      - [Image vs Container](#image-vs-container)
-    - [Dockerfile](#dockerfile)
-  - [Container lifecycle, ENTRYPOINT and PID 1](#container-lyfecicle-entrypoint-and-pid-1)
   - [Service Architecture](#service-architecture)
-    - [Request flow and PHP execution](#request-flow-and-php-execution)
     - [MariaDB](#mariadb)
     - [WordPress](#wordpress)
     - [NGINX](#nginx)
-  - [Docker Compose](#docker-compose)
-    - [The `docker-compose.yml` file in *Inception*](#the-docker-composeyml-file-in-inception)
-  - [Data Persistence](#volúmenes---persistencia-de-datos)
+    - [Networking](#networking)
+      - [Request flow](#request-flow)
+      - [Docker Network vs Host Network](docker-network-vs-host-network)
+  - [Volumes and Data Persistence](#volumes-and-data-persistence)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
-  - [Docker Network](docker-network)
-    - [Docker Network vs Host Network](#docker-network-vs-host-network)
   - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
 - [Resources](#resources)
 
@@ -116,11 +112,11 @@ El proyecto debe incluir:
 
 ## Project description
 This sections explains the core concepts and architecture of the *Inception* project:    
-- Introduction to Docher and containers
+- Introduction to Docker and containers
 - Docker images and Dockerfile
 - General stack architecture (services and their responsibilities)
 - How containers / services communicate (networking)
-- Data persistance and storage
+- Data persistence and storage
 - Configuration via environment variables and secrets
 
 ### Docker and Containers
@@ -170,7 +166,7 @@ A **Dockerfile** is a text file that defines **how a Docker image is built**, sp
 > In *Inception*, each service (`mariadb`, `wordpress`, `nginx`) runs in its own container, each with a dedicated Dockerfile.  
 
 ### Service Architecture
-The project stack consist of three isolated services, each running its own container:  
+The project stack consists of three isolated services, each running its own container:  
 
 | Service | Container |  Role | Exposed port |
 |---------|-----------|-------|--------------|
@@ -190,7 +186,7 @@ MariaDB does not serve HTTP requests and is never exposed directly to the user.
 ##### WordPress
 **WordPress** is a PHP-based **Content Management System (CMS)**.  
 It allows easy creation and management of websites, blogs, users, plugins, and themes.  
-In this project, WordPress does not handle HTTP requests directly via Apache. Isntead, it runs with **PHP-FPM**, while **NGINX** acts as the web server and reverse proxy.  
+In this project, WordPress does not handle HTTP requests directly via Apache. Instead, it runs with **PHP-FPM**, while **NGINX** acts as the web server and reverse proxy.  
 - **PHP-FPM (PHP FastCGI Process Manage)** is a service that executes PHP scripts and manages PHP worker processes. It receives PHP requests from NGINX using the FastCGI protocol and returns the generated reponse.
 - **WP-CLI (WordPress Command-Line Interface)** is a command-line tool used to install, configure, and manage WordPress. In this project, WP-CLI is used at container startup tp perform the initial WordPress installation and configuration automatically.  
 
@@ -204,7 +200,7 @@ In this project, it handles:
 NGINX runs as a **single, foreground process** inside its container. It does not manage application state or interact directly with the database. This separation allows NGINX to start directly as PID 1 without requiring intermediate setup scripts.  
 
 ##### Networking
-###### Request flow and PHP execution
+###### Request flow
 
         Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
 
@@ -215,11 +211,11 @@ NGINX runs as a **single, foreground process** inside its container. It does not
 - **WordPress** generates HTML
 - **NGINX** returns response to browser
 
-> Docker Compose orchestrates this flow: defines services, networks, volumes, ports, and container dependencies.  
+> Note: Docker Compose orchestrates this flow: defines services, networks, volumes, ports, and container dependencies.  
 
 ###### Docker Network vs Host Network
 Containers communicate over networks. There are two main types:  
-- **Bridge network (default)**: private network for containers, allows secure commuinication using service names. Internal ports are not exposed to the host unless explicitly mapped.  
+- **Bridge network (default)**: private network for containers, allows secure communication using service names. Internal ports are not exposed to the host unless explicitly mapped.  
 - **Host network**: container shares the host's network stack; ports are exposed directly.
 
 > In *Inception*, all services uses a bridge network for security and isolation. This network is defined in the `docker-compose.yml` file.  
@@ -229,9 +225,9 @@ Thanks to the internal bridge network:
 - NGINX forwards PHP requests to WordPress using `fastcgi_pass wordpress:9000` (defined in `nginx.conf`)
 This ensures internal traffic is isolated, secure, and predictable.  
 
-### Volumes and data persistence
+### Volumes and Data Persistence
 Containers are ephemeral: deleting a container removes its filesystem. To avoid this, Docker allows the **data persistant outside the container** by two different ways:
-  - **Docker volumes**: managed by Docker, path hidden, recommended in production because they are more safe.
+  - **Docker volumes**: managed by Docker, path hidden, recommended in production because they are safer.
   - **Bind mounts**: host-controlled path, easy to inspect, allows explicit paths. 
 
 #### Docker Volumes vs Bind Mounts
@@ -253,7 +249,7 @@ In this project, data persistance is implemented using **bind mounts** to host d
 - `.env` must **never** be commited to GitHub
 - Docker secrets are **not committed**; they are provided to containers at runtime and securely managed by Docker.
 
-> This separation ensures credentials and configuration data re handled securely and follow best practices.  
+> This separation ensures credentials and configuration data are handled securely and follow best practices.  
 
 ### Project Structure -> NO SE SI PASAR ESTO A DEV_DOC PARA PODER EXPLICAR EN ÉL UN POCO EL CÓDIGO DE CADA FILE, DE QUÉ SE ENCARGA...
    
