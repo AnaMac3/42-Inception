@@ -22,6 +22,58 @@ This document describes the technical architecture of the *Inception* project. I
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
   - [Core Docker Compose commands](#core-docker-compose-commands)
   - [Makefile shortcuts](#makefile-shortcuts)
+ 
+-------------------
+- Conceptos fundamentales (teoría)
+  - Architecture of containers
+    - Multi-container system
+    - Build time vs runtime
+    - ...
+  - PID 1 and process management
+    - PID 1 in Linux and Docker
+    - Foreground vs background
+    - use of `exec`
+    - Antipatrones?
+  - Lifecycle of a container
+    - Inicio, ejecución y shutdown
+    - señales
+    - qué pasa si el PID muere
+  - Netowrking y comunicación entre contenedores
+    - docker bridge  network vs hsot network -> pero esto ya lo hemos tratado en el readme...
+    - nombres de servicios
+    - seguridad y aislamiento
+  - Persistencia de datos
+    - diferencia entre datos en imagen vs datos en volumenes
+    - como se mantiene el estado tras reinicios o eliminación de contenedores
+- Arquitectura aplicada en Inception
+  - Servicios y dockerfiles
+    - MariaDB
+    - WordPress
+    - NGINX
+  - Docker Compose
+    - Def de servicios, red interna y volumes
+    - Startup flow
+    - Mapeo de puertos y bind mounts
+    - palabras clave del docker-compose.yml
+    - Interacción de contenedores
+  - Persistencia de datos
+    - ubicación de datos persistentes
+    - contenido de cada volumen
+    - relación con make dwon/clean/fclean
+  - Modelo de datos WordPress - MariaDB
+    - wp-config.php
+    - base de datos y tablas
+    - contenido persistente
+- Inspección y testeo
+  - comandos utiles de docker
+  - acceso e inspeccion de contnedores
+  - inspeccion de mariadb
+  - persistencia de volumenes
+  - logs y debugging
+
+--------------------
+
+
 - [Container architecture and lifecycle](#container-architecture-and-lifecycle)
   - [Architecutre overview]
   - [Build time vs runtime]
@@ -51,6 +103,8 @@ This document describes the technical architecture of the *Inception* project. I
   - [Persistent behaviour (`make` rules)](#persistent-behaviour-make-rules)
   - [WordPress-MariaDB data model](#wordpress-mariadb-data-model)
   - [Inspecting persistent data](#inspecting-persistent-data)
+ 
+---------------
 
 -----------------------------------------------------
 
