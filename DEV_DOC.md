@@ -397,67 +397,61 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 ⚠️ **Implication regarding images:**  
 If mages are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
 
-## Container architecture and lifecycle
-This project follows a **multi-container architecture** where each service runs in its own isolated container with a **single responsibility**.  
-- **NGINX** handles HTTPS connections and acts as reverse proxy
-- **WordPress (PHP-FPM)** executes PHP application logic
-- **MariaDB** stores persistent application data
+## Theory - Fundamental Concepts
+This section explains the theoretical foundations required to understand how the *Inception* project works internally.  
+It focuses on **how Docker containers behave**, how their lifecycle is managed, and why certain design choices are mandatory to ensure correctness, stability, and compliance with the subject.  
 
-Containers communicate through a **private Docker bridge network**, while persistent application state is stored using **bind-mounted volumes** on the host system.  
-This chapter explains how each container is built, how it starts, how it runs, and how it interacts with other services throughout its lifecycle.  
+### Container execution model  
 
-### Build time vs runtime
-A fundamental concept in this project is the strict separation between **build time** and **runtime**:
-- **Build time**:
-  - Docker images are constructed
-  - Software and configuration files are installed
-  - No application state is created
-- **Runtime**:
-  - Containers are started from images
-  - Application state is initialized if needed
-  - Persistent data is read from or written to volumes  
+This project uses a **multi-container architecture**, where each service runs inside its **own isolated container** with a **single responsibility**.  
+Containers communicate through a **private Docker bridge network**.    
+Persistent application state is stored outside containers using **bind-mounted volumes** on the host system.   
+
+#### Build time vs runtime
+A fundamental concept in Docker is the strict separation between **build time** and **runtime**.
+##### Build time
+Occurs when an image is created using a `Dockerfile`:
+- Base operating system is defined
+- Packages and dependencies are installed
+- Configuration templates and scripts are copied
+- No application state is created
+
+Images must remain **stateless and immutable**.  
+##### Runtime
+Occurs when a container is started from an image: 
+- Application state is initialized if needed
+- Configuration is generated dynamically
+- Persistent data is read from or written to volumes    
 
 > **Key principle**:
-> Images define infrastruture, containers manage state
+> **Images define infrastruture - containers manage state**
 
-Any operation that depends on runtime information (database state, users, credentials, generated configuration) must occur at runtime, never during image build.  
+Any operation that depends on:
+- Database contents
+- Existing users
+- Generated credentials
+- Runtime configuration
 
-### PID 1, exec and foreground processes
+  **must happen at runtime**, never during image build.  
+
+#### PID 1 and Process Management
 A Docker container is **not a virtual machine**. It does not run a full system, nor multiple independent services. A container lives **as long as its main process is running**. This main process is known as **PID 1**.  
 
-#### PID 1 in Linux and Docker
+##### PID 1 in Linux and Docker
 In Linux, **PID 1** is the first process started by the kernel.  
 It has special responsibilities:
-- Receiving and handling system signals
-- Reaping zombie processes
-- Managing child processes
+- Receiving and handling system signals (`SIGTERM`, `SIGINT`)
+- Reaping zombie child processes
+- Managing shutdown behavior  
 In Docker:
 - Each container has its **own PID namespace**
 - Each container therefore has its **own PID 1**.  
 PID 1 is defined by:  
 - The command specified by `ENTRYPOINT`
-- Or by `CMD` if no `ENTRYPOINT` is provided
+- Or by `CMD` if no `ENTRYPOINT` is provided  
 
-#### PID 1 and Container Lifetime
-- The process running as PID 1 **keeps the container alive**
-- If PID 1 exits, the container stops
-- Docker monitors **only PID 1**  
-Because of this, the following patterns cause **incorrect behaviour**:
-- Running the real service in background
-- Letting the startup script exit
-- Using fake "keep-alive" loops  
-
-##### Why infinite loops are forbidden  
-A common anti-pattern is:
-
-          service mysql start
-          while true; do sleep 1; done
-
-This is **explicitly forbidden** in *Inception*.  
-- The loop becomes PID 1 instead of the real service
-- Signals sent by Docker are not forwarded correctly
-- The real service cannot shut down cleanly
-- Zombie processes may accumulate
+If **PID 1 exits**, the container stops immediately.  
+Docker **monitors only PID 1**  
 
 #### Foreground vs background
 A process running in **foreground**:
@@ -465,16 +459,18 @@ A process running in **foreground**:
 - Does not return control to the shell
 - Remains attached to PID 1
 - Keeps the container alive
+
 A process running in **background**
 - Is started with `&`
 - Allows the script to continue and exit
 - Is **not** PID 1
 - Will be terminated when the container stops
-If the startup script finishes and no foreground process remains, the container exits.
 
-#### `exec` and signal handling
+If the startup script finishes and **no foreground process remains**, the container exits.
+
+#### `exec`: replacing shell and signal handling
 When a container starts via a **shell or a script** (for example via `ENTRYPOINT ["setup.sh"]), the shell becomes PID 1 by default.  
-In this case, using `exec` INSIDE THE STARTED SHELL O SCRIPT is **mandatory** to replace the shell process with the real service.  
+In this case, using `exec` inside the script is **mandatory** to replace the shell process with the real service.  
 
 Example: 
 
@@ -487,12 +483,12 @@ What `exec` does:
 - Allows Docker to send signals directly to the service
 - Ensures proper shutdown behavior
 
-Without `exec`, the shell remains PID 1 and the real service runs as a child process, which breaks signal handling.
+Without `exec`, the shell remains PID 1 and the real service runs as a child process, which breaks signal handling and shutdown.
 
 ##### When `exec` is NOT required
-If the container starts the binary **directly**, this is the **exec form** of `CMD` or `ENTRYPOINT`, no shell is involved.  
+If the container starts the binary **directly** using the **exec form** of `CMD` or `ENTRYPOINT`, no shell is involved.  
 
-In the NGINX container, the service is started IN THE DOCKERFILE as:
+Example (NGINX container - `Dockerfile`):
 
         CMD ["nginx", "-g", "daemon off;"]
 
@@ -501,10 +497,40 @@ This is the exec form of `CMD`, which means:
 - `nginx`  becomes PID 1 directly
 - Signal handling works correctly
 
-> `ENTRYPOINT["nginx", "-g", "daemon off;"]` would also be valid, but `CMD` is sufficient here.
+#### Incorrect container behavior and forbidden patterns
+##### Background services
+Running the main service in background (using `&`) is forbidden. COMPROBAR SI ESTO LO PROHIBE EL SUBJECT O ES ALGO GENERAL DE DOCKER  
+- The background process does not become PID 1
+- Docker cannot forward signals correctly
+- The container lifecycle is broken
 
-#### One main process per container
-Docker containers are designed to run a single main proces.  
+##### Exiting startup scripts
+Letting the startup script exit without replacing itself with the real service causes the container to stop immediately.  
+PID 1 must always be the actual service process.  
+
+##### Fake keep-alive loops
+A common anti-pattern is:
+
+          service mysql start
+          while true; do sleep 1; done
+
+This is **explicitly forbidden** in *Inception*:  
+- The loop becomes PID 1 instead of the real service
+- Signals sent by Docker are not forwarded correctly
+- The real service cannot shut down cleanly
+- Zombie processes may accumulate
+
+### Container lifecycle
+#### Start, execution, and shutdown
+Docker containers are designed to run **one main proces**.  
+At a theoretical level, the lifecycle is:  
+1. Container starts
+2. PID 1 process starts
+3. Container runs while PID 1 is alive
+4. Docker sends signals on shutdown 
+5. PID 1 exists
+6. Container stops
+
 In *Inception*:
 
 | Container | PID 1 process |
@@ -513,18 +539,20 @@ In *Inception*:
 | `wordpress` | php-fpm |
 | `nginx` | nginx |
 
-Some containers require an **initialization phase** before starting the main service:
+Some containers require a **runtime initialization phase** before starting the main service:
 - **MariaDB** initializes databases and users
 - **WordPress** generates configuration and installs the application
-These containers use setup scripts as `ENTRYPOINT`.
-Once initialization is complete, the real service is started with `exec`.
+After initialization, the real service **must replace the shell using `exec`**.  
 NGINX does not require initialization:
 - No application state
 - No database dependency
-- No runtime configuration generation  
-It can therefore start directly as PID 1.  
+- No runtime configuration generation
 
-#### Container Shutdown
+It therefore starts directly as PID 1.  
+
+> ⚠️ To know more about the concrete implementation of these steps [see FUNCTIONAL SECTION](#).
+
+#### Signals and shutdown behavior
 When running:
 
           docker compose stop
@@ -534,26 +562,29 @@ Docker performs the following steps:
 2. Wits a short grace period
 3. Sends `SIGKILL` if the process does not exit
 
-Services handle shutdown internally:
+If PID 1:
+- Runs in foreground
+- Handles signals correctly
+- Is the real service  
+
+Then shutdown is clean:
 - MariaDB closes connections and flushes data
 - PHP-FPM stops workers
 - NGINX closes sockets
+If PID 1 does not handle signals properly, Docker is forced to kill the container.  
 
-If the process:
-- Runs in foreground
-- Is PID 1
-- Handles signals correctly  
-then, the container shuts down cleanly.  
+##### What appens if PID 1 exits
+If PID 1 exits:
+- The container stops immediately
+- Docker considers the container terminated
+- Restart policies may trigger a restart
+This is why PID 1 must always be the real service.  
 
-To verify clean shutdown:  
 
-        docker inspect <container> | grep ExitCode
-
-- `0` -> clean exit
-- `137` -> SIGKILL (bad) 
-
-### MariaDB container lifecycle
-#### Build time
+## Applied architecture in Inception (práctica)
+### Servicios y Dockerfiles
+#### MariaDB 
+##### Build time
 During image construction, the MariaDB Dockerfile prepares the **database infraestructure**:
 - Installs the MariaDB server packages
 - Copies a custom MariaDB configuration file (`my_conf`)
@@ -562,7 +593,7 @@ During image construction, the MariaDB Dockerfile prepares the **database infrae
 - Defines `setup.sh` as the container
 No database or user is created at build time.
 
-##### Custom configuration (`my.conf`)
+###### Custom configuration (`my.conf`)
 The default MariaDB configuration binds the server to `127.0.0.1`, which prevents connections from other containers.  
 The custom configuration overrides this behaviour:
 - MariaDB listens on `0.0.0.0`
@@ -571,7 +602,7 @@ The custom configuration overrides this behaviour:
 Access from the host is only possible via `docker exec`, which does not expose the database to external connections.  
 This configuration allows controlled inter-container communication while preserving isolation from the host system.
 
-#### Runtime initialization
+##### Runtime initialization
 The `setup.sh` script is executed **every time the MariaDB container starts**, as it is defined as the `ENTRYPOINT`.  
 Its responsibilities are:
 - Preparing runtime directories
@@ -581,7 +612,7 @@ Its responsibilities are:
 - Starting MariaDB as the main foreground process
 This logic is essential when using **persistent volumes**, as containers may restart  while data must remain intact.
 
-#### Background vs foreground execution
+##### Background vs foreground execution
 During first startup:
 - MariaDB is launched **temporarily in background**
 - This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`...)
@@ -589,8 +620,11 @@ During first startup:
 - MariaDB is restarted in **foreground mode**
 Running in the foreground ensures that MariaDB becomes **PID 1**, allowing Docker to properly manage lifecycle and signals.
 
-### WordPress container lifecycle
-#### Build time
+##### Configuración de puertos, volúemenes y seguridad
+falta especificar esto
+
+#### WordPress
+##### Build time
 At build time, the WordPress image **does not install WordPress** itself. Instead, it prepares the execution environment.  
 Installing WordPress at build time would embed application state into the image, breaking persistence and update safety. 
 > - **Build time = infrastructure**
@@ -598,7 +632,27 @@ Installing WordPress at build time would embed application state into the image,
 
 WordPress installation is application state, so it occurs at runtime.
 
-#### PHP-FPM role 
+##### Runtime WordPress installation
+The `setup.sh` script is executed **every time the container starts**.  
+Its responsibilities are:
+- ensuring file permissions
+- waiting for MariaDB availability
+- installing WordPress only if not already present
+- preserving existing data
+- starting PHP-FPM in the **foreground** using `exec`
+PHP-FPM becomes **PID 1**, allowing proper container lifecycle and signals management.
+
+###### `wp-config.php` generation
+Application-specific configurations is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
+This file contains:
+- database connection parameters
+- authentication key and salts
+- table prefix
+- environment-specific settings
+
+`wp-config.php` is generated at runtime using WP-CLI and environment variables, ensuring sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
+
+##### PHP-FPM role 
 WordPress runs using **PHP-FPM (FastCGI Process Manager)**.  
 PHP-FPM:
 - manages pools of PHP worker processes
@@ -613,7 +667,7 @@ A custom `www.conf` is provided at vuild time, defining:
 - environment variable preservation (`clear_env =  no`)   
 This configuration is static infraestructure and does not change at runtime.
 
-#### WP-CLI role
+##### WP-CLI role
 **WP-CLI** is the official WordPress Command-Line Interface.  
 It is used at runtime to: 
     - download WordPress core
@@ -623,35 +677,18 @@ It is used at runtime to:
     - manage plugins and themes
 WP-CLI allows WordPress installation to be fully automated and reproducible.  
 
-#### Runtime WordPress installation
-The `setup.sh` script is executed **every time the container starts**.  
-Its responsibilities are:
-- ensuring file permissions
-- waiting for MariaDB availability
-- installing WordPress only if not already present
-- preserving existing data
-- starting PHP-FPM in the **foreground** using `exec`
-PHP-FPM becomes **PID 1**, allowing proper container lifecycle and signals management.
-
-#### `wp-config.php` generation
-Application-specific configurations is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
-This file contains:
-- database connection parameters
-- authentication key and salts
-- table prefix
-- environment-specific settings
-
-`wp-config.php` is generated at runtime using WP-CLI and environment variables, ensuring sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
-
-### PHP-FPM internals
+##### PHP-FPM internals
 PHP-FPM acts as a **FastCGI server** between NGINX and PHP code execution.  
 - NGINX handles HTTPS/TLS
 - PHP-FPM executes PJP
 - Communication happens over port `9000` using FastCGI
 This separation improves performance, security, and scalability compared to tradicional Apache + mod_php setups.
 
-### NGINX container lifecycle
-#### Build time
+##### gestión de dependencias y espera de mariadb
+qué hay que explicar aquí?
+
+#### NGINX
+##### Build time
 During **image construction**, the NGINX Dockerfile sets up the environment required to serve WordPress:
 - installs `nginx` and `openssl`:
   - `nginx`: the web server and reverse proxy
@@ -661,32 +698,20 @@ During **image construction**, the NGINX Dockerfile sets up the environment requ
 - copies the custom `nginx.conf` 
 - exposes port `443` for HTTPS communication
 
-#### TLS termination
+###### TLS termination
 NGINX terminates HTTP connections:
 - negotiates TLS(v1.2 / v1.3)
 - decrypts incoming traffic
 - forwards requests internally
 This isolates cryptographic concerns from the application layer.
 
-#### Reverse proxy role
+###### Reverse proxy role
 NGINX:
 - serves static files
 - forwards PHP request to PHP-FPM
 - allows WordPress to handle clean URLs
 
-#### Foreground execution
-NGINX does not require a setup script. It starts **directly in foreground** using:
-
-          CMD["nginx", "-g", "daemon off;"]
-
-By keeping NGINX in the **foreground**, the process becomes **PID 1**, so docker can manage lifecycle and signals correctly.  
-
-Daemon vs foreground:
-- A daemon forks into the background
-- Docker requires the main service to stay in the foreground
-- If NGINX daemonized itself, the container would exit immediately
-
-#### `nginx.conf` explained -> RESUMIR Y PASAR A INGLÉS
+###### `nginx.conf` explained -> RESUMIR Y PASAR A INGLÉS
 - Escucha en conexiones IPv4 e IPv6 a tra´ves del puerto 443 usando HTTPS
 - Configuración TLS/SSL: establece protocolos TLSv1.2 y TLSv1.3.
   > TLS (Transport Layer Security): protocolo que cifra la comunicación entre navegador y servidor.
@@ -706,7 +731,19 @@ Daemon vs foreground:
   - `fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name` : le dice a PHP qué archivo debe ejecutar
   - `fastcgi_param PATH_INFO $fastcgi_path_info` : pasa la parte extra de la URL al script PJP, útil para WordPress y URLS amigables
 
-RESUMEN DEL BLOQUE:  
+##### Foreground execution
+NGINX does not require a setup script. It starts **directly in foreground** using:
+
+          CMD["nginx", "-g", "daemon off;"]
+
+By keeping NGINX in the **foreground**, the process becomes **PID 1**, so docker can manage lifecycle and signals correctly.  
+
+Daemon vs foreground:
+- A daemon forks into the background
+- Docker requires the main service to stay in the foreground
+- If NGINX daemonized itself, the container would exit immediately
+
+##### RESUMEN DEL BLOQUE:  
 - NGINX escucha HTTPS en IPv4 e IPv6
 - Usa TLS/SSSL para cifrar la comunicación
 - Sirve archivos estáticos desde /var/www/html (que es el volumen persistente de wordpress, no?)
@@ -723,23 +760,20 @@ Using Docker Compose, we can define:
 - How containers are built and restarted
 - The startup order of the services
 In this project, the `Makefile` is responsible for executing Docker Compose commands.
+The `docker-compose.yml` file defines the complete architecture of the project.  
 
-#### The `docker-compose.yml` file in *Inception* 
-This file defines the complete architecture of the project.  
-##### Services
-The system is composed of three services:
+##### Servicios, red interna y volumes
+The system is composed of three **services**:
 - `mariadb` -> data layer (database)
 - `wordpress` -> application layer (PHP)
 - `nginx` -> entry layer (reverse proxy + TLS)
 Each service corresponds to one Docker container built from a custom Dockerfile.
 
-##### Network
-A single internal Docker network is defined. This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
+A single internal **Docker network** is defined. This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
 
 > Note: unlike the `host` network mode, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures. For more infor, [see Docker Network](#docker-network).
 
-##### Volumes and data persistence
-Two persistent volumes are used:
+Two **persistent volumes** are used:
 - WordPress (`/var/www/html`)
 - MariaDB (`/var/lib/mysql`)  
 These volumes are implemented as [**bind mounts**](#data-persistence) to the host filesystem.
@@ -750,6 +784,48 @@ These volumes are implemented as [**bind mounts**](#data-persistence) to the hos
 This ensures that:
 - Website files and database data persist across container restarts.
 - Data is not lost when containers are removed or rebuilt.
+
+##### Startup flow
+When running:
+
+        docker-compose up
+
+Docker performs the following steps:
+1. Creates the network
+2. Builds the images if they do not already exist
+3. Starts the containers following the dependency order:
+   - `mariadb`
+   - `wordpress`
+   - `nginx`
+   
+   > ⚠️ The `depends_on` directive only ensures startup order. It does **NOT** guarantee that service is ready to accept connections.
+   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure MariaDB is available before continuing the installation process.
+   > NGINX does not require such a mechanism, as it only needs to listen on port 443. When a PHP request is received, NGINX attempts to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
+
+##### Mapeo de puertos y bind mounts
+Thanks to the internal Docker network:  
+- WordPress connects to MariaDB using `mariadb` as the database host (defined in `wp-config.php`)
+- NGINXforwards PHP requests to Wordpress using:
+
+                fastcgi_pass wordpress:9000
+
+(defined in `/nginx/conf/nginx.conf`)
+
+Overall request flow:
+
+          Internet → NGINX → WordPress → MariaDB
+Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes: YO NO USO VOLUMES, USO BIND MOUNTS, PONER EJEMPLO QUE TOCA
+
+      volumes:
+          wordpress_data:
+          mariadb_data:
+
+*Inception* exige que estén montados en:
+
+        /home/<login>/data/wordpress
+        /home/<login>/data/mariadb
+  
+HAY COSAS QUE SE REPITEN!!
 
 ##### Main `docker-compose.yml` keywords
 
@@ -767,121 +843,10 @@ This ensures that:
 | `restart` | Defines the container restart policy in case of failure. |
 | `bridge` driver | Allows containers on the same host to communicate through an isolated internal network. |
 
-##### Startup flow
-When running:
+##### Interacción de contenedores: flujo de peticiones Internet - NGINX - wordpress - mariadb
 
-        docker-compose up
-
-Docker performs the following steps:
-1. Creates the network
-2. Builds the images if they do not already exist
-3. Starts the containers following the dependency order:
-   - `mariadb`
-   - `wordpress`
-   - `nginx`
-   
-   > ⚠️ The `depends_on` directive only ensures startup order. It does **NOT** guarantee that service is ready to accept connections.
-   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure MariaDB is available before continuing the installation process.
-   > NGINX does not require such a mechanism, as it only needs to listen on port 443. When a PHP request is received, NGINX attempts to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.  
-
-##### Inter-container communication
-Thanks to the internal Docker network:  
-- WordPress connects to MariaDB using `mariadb` as the database host (defined in `wp-config.php`)
-- NGINXforwards PHP requests to Wordpress using:
-
-                fastcgi_pass wordpress:9000
-
-(defined in `/nginx/conf/nginx.conf`)
-
-Overall request flow:
-
-          Internet → NGINX → WordPress → MariaDB
-
-### Data Persistence
-Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes:
-
-      volumes:
-          wordpress_data:
-          mariadb_data:
-
-*Inception* exige que estén montados en:
-
-        /home/<login>/data/wordpress
-        /home/<login>/data/mariadb
-
-#### Docker networks
-#### Service name resolution
-#### Internal vs exposed ports
-
-
-## Container and volume management
-This section focuses on practical interaction with running containers and persistent data. It provides **tools and commands** to inspect, debug and verify runtime state of the project.  
-
-### Container inspection and logs
-| Command | Purpose |
-|----|----|
-| `docker ps` | Lists running containers |
-| `docker ps -a` | Lists all containers, including stopped ones |
-| `docker logs` | Displays logs from the different containers |
-| `docker inspect <container>` | Shows low-level container configuration and runtime details | 
-| `docker inspect <container> | grep ExitCode` | PARA VER EXIT CODE: `0` -> salida limpia; `137` -> SIGKILL (mal) |
-
-HABRIA QUE EXPLICAR QUÉ HACEN COMANDOS COMO:
-- DOCKER KILL
-- DOCKER STOP
-- ...
-
-### Entering containers (interactive debugging)
-Containers can be accessed interactively using `docker exec`. This is useful for debugging, inspecting files and verifying runtime state.  
-Examples:
-
-        docker exec -it mariadb bash
-        docker exec -it wordpress bash
-        docker exec -it nginx sh
-
-Once inside a container, you can:
-- inspect configuration files
-- run service-specific CLIs (e.g. `wp`, `mysql`)
-- debug permissions and file paths
-
-⚠️ PROBAR TODAS ESTAS COSAS!!! + añadir cosas concretas
-- `ls /var/www/html` -> qué permite ver? este es el volumen persistente de wordpress, no?
-- `env | grep MYSQL` -> ver variables de entorno
-- comprobar wp-config.php...
-- docker inspect <container> | grep ExitCode -> ESTO DEBERIA IR AQUÍ??
-
-### Database inspection
-MariaDB data can be inspected from inside the database container.  
-Because the database is not exposed to the host, access is done via `docker exec`.  
-
-Example (inside mariadb container):
-
-        mysql -u root -p 
-        SHOW DATABASES;
-        USE database;
-        SHOW TABLES;
-
-`mysql -h mariadb -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE` -> INTENTAR CONECTAR DESDE WORDPRESS (PREVIAMENTE DOCKER EXEC -IT WORDPRESS BASH) A MARIADB  + añadir mas maneras de comprobar conexiones 
-
-This is used to inspect the real persistent WordPress data stored in MariaDB. For see this in more detail [see Inspecting persistent data](#inspecting-persistent-data).
-
-### Volumes and storage
-Persistent data is stored using bind-mounted volumes.  
-Useful commands:  
-
-| Command | Purpose |
-|----|----|
-| `docker volume ls` | Lists Docker-managed volumes |
-| `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
-| `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
-
-PULIR:
-- QUÉ VOLUMEN MONTA CADA SERVICIO
-- QUÉ DATOS PERSISTEN
-- QUÉ PASA EN MAKE FCLEAN...
-
-## Project data storage and persistence
-### Persistent data locations
+#### Persistencia de datos
+##### Persistent data location
 All persistent data is stored explicitly on the VM filesystem: 
 
         /home/<login>/data/mariadb
@@ -891,11 +856,10 @@ All persistent data is stored explicitly on the VM filesystem:
 - WordPress stores uploads, plugins, and themes in `wp-content`
 
 This are **Docker bind mounts**, defined in `docker-compose.yml`, and ensure that data survives container restarts and rebuilds.  
-As long as these directories are preserved, all WordPress content, configuration and database state survive container restarts and rebuilds.  
-
-### Volume mounting and container paths
+As long as these directories are preserved, all WordPress content, configuration and database state survive container restarts and rebuilds.  ##### Contenido de cada volumen
+##### Volume mounting and container paths
 The persistent volumes are mounted as follows:  
-#### MariaDB
+###### MariaDB
 - Host path: `/home/login/data/mariadb`
 - Container path: `/var/lib/mysql`
 - This directory contains all MariaDB database files, meaning:
@@ -905,7 +869,7 @@ The persistent volumes are mounted as follows:
   - Comments
   - WordPress options
   In short: all logically important WordPress data.
-#### WordPress
+###### WordPress
 - Host path: `/home/login/data/wordpress`
 - Container path: `/var/www/html`
 - This directory contains:
@@ -918,7 +882,7 @@ The persistent volumes are mounted as follows:
 ⚠️ COMPROBAR TODOS ESTOS ARCHIVOS... REPASAR  
 ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 
-### Persistent behaviour (`make` rules)
+##### Relación con make down/clean/fclean
 ⚠️ AÑADIR CÓDIGO DEL MAKEFILE PARA VER CÓMO ESTOY HACIENDO TODO ESTO ⚠️ ⚠️ 
 - `make down`:
   - Stops and removes containers
@@ -940,14 +904,14 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
 ⚠️ **Important distinction:**  
 `clean`preserves data, `fclean` deletes it entirely.
 
-### WordPress-MariaDB data model
-#### WordPress configuration: `wp-config.php`  
+#### Modelo de datos WordPress - MariaDB
+##### WordPress configuration: `wp-config.php`  
 `wp-config.php` is the central configuration file that links WordPress with its database and define its runtime behaviour. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script and stored persistently in the wordpress volume.    
-##### Location
+###### Location
 
           /home/login/data/wordpress/wp-config.php 
 
-##### Role in the WordPress-MariaDB architecture
+###### Role in the WordPress-MariaDB architecture
 `wp-config.php` does not store content itself, but it defines how WordPress accesses and interprets persistent data stored in MariaDB.  
 It contains:
 1. Database connection settings
@@ -988,11 +952,12 @@ It contains:
            require_once ABSPATH . 'wp-settings.php';
    
    This loads and initializes the WordPress core.
+##### Database
+All WordPress logical data is stored in a single MariaDB database, which persists independently from container lifecycles. This includes users, roles, content, configuration and metadata.
 
-#### Database overview
-All WordPress logical data is stored in a single MariaDB database, which persists independently from container lifecycles. This includes users, roles, content, configuration and metadata.  
+CAMBIAR LA EXPLICACIÓN: EXPLICAR TABLAS PPALES... IGUAL ALGUNA MÁS, NO? NO SOLO WP_USERS Y WP_POSTS...
 
-#### Users and roles (data model)
+###### Users and roles (data model)
 User accounts are stored in the `wp_users` table.  
 Each user entry contains basic identity information such as:
 - login name
@@ -1004,7 +969,7 @@ Roles are stored under the `wp_capabilities` meta key as PHP serialized data, fo
       a:1:{s:13:"administrator";b:1;}
       a:1:{s:10:"subscriber";b:1;}
 
-#### Posts, pages, uploads and revisions
+###### Posts, pages, uploads and revisions
 All WordPress content is stored in `wp_posts` table.  
 This table includes:
 - blog posts
@@ -1023,7 +988,7 @@ The `post_author` filed references `wp_users.ID`:
 - A positive value corresponds to the user who created the content: `1` usually correspondos to the admin user
 - `0` indicates system-generated content
 
-#### Global WordPress configuration
+###### Global WordPress configuration
 Global WordPress condiguration is stored in the `wp_options` table.  
 This table includes:
 - site URL
@@ -1031,10 +996,67 @@ This table includes:
 - enabled plugins
 - internal WordPress settings
 
-### Inspecting persistent data
-How to verify and inspect the persistent data described above.  
+##### Contenido persistente: posts, páginas, roles, plugins, themes
+????
 
-#### Accessing MariaDB
+### Inspección y testeo
+#### Docker useful commands
+| Command | Purpose |
+|----|----|
+| `docker ps` | Lists running containers |
+| `docker ps -a` | Lists all containers, including stopped ones |
+| `docker logs` | Displays logs from the different containers |
+| `docker inspect <container>` | Shows low-level container configuration and runtime details | 
+| `docker inspect <container> | grep ExitCode` | PARA VER EXIT CODE: `0` -> salida limpia; `137` -> SIGKILL (mal) |
+
+HABRIA QUE EXPLICAR QUÉ HACEN COMANDOS COMO:
+- DOCKER KILL
+- DOCKER STOP
+- docker exec -it...
+- AÑADIR COMANDOS QUE FALTAN
+
+#### Acceso e inspeccion de contenedores
+Containers can be accessed interactively using `docker exec`. This is useful for debugging, inspecting files and verifying runtime state.  
+Examples:
+
+        docker exec -it mariadb bash
+        docker exec -it wordpress bash
+        docker exec -it nginx sh
+
+Once inside a container, you can:
+- inspect configuration files
+- run service-specific CLIs (e.g. `wp`, `mysql`)
+- debug permissions and file paths
+
+Poner ejemplis útiles de todo esto...
+
+⚠️ PROBAR TODAS ESTAS COSAS!!! + añadir cosas concretas
+- `ls /var/www/html` -> qué permite ver? este es el volumen persistente de wordpress, no?
+- `env | grep MYSQL` -> ver variables de entorno
+- comprobar wp-config.php...
+- docker inspect <container> | grep ExitCode -> ESTO DEBERIA IR AQUÍ??
+
+#### MariaDB database inspection
+PONER TODO POR PASOS:
+1. ACCEDER A MARIADB DESDE SU CONTENEDORE
+2. MOSTRAR BASES DE DATOS, TABLAS, CONTENIDO
+3. EJEMPLOS PRÁCTICOS
+
+MariaDB data can be inspected from inside the database container.  
+Because the database is not exposed to the host, access is done via `docker exec`.  
+
+Example (inside mariadb container):
+
+        mysql -u root -p 
+        SHOW DATABASES;
+        USE database;
+        SHOW TABLES;
+
+`mysql -h mariadb -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE` -> INTENTAR CONECTAR DESDE WORDPRESS (PREVIAMENTE DOCKER EXEC -IT WORDPRESS BASH) A MARIADB  + añadir mas maneras de comprobar conexiones 
+
+This is used to inspect the real persistent WordPress data stored in MariaDB. For see this in more detail [see Inspecting persistent data](#inspecting-persistent-data).
+
+##### Accessing MariaDB
       
       docker exec -it mariadb bash
       mysql -u root -p
@@ -1054,7 +1076,7 @@ In this project, the WordPress database user is created as:
 - When running `mysql -u login -p`, MariaDB attempts `login@localhost`, which does not exists
 - Therefore, WordPress connects successfully via Docker networking, while manual inspection must be done as `root`.
 
-#### Inspecting databases and tables
+##### Inspecting databases and tables
 
       SHOW DATABASES;
       USE database;
@@ -1105,7 +1127,7 @@ Example inspections:
       SELECT ID, post_title, post_type, post_status
       FROM wp_posts;
 
-#### SQL inspection keywords
+##### SQL inspection keywords
 | Keyword | Purpose |
 |---------|---------|
 | SHOW | List databases or tables |
@@ -1114,11 +1136,38 @@ Example inspections:
 | SELECT | Query table contents |
 | FROM | Specify source table |
 
-#### Logs
+#### Persistencia de volúmenes
+Persistent data is stored using bind-mounted volumes.  
+Useful commands:  
+
+| Command | Purpose |
+|----|----|
+| `docker volume ls` | Lists Docker-managed volumes |
+| `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
+| `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
+
+PULIR:
+- QUÉ VOLUMEN MONTA CADA SERVICIO
+- QUÉ DATOS PERSISTEN
+- QUÉ PASA EN MAKE FCLEAN...
+
+- explicar más sobre du -sh /home/<login>/data...
+- explicar qué datos persisten tras make down / clean / fclean...
+
+#### Logs and debugging
 WordPress does not store logs in MariaDB by default.  
 Existing logs:
 - PHP-FPM logs -> inside WordPress container (not persistent)
 - MariaDB logs -> `/var/log/mysql` (not persistent)
 ⚠️ COMPROBAR ESTO!!! VER DONDE SE GUARDA
 Persistent logging would require explicit configuration, which is not required for *Inception*. ❌❌ CREO QUE NO HACE FATLA HACER ESTO
+añadir cosas
+DÓNDE METO ESTO?
+To verify clean shutdown:  
+
+        docker inspect <container> | grep ExitCode
+
+- `0` -> clean exit
+- `137` -> SIGKILL (bad)
+
 
