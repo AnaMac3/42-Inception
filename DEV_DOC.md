@@ -23,7 +23,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Core Docker Compose commands](#core-docker-compose-commands)
   - [Makefile shortcuts](#makefile-shortcuts)
 - [Theory - Fundamental Concepts](#theory-fundamental-concepts)
-  - [Container execution model[(#container-execution-model)
+  - [Container execution model](#container-execution-model)
     - [Build time vs runtime](#build-time-vs-runtime)
     - [PID 1 and Process Management](#pid-1-and-process-management)
     - [Foreground vs background](#foreground-vs-background)
@@ -33,68 +33,36 @@ This document describes the technical architecture of the *Inception* project. I
     - [Start, execution, and shutdown](#start-execution-and-shutdown)
     - [Signals and shutdown behavior])(#signals-and-shutdown-behavior)
 - [Applied architecture in Inception]
+  - [Services and Dockerfiles](#services-and-dockerfiles)
+    - [MariaDB](#mariadb)
+    - [WordPress](#wordpress)
+    - [NGINX](#nginx)
+  - [Docker Compose Orchestration](#docker-compose-orchestration)
+    - [Service definitions](#service-definitions)
+    - [Internal network](#internal-network)
+    - [Volume bindings](#volume-bindings)
+    - [Startup flow and dependencies](#startup-flow-and-dependencies)
+    - [Port mapping](#port-mapping)
+    - [Key `docker-compose.yml` directives](#key-docker-compose.yml-directives)
+    - [Container interaction](#container-interaction)
+  - [Data persistence](#data-persistence)
+    - [Persistent data locations on the host](#persistent-data-locations-on-the-host)
+    - [Content of each volume](#content-of-each-volume)
+    - [Relation with make down / clean / fclean](#relation-with-make-down-clean-fclean)
+  - [WordPress - MariaDB data model](#wordpress-mariadb-data-model)
+    - [`wp-config.php`](#wpconfig.php)
+    - [Database structure and tables](#database-structure-and-tables)
+    - [Persistent application data](#persistent-application-data)
  
 -------------------
-- Arquitectura aplicada en Inception
-  - Servicios y dockerfiles
-    - MariaDB
-    - WordPress
-    - NGINX
-  - Docker Compose
-    - Def de servicios, red interna y volumes
-    - Startup flow
-    - Mapeo de puertos y bind mounts
-    - palabras clave del docker-compose.yml
-    - Interacción de contenedores
-  - Persistencia de datos
-    - ubicación de datos persistentes
-    - contenido de cada volumen
-    - relación con make dwon/clean/fclean
-  - Modelo de datos WordPress - MariaDB
-    - wp-config.php
-    - base de datos y tablas
-    - contenido persistente
-- Inspección y testeo
-  - comandos utiles de docker
-  - acceso e inspeccion de contnedores
-  - inspeccion de mariadb
-  - persistencia de volumenes
-  - logs y debugging
 
---------------------
-
-
-- [Container architecture and lifecycle](#container-architecture-and-lifecycle)
-  - [Architecutre overview]
-  - [Build time vs runtime]
-  - [Container lifecycle fundamentals]
-    - [PID 1 and container lifetime]
-    - [Foreground vs background]
-    - [exec and signal handling]
-    - [One main process per container]
-  - [Service lifecycles]
-    - [MariaDB container lifecycle]
-    - [WordPress container lifecycle]
-    - [NGINX container lifecycle]
-  - [Docker Compose architecture]
-    - [Services]
-    - [Network]
-    - [Volumes and persistence]
-    - [Startup flow]
-    - [Inter-container communication]
-- [Container and volume management](#container-and-volume-management)
-  - [Container inspection and logs](#container-inspection-and-logs)
-  - [Entering containers (interactive debugging)](#entering-containers-interactive-debugging)
-  - [Database inspection](#database-inspection)
-  - [Volumes and storage](#volumes-and-storage)
-- [Project data storage and persistence](#project-data-storage-and-persistence)
-  - [Persistent data locations](#persistent-data-locations)
-  - [Volume mounting and container paths](#volume-mounting-and-container-paths)
-  - [Persistent behaviour (`make` rules)](#persistent-behaviour-make-rules)
-  - [WordPress-MariaDB data model](#wordpress-mariadb-data-model)
-  - [Inspecting persistent data](#inspecting-persistent-data)
+- [Inspection and testing](#isnpection-and-testing)
+  - [Useful Docker commands](#useful-docker-commands)
+  - [Container access and inspection](#container-acces-and-inspection)
+  - [MariaDB inspection)](#mariadb-inspection)
+  - [Volume persistence verification](#volume-persistence-verification)
+  - [Logs and debugging](#logs-and-debugging)
  
----------------
 
 -----------------------------------------------------
 
@@ -391,8 +359,7 @@ If mages are not removed (`make down`), changes in `Dockerfile` or `setup.sh` wi
 This section explains the theoretical foundations required to understand how the *Inception* project works internally.  
 It focuses on **how Docker containers behave**, how their lifecycle is managed, and why certain design choices are mandatory to ensure correctness, stability, and compliance with the subject.  
 
-### Container execution model  
-
+### Container execution model
 This project uses a **multi-container architecture**, where each service runs inside its **own isolated container** with a **single responsibility**.  
 Containers communicate through a **private Docker bridge network**.    
 Persistent application state is stored outside containers using **bind-mounted volumes** on the host system.   
@@ -571,8 +538,11 @@ If PID 1 exits:
 This is why PID 1 must always be the real service.  
 
 
-## Applied architecture in Inception (práctica)
-### Servicios y Dockerfiles
+## Applied Architecture in Inception
+This section describes **how the theoretical Docker concepts explained earlier are applied concretely in the Inception project**.  
+It focouses on the **practical implementation choices**, the role of each service, how containers are built and started, how Docke Compose orchestrates the system, and how data persistence is ensured.  
+### Services and Dockerfiles
+Each service runs in its own container, built from a dedicated Dockerfile.  
 #### MariaDB 
 ##### Build time
 During image construction, the MariaDB Dockerfile prepares the **database infraestructure**:
@@ -580,16 +550,16 @@ During image construction, the MariaDB Dockerfile prepares the **database infrae
 - Copies a custom MariaDB configuration file (`my_conf`)
 - Copies an initialization script (`setup.sh`)
 - Exposes port `3306` for inter-container communication
-- Defines `setup.sh` as the container
-No database or user is created at build time.
+- Defines `setup.sh` as the container `ENTRYPOINT`.
+No database, user or application state is created at build time. This ensures the image remains **stateless and reusable**.    
 
 ###### Custom configuration (`my.conf`)
-The default MariaDB configuration binds the server to `127.0.0.1`, which prevents connections from other containers.  
+The default MariaDB binds the server to `127.0.0.1`, which prevents connections from other containers.  
 The custom configuration overrides this behaviour:
 - MariaDB listens on `0.0.0.0`
 - This allows WordPress to connect through the Docker bridge network
 - The database remains inaccessible from the host unless explicitly exposed
-Access from the host is only possible via `docker exec`, which does not expose the database to external connections.  
+Access from the host is only possible via `docker exec`.  
 This configuration allows controlled inter-container communication while preserving isolation from the host system.
 
 ##### Runtime initialization
@@ -599,7 +569,7 @@ Its responsibilities are:
 - Detecting whether the database has already been initialized
 - Initializing the database only on the first container startup
 - Creating the applciation database and user
-- Starting MariaDB as the main foreground process
+- Starting MariaDB as the main foreground process  
 This logic is essential when using **persistent volumes**, as containers may restart  while data must remain intact.
 
 ##### Background vs foreground execution
@@ -607,7 +577,7 @@ During first startup:
 - MariaDB is launched **temporarily in background**
 - This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`...)
 - The temporary process is stopped
-- MariaDB is restarted in **foreground mode**
+- MariaDB is restarted in **foreground mode** using `exec`  
 Running in the foreground ensures that MariaDB becomes **PID 1**, allowing Docker to properly manage lifecycle and signals.
 
 ##### Configuración de puertos, volúemenes y seguridad
