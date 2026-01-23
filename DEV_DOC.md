@@ -22,29 +22,19 @@ This document describes the technical architecture of the *Inception* project. I
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
   - [Core Docker Compose commands](#core-docker-compose-commands)
   - [Makefile shortcuts](#makefile-shortcuts)
+- [Theory - Fundamental Concepts](#theory-fundamental-concepts)
+  - [Container execution model[(#container-execution-model)
+    - [Build time vs runtime](#build-time-vs-runtime)
+    - [PID 1 and Process Management](#pid-1-and-process-management)
+    - [Foreground vs background](#foreground-vs-background)
+    - [`exec`: replacing shell and signal handling](#exec-replacing-shell-and-signal-handling)
+    - [Incorrect container behavior and forbidden patterns](#incorrect-container-behavior-and-forbidden-patterns)
+  - [Container lifecycle](#container-lifecycle)
+    - [Start, execution, and shutdown](#start-execution-and-shutdown)
+    - [Signals and shutdown behavior])(#signals-and-shutdown-behavior)
+- [Applied architecture in Inception]
  
 -------------------
-- Conceptos fundamentales (teoría)
-  - Architecture of containers
-    - Multi-container system
-    - Build time vs runtime
-    - ...
-  - PID 1 and process management
-    - PID 1 in Linux and Docker
-    - Foreground vs background
-    - use of `exec`
-    - Antipatrones?
-  - Lifecycle of a container
-    - Inicio, ejecución y shutdown
-    - señales
-    - qué pasa si el PID muere
-  - Netowrking y comunicación entre contenedores
-    - docker bridge  network vs hsot network -> pero esto ya lo hemos tratado en el readme...
-    - nombres de servicios
-    - seguridad y aislamiento
-  - Persistencia de datos
-    - diferencia entre datos en imagen vs datos en volumenes
-    - como se mantiene el estado tras reinicios o eliminación de contenedores
 - Arquitectura aplicada en Inception
   - Servicios y dockerfiles
     - MariaDB
