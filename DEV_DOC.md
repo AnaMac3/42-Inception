@@ -55,7 +55,6 @@ This document describes the technical architecture of the *Inception* project. I
   - [Volume persistence verification](#volume-persistence-verification)
   - [Logs and debugging](#logs-and-debugging)
  
-
 ---
 
 ## Set up the environment from scratch
@@ -854,92 +853,98 @@ The `post_author` field references `wp_users.ID`:
 - A positive value corresponds to the user who created the content: `1` usually correspondos to the admin user
 - `0` indicates system-generated content
 
------------------------------------
+## Inspection and testing
+This section explains how to inspect, verify, and debug the running *Inception* stack.  
+It foucses on practical commands used to:
+- observe container state
+- access services interactively
+- inspect MariaDB content
+- verify persistent volumes
+- analyze logs and shutdown behavior
+  
+### Useful Docker commands
+Basic Docker commands used to monitor the system:  
 
-### Inspección y testeo
-#### Docker useful commands
 | Command | Purpose |
 |----|----|
 | `docker ps` | Lists running containers |
 | `docker ps -a` | Lists all containers, including stopped ones |
-| `docker logs` | Displays logs from the different containers |
+| `docker logs <container>` | Shows container stdout/stderr |
 | `docker inspect <container>` | Shows low-level container configuration and runtime details | 
-| `docker inspect <container> | grep ExitCode` | PARA VER EXIT CODE: `0` -> salida limpia; `137` -> SIGKILL (mal) |
+| `docker inspect <container> | grep ExitCode` | Shows exit code after stop. `0` -> clean shutdown; `137` -> SIGKILL. This is usefull to confirm correct PID 1 behavior |
+| `docker stop <container>` | Sends SIGTERM (graceful stop) |
+| `docker kill <container>` | Sends SIGKILL (forced stop) |
+| `docker exec -it <container> bash` | Interactive shell inside the container |
 
-HABRIA QUE EXPLICAR QUÉ HACEN COMANDOS COMO:
-- DOCKER KILL
-- DOCKER STOP
-- docker exec -it...
-- AÑADIR COMANDOS QUE FALTAN
+⚠️ FALTA PROBAR TODOS LOS COAMNDSO!!!
 
-#### Acceso e inspeccion de contenedores
-Containers can be accessed interactively using `docker exec`. This is useful for debugging, inspecting files and verifying runtime state.  
+### Container access and inspection
+Containers can be accessed interactively using `docker exec`.  
+This is useful for debugging, inspecting files and verifying runtime state.  
 Examples:
 
         docker exec -it mariadb bash
         docker exec -it wordpress bash
         docker exec -it nginx sh
 
-Once inside a container, you can:
-- inspect configuration files
-- run service-specific CLIs (e.g. `wp`, `mysql`)
-- debug permissions and file paths
+Once inside a container, you can:  ⚠️ ESPECIFICAR EN QUÉ CONTENEDORES TE TIENES QUE METER PARA VER ESTAS COSAS
+#### Inspect WordPress files
+⚠️  TESTEAR ESTO!!!
 
-Poner ejemplis útiles de todo esto...
+        ls /var/www/html
 
-⚠️ PROBAR TODAS ESTAS COSAS!!! + añadir cosas concretas
-- `ls /var/www/html` -> qué permite ver? este es el volumen persistente de wordpress, no?
-- `env | grep MYSQL` -> ver variables de entorno
-- comprobar wp-config.php...
-- docker inspect <container> | grep ExitCode -> ESTO DEBERIA IR AQUÍ??
+This directory is bind-mounted from:
 
-#### MariaDB database inspection
-PONER TODO POR PASOS:
-1. ACCEDER A MARIADB DESDE SU CONTENEDORE
-2. MOSTRAR BASES DE DATOS, TABLAS, CONTENIDO
-3. EJEMPLOS PRÁCTICOS
+      /home/<login>/data/wordpress
 
-MariaDB data can be inspected from inside the database container.  
-Because the database is not exposed to the host, access is done via `docker exec`.  
+It contains:
+- WordPress core
+- `wp-config.php`
+- themes
+- plugins
+- uploads  
+This confirms volume persistence.  
 
-Example (inside mariadb container):
+#### Check environment variables ⚠️ ⚠️ 
 
-        mysql -u root -p 
-        SHOW DATABASES;
-        USE database;
-        SHOW TABLES;
+      env  | grep MYSQL
 
-`mysql -h mariadb -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE` -> INTENTAR CONECTAR DESDE WORDPRESS (PREVIAMENTE DOCKER EXEC -IT WORDPRESS BASH) A MARIADB  + añadir mas maneras de comprobar conexiones 
+Verifies that `.env` variables are injected correctly at runtime.  
 
-This is used to inspect the real persistent WordPress data stored in MariaDB. For see this in more detail [see Inspecting persistent data](#inspecting-persistent-data).
+#### Verify WordPress configuration ⚠️ ⚠️ 
 
-##### Accessing MariaDB
-      
-      docker exec -it mariadb bash
-      mysql -u root -p
+      cat wp-config.php
 
-Root access is required for inspection.  
-MariaDB users are defined using the format:
+Confirms:
+- database hostname (`mariadb`)
+- credentials
+- table prefix
 
-        'user'@'host'
+### MariaDB inspection
+The database is not exposed to the host; the access is performed via `docker exec`:
 
-In this project, the WordPress database user is created as:
+        docker exec -it mariadb bash
+        mysql -u root -p
+
+Root access is required for manual inspection:  
+- MariaDB users are defined as `'user'@'host'`
+- In this project, the WordPress database user is created as:
 
       CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 
-- `%` is a wildcard meaning "any host on the network"
-- This allows WordPress (running in another container) to connect
-- However, `%` does not include `localhost`
-- When running `mysql -u login -p`, MariaDB attempts `login@localhost`, which does not exists
-- Therefore, WordPress connects successfully via Docker networking, while manual inspection must be done as `root`.
-
-##### Inspecting databases and tables
+  `%` means **any host on the Docker network**.
+  Therefore:
+  - WordPress connects succesfully from another container
+  - Manual login using `mysql -u user -p` fails (defaults to `user@localhost`)
+  - Inspection must be done as root
+ 
+List databases:
 
       SHOW DATABASES;
       USE database;
       SHOW TABLES;
 
-Typicall databases present:
+Typicall databases:
 - `mysql` -> system database
 - `information_schema`
 - `performance_schema`
@@ -954,35 +959,46 @@ Main wordPress tables:
 - `wp_postmeta` -> post metadata
 - `wp_comments`, `wp_commentmeta`
 - `wp_options` -> global configuration
-- `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`
+- `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`  
 
-Example inspections:
+Example inspections:  
+- List users:
 
-- PARA VER USUARIOS
+          DESCRIBE wp_users;
+          SELECT ID, user_login, user_email FROM wp_users;
 
-      DESCRIBE wp_users;
-      SELECT ID, user_login, user_email FROM wp_users;
 
-- PARA VER PERMISOS/roles
+- View roles:
 
       SELECT user_id, meta_key, meta_value
       FROM wp_usermeta
       WHERE meta_key LIKE '%capabilities%';
 
 
-> How to change permissions from the WordPress contaniner:
-
->      wp user set-role user1 author --allow-root
-
-> This updates:
->  - `wp_capabilities`
->  - `wp_user_level`
-
-
-- PARA VER POSTS
+- View posts:
 
       SELECT ID, post_title, post_type, post_status
       FROM wp_posts;
+
+
+Modify roles from WordPress container:
+
+
+        docker exec -it wordpress bash
+        wp user set-role user1 author --allow-root
+
+This updates:
+- `wp_capabilities`
+- `wp_user_level`
+
+### Volume persistence verification
+
+⚠️ ⚠️ ⚠️  -> NOS HEMOS QUEDADO AQUÍ!!!
+
+### Logs and debugging
+
+-----------------------------------
+
 
 ##### SQL inspection keywords
 | Keyword | Purpose |
