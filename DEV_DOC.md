@@ -45,7 +45,7 @@ This document describes the technical architecture of the *Inception* project. I
     - [Persistent data locations](#persistent-data-locations)
     - [Volume contents](#content-of-each-volume)
     - [Relation with `make down / clean / fclean`](#relation-with-make-down--clean--fclean)
-  - [WordPress - MariaDB Data Model](#wordpress-mariadb-data-model)
+  - [WordPress - MariaDB Data Model](#wordpress---mariadb-data-model)
     - [`wp-config.php`](#wp-configphp)
     - [Database structure and tables](#database-structure-and-tables)
 - [Inspection and testing](#inspection-and-testing)
