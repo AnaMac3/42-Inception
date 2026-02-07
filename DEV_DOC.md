@@ -16,7 +16,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
-    - [SSH tunneling (VM -> host browser)](#ssh-tunneling-vm-->-host-browser)
+    - [SSH tunneling (VM -> host browser)](#ssh-tunneling-vm--host-browser)
       - [Windows / WSL](#windows--wsl)
       - [42 iMacs / Linux (no sudo)](#42-imacs--linux-no-sudo)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
@@ -284,7 +284,7 @@ Verify with:
 
 If it responds from `127.0.0.1`, the domain is well configurated inside the VM.  
 
-#### SSH tunneling (VM -> host browser)
+#### SSH tunneling (VM → host browser)
 Since the services run inside a VM, HTTPS traffic must be forwarded to the host machine.   
 ##### Windows / WSL
 Edit the host machine's `hosts` file (as administrator):
