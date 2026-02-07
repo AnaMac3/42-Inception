@@ -32,7 +32,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Container lifecycle](#container-lifecycle)
     - [Start, execution, and shutdown](#start-execution-and-shutdown)
     - [Signals and shutdown behavior])(#signals-and-shutdown-behavior)
-- [Applied architecture in Inception]
+- [Applied architecture in Inception](#applied-architecture-in-inception)
   - [Services and Dockerfiles](#services-and-dockerfiles)
     - [MariaDB](#mariadb)
     - [WordPress](#wordpress)
@@ -585,22 +585,22 @@ falta especificar esto
 
 #### WordPress
 ##### Build time
-At build time, the WordPress image **does not install WordPress** itself. Instead, it prepares the execution environment.  
+At build time, the WordPress image **does not install WordPress** itself. Instead, it prepares the execution environment:  
+- PHP and required extensions are installed
+- WP-CLI is installed (command-line interface used at runtime to download WordPress core files, generate wp-config.php, create users, and install and configure WordPress)
 Installing WordPress at build time would embed application state into the image, breaking persistence and update safety. 
 > - **Build time = infrastructure**
 > - **Runtime = application state**  
 
-WordPress installation is application state, so it occurs at runtime.
-
 ##### Runtime WordPress installation
 The `setup.sh` script is executed **every time the container starts**.  
 Its responsibilities are:
-- ensuring file permissions
+- ensuring correct file permissions
 - waiting for MariaDB availability
 - installing WordPress only if not already present
 - preserving existing data
 - starting PHP-FPM in the **foreground** using `exec`
-PHP-FPM becomes **PID 1**, allowing proper container lifecycle and signals management.
+PHP-FPM becomes **PID 1**, allowing Docker to manage signals and lifecycle correctly.  
 
 ###### `wp-config.php` generation
 Application-specific configurations is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
@@ -610,105 +610,79 @@ This file contains:
 - table prefix
 - environment-specific settings
 
-`wp-config.php` is generated at runtime using WP-CLI and environment variables, ensuring sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
+`wp-config.php` is generated at runtime using **WP-CLI and environment variables,** ensuring sensitive data is not baked into the image and that configuration persist correctly across container restarts.  
 
-##### PHP-FPM role 
+##### PHP-FPM role
 WordPress runs using **PHP-FPM (FastCGI Process Manager)**.  
 PHP-FPM:
 - manages pools of PHP worker processes
 - executes PHP scripts
-- communicates with NGINX via Fast-CGI
+- communicates with NGINX via Fast-CGI on port `9000`
 
-A custom `www.conf` is provided at vuild time, defining:  
-- execution user and group (`www-data`) for PHP-FPM runing be as NGINX expects
-- listening on port `9000` for FastCGI request from NGINX
+A custom `www.conf` is provided at build time, defining:  
+- execution user and group (`www-data`)
+- listening on port `9000`
 - dynamic process manager (`pm = dynamic`)
-- the number of PHP worker proesses to avoid resource exhaustion
+- worker limits to prevent resource exhaustion
 - environment variable preservation (`clear_env =  no`)   
-This configuration is static infraestructure and does not change at runtime.
+This configuration is **static infraestructure** and does not change at runtime.
 
 ##### WP-CLI role
-**WP-CLI** is the official WordPress Command-Line Interface.  
+**WP-CLI** is the official WordPress command-Line interface.  
 It is used at runtime to: 
-    - download WordPress core
-    - create `wp-config.php`
-    - install WordPress
-    - create admin and additional users
-    - manage plugins and themes
+- download WordPress core
+- create `wp-config.php`
+- install WordPress
+- create admin and additional users
+- manage plugins and themes  
 WP-CLI allows WordPress installation to be fully automated and reproducible.  
-
-##### PHP-FPM internals
-PHP-FPM acts as a **FastCGI server** between NGINX and PHP code execution.  
-- NGINX handles HTTPS/TLS
-- PHP-FPM executes PJP
-- Communication happens over port `9000` using FastCGI
-This separation improves performance, security, and scalability compared to tradicional Apache + mod_php setups.
-
-##### gestión de dependencias y espera de mariadb
-qué hay que explicar aquí?
 
 #### NGINX
 ##### Build time
-During **image construction**, the NGINX Dockerfile sets up the environment required to serve WordPress:
+During **image construction**, the NGINX Dockerfile:
 - installs `nginx` and `openssl`:
   - `nginx`: the web server and reverse proxy
   - `openssl`: generates TLS certificates
 - creates the folder for SSL certificates: `/etc/nginx/ssl`
-- generates a **self-signed TLS certificate** (development only, in production certificate should be isued by a trusted Certificate Authority - CA)
+- generates a **self-signed TLS certificate** (development use only, in production certificate should be isued by a trusted Certificate Authority - CA)
 - copies the custom `nginx.conf` 
 - exposes port `443` for HTTPS communication
 
 ###### TLS termination
-NGINX terminates HTTP connections:
-- negotiates TLS(v1.2 / v1.3)
-- decrypts incoming traffic
-- forwards requests internally
+NGINX handles:
+- TLS negotiation (TLSv1.2 / TLSv1.3)
+- Traffic decryption
+- Secure client communication
 This isolates cryptographic concerns from the application layer.
 
 ###### Reverse proxy role
 NGINX:
 - serves static files
 - forwards PHP request to PHP-FPM
-- allows WordPress to handle clean URLs
+- enables clean WordPress URLs  
 
-###### `nginx.conf` explained -> RESUMIR Y PASAR A INGLÉS
-- Escucha en conexiones IPv4 e IPv6 a tra´ves del puerto 443 usando HTTPS
-- Configuración TLS/SSL: establece protocolos TLSv1.2 y TLSv1.3.
-  > TLS (Transport Layer Security): protocolo que cifra la comunicación entre navegador y servidor.
-- Establece las rutas del certificado (`.crt`) y la clave privada (`.key`) creadas en el Dockerfile, para que se pueda establecer esa conexión segura. 
-- Document root and default index files: Se establece dónde están los archivos que se van a servir (los archivos de WordPess-> root /var/www/html). Si un usuario entra a una carpeta en la URL, NGINX busca primero index.php y si no existe, index.html
-- Location block for static files:
-  - URI: la parte de la URL después del dominio. Ejemplo: `https://login.42.fr/wp-admin` -> la URI es `/wp-admin`
-  - `try_files $uri $uri/ /index.php?$args;` -> le dice a NGINX:
-    - primero intenta servir un archivo que coincida con la URI: `wp-admin` busca `/var/www/html/wp-admin`
-    - si no existe, intenta tratar la uri como una carpeta (`$uri/`)
-    - si no existe, redirige todas las peticiones a `index.php` pasando los parámetros de la URL (`$args`) a PHP
-  - Esto permite que WordPress maneje las URLS bonitas (https://amacarul.42.fr/my-post) incluso si no hay un archivo físico llamado my-post
-- Location block for php procesing: este bloque se activa solo para archivos que terminen en `.php`
-  - `fastcgi_split_path_info`: divide la URL en el archivo PHP real y la parte extra de la ruta; divide el nombre del script de la ruta (ej: `/index.php/foo/bar` -> script = `index.php; path: `/foo/bar`)
-  - `fastcgi_pass wordpress:9000`: envia la petición al contenedor wordpress en el puerto 9000, donde PHP-FPM ejecuta el PHP
-  - `fastcgi_index index-php`: archivo por defecto si se pide una carpeta (?)
-  - `fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name` : le dice a PHP qué archivo debe ejecutar
-  - `fastcgi_param PATH_INFO $fastcgi_path_info` : pasa la parte extra de la URL al script PJP, útil para WordPress y URLS amigables
+###### `nginx.conf` overview
+The configuration:
+- Listens on IPv4 and IPv6 over HTTPS
+- Defines TLS certificates and protocols
+- Serves WordPress files from `/var/www/html`
+- Redicrects non-existing paths to `index-php`
+- Forwards `.php` requests to `wordpress:9000` via FastCGI
+This allows WordPress to handle "pretty URLs" withput physical files.
+
+⚠️  CONTRASTAR ESTE RESUMEN CON MI CÓDIGO!
 
 ##### Foreground execution
-NGINX does not require a setup script. It starts **directly in foreground** using:
+NGINX does not require a setup script. It starts **directly in foreground** as PID 1 using:
 
           CMD["nginx", "-g", "daemon off;"]
 
-By keeping NGINX in the **foreground**, the process becomes **PID 1**, so docker can manage lifecycle and signals correctly.  
+Running in foreground:
+- Prevents container exit
+- Allows proper signal handling
+- Avoids daemonization issues
 
-Daemon vs foreground:
-- A daemon forks into the background
-- Docker requires the main service to stay in the foreground
-- If NGINX daemonized itself, the container would exit immediately
-
-##### RESUMEN DEL BLOQUE:  
-- NGINX escucha HTTPS en IPv4 e IPv6
-- Usa TLS/SSSL para cifrar la comunicación
-- Sirve archivos estáticos desde /var/www/html (que es el volumen persistente de wordpress, no?)
-- Redirige cualquier URL que no corresponda a un archivo real a `index.php`
-- Envía las solicitudes `.php` al contenedor PHP-FPM de wordpress usando FastCGI
+⚠️ QUÉ ES DAEMON??? DEBERIA DEFINIRLO EN ALGUNA PARTE
 
 #### Docker Compose architecture
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
