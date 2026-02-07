@@ -3,7 +3,7 @@
 This document describes the technical architecture of the *Inception* project. It focuses on how the system is built, deployed, configured, persisted and inspected, and is intended for developers and evaluators.  
 
 ## Table of Contents
-- [Set up the environment from scratch](set-up-the-environment-from-scratch)
+- [Set up the environment from scratch](#set-up-the-environment-from-scratch)
   - [Virtual Machine setup (VirtualBox + Debian)](#virtual-machine-setup-virtualbox-debian)
     - [Virtualization tool](#virtualization-tool)
     - [Debian ISO](#debian-iso)
@@ -31,40 +31,32 @@ This document describes the technical architecture of the *Inception* project. I
     - [Incorrect container behavior and forbidden patterns](#incorrect-container-behavior-and-forbidden-patterns)
   - [Container lifecycle](#container-lifecycle)
     - [Start, execution, and shutdown](#start-execution-and-shutdown)
-    - [Signals and shutdown behavior])(#signals-and-shutdown-behavior)
+    - [Signals and shutdown behavior](#signals-and-shutdown-behavior)
 - [Applied architecture in Inception](#applied-architecture-in-inception)
   - [Services and Dockerfiles](#services-and-dockerfiles)
     - [MariaDB](#mariadb)
     - [WordPress](#wordpress)
     - [NGINX](#nginx)
   - [Docker Compose Orchestration](#docker-compose-orchestration)
-    - [Service definitions](#service-definitions)
-    - [Internal network](#internal-network)
-    - [Volume bindings](#volume-bindings)
+    - [Service, internal network, and volumes](#service,-internal-network,-and-volumes)
     - [Startup flow and dependencies](#startup-flow-and-dependencies)
-    - [Port mapping](#port-mapping)
     - [Key `docker-compose.yml` directives](#key-docker-compose.yml-directives)
-    - [Container interaction](#container-interaction)
   - [Data persistence](#data-persistence)
-    - [Persistent data locations on the host](#persistent-data-locations-on-the-host)
-    - [Content of each volume](#content-of-each-volume)
-    - [Relation with make down / clean / fclean](#relation-with-make-down-clean-fclean)
-  - [WordPress - MariaDB data model](#wordpress-mariadb-data-model)
+    - [Persistent data locations](#persistent-data-locations)
+    - [Volume contents](#content-of-each-volume)
+    - [Relation with `make down / clean / fclean`](#relation-with-make-down-clean-fclean)
+  - [WordPress - MariaDB Data Model](#wordpress-mariadb-data-model)
     - [`wp-config.php`](#wpconfig.php)
     - [Database structure and tables](#database-structure-and-tables)
-    - [Persistent application data](#persistent-application-data)
- 
--------------------
-
-- [Inspection and testing](#isnpection-and-testing)
+- [Inspection and testing](#inspection-and-testing)
   - [Useful Docker commands](#useful-docker-commands)
   - [Container access and inspection](#container-acces-and-inspection)
-  - [MariaDB inspection)](#mariadb-inspection)
+  - [MariaDB inspection](#mariadb-inspection)
   - [Volume persistence verification](#volume-persistence-verification)
   - [Logs and debugging](#logs-and-debugging)
  
 
------------------------------------------------------
+---
 
 ## Set up the environment from scratch
 
@@ -149,13 +141,11 @@ After instalation, reboot the VM.
 | Reboot VM | `reboot`|
 | Get VM IP address | `ip a` |
 | SSH from host | `ssh <login>@<IP_VM>` |
-| SSH and domain .... ¿COMO LLAMO A ESTO?? ... from host | `ssh -L 443:localhost:443 <login>@<IP_VM>` |
+| SSH port forwarding | `ssh -L 443:localhost:443 <login>@<IP_VM>` |
 | Switch to root | `su -` |
 | Return to user | `su - <login>` |
 
 ⚠️ AÑADIR MÁS COSAS ÚTILES!!
-
-Using `sudo` is recommended, but switching to root is also acceptable for this project.  ⚠️ ES NECESARIO DECIR ESTO?? QUÉ IMPLICA?
 
 ### Installing Docker, Docker Compose and build tools
 Inside the Debian VM:
@@ -243,7 +233,7 @@ The `.env` file defines all configuration values used by Docker Compose and the 
 - It avoids hardcoding secrets in configuration files
 - It must be located in `./srcs` 
 
-Example structure: ⚠️ EXPLICAR QUÉ HACE CADA COSA, QUÉ ES CADA COSA...
+Example structure:  
 
       DOMAIN_NAME=amacarul.42.fr
 
@@ -263,10 +253,20 @@ Example structure: ⚠️ EXPLICAR QUÉ HACE CADA COSA, QUÉ ES CADA COSA...
       WORDPRESS_USER_PASSWORD=***
 
 Environment variables are used to configure containers dynamically without modifying source files.  
-⚠️ QUIZÁS DEBA DE USAR SECRETS TB!!! PARA LAS CONTRASEÑAS, NO??
+⚠️ HAY QUE USER SECRETS -> PARA LAS CONTRASEÑAS, NO??
+⚠️ AÑADIR TABLA EXPLICATIVA !!!
+
+| Variable | Purpose | 
+|----------|---------|
+| `DOMAIN_NAME` | |
+| `MYSQL_HOSTNAME`| |
+| `MYSQL_DATABASE` | |
+| `MYSQL_PASSWORD` | |
+| | |
 
 ### Domain configuration and SSH tunneling
-⚠️ PARA PODER ACCEDER DESDE LE NAVEGADOR DEL HOST A HTTPS://LOGIN.42.FR 
+Because the project runs inside a virtual machine, additional configuration is requried to access the HTTPS website from the host browser.  
+This section explains how to map the custom domain locally and forward port 443 from the VM to the host using SSH tunneling.  
 
 #### `/etc/hosts`  
 Inside the VM:
@@ -277,38 +277,40 @@ Add:
 
     127.0.0.1 <login>.42.fr
 
-Save with `Ctrl+O`, Enter, exit with `Ctrl+X`.  
+Save with `Ctrl+O`, press Enter, exit with `Ctrl+X`.  
 Verify with:
 
        ping <login>.42.fr
 
-If it responds from 127.0.0.1, it is well configurated.  
+If it responds from `127.0.0.1`, the domain is well configurated inside the VM.  
 
 #### SSH tunneling (VM -> host browser)
-Because the services run inside a VM, HTTPS traffic must be forwarded to the host browser.   
+Since the services run inside a VM, HTTPS traffic must be forwarded to the host machine.   
 ##### Windows / WSL
+Edit the host machine's `hosts` file (as administrator):
+- Open Notepad as Administrator
+- File -> Open
+- Navigate to: `C:\Windows\System32\drivers\etc`
+- Change file filtero to *All files*
+- Open `hosts`
+- Add: 
 
-  - Pulsar tecla Windows y escribir block de notas
-  - Click dcho, seleccionar Ejecutar como admin
-  - Dentro de block de notas ir a Archivo -> Abrir
-  - Ruta: C:\Windows\System32\drivers\etc
-  - Cambiar filtro de documentos de texto txt a Todos los archivos
-  - Abrir el arhcivo host
-  - Añadir al final del archivo la línea: 127.0.0.1 amacarul.42.fr
-  - Guardar y cerrar
+        127.0.0.1 <login>.42.fr
+
+- Save and close
 
 In the shell:
 
       ssh -L 443:localhost:443 <login>@<IP_VM>
 
-> Mientras esta ventana se mantenga abierta, el tunneling está activo (?)
+> The tunnel remains active while the SSH session is open. 
 
-Access:
+Access from the host browser:
 
     https://<login>.42.fr
 
 
-##### 42 iMacs (no sudo) ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ -> HAY QUE HACER K TB SE PUEDA ACCEDER A HTTPS://LOGIN.42.FR DESDE EL NAVEGADOR
+##### 42 iMacs / Linux (no sudo)
 Port 443 cannot be used locally:
 
       ssh -L 8443:localhost:443 <login>@<VM_IP>
@@ -353,7 +355,7 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 | `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 ⚠️ **Implication regarding images:**  
-If mages are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
+If images are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
 
 ## Theory - Fundamental Concepts
 This section explains the theoretical foundations required to understand how the *Inception* project works internally.  
@@ -456,7 +458,7 @@ This is the exec form of `CMD`, which means:
 
 #### Incorrect container behavior and forbidden patterns
 ##### Background services
-Running the main service in background (using `&`) is forbidden. COMPROBAR SI ESTO LO PROHIBE EL SUBJECT O ES ALGO GENERAL DE DOCKER  
+Running the main service in background (using `&`) is forbidden.  
 - The background process does not become PID 1
 - Docker cannot forward signals correctly
 - The container lifecycle is broken
@@ -507,8 +509,6 @@ NGINX does not require initialization:
 
 It therefore starts directly as PID 1.  
 
-> ⚠️ To know more about the concrete implementation of these steps [see FUNCTIONAL SECTION](#).
-
 #### Signals and shutdown behavior
 When running:
 
@@ -540,12 +540,12 @@ This is why PID 1 must always be the real service.
 
 ## Applied Architecture in Inception
 This section describes **how the theoretical Docker concepts explained earlier are applied concretely in the Inception project**.  
-It focouses on the **practical implementation choices**, the role of each service, how containers are built and started, how Docke Compose orchestrates the system, and how data persistence is ensured.  
+It focuses on the **practical implementation choices**, the role of each service, how containers are built and started, how Docker Compose orchestrates the system, and how data persistence is ensured.  
 ### Services and Dockerfiles
 Each service runs in its own container, built from a dedicated Dockerfile.  
 #### MariaDB 
 ##### Build time
-During image construction, the MariaDB Dockerfile prepares the **database infraestructure**:
+During image construction, the MariaDB Dockerfile prepares the **database infrastructure**:
 - Installs the MariaDB server packages
 - Copies a custom MariaDB configuration file (`my_conf`)
 - Copies an initialization script (`setup.sh`)
@@ -568,9 +568,9 @@ Its responsibilities are:
 - Preparing runtime directories
 - Detecting whether the database has already been initialized
 - Initializing the database only on the first container startup
-- Creating the applciation database and user
+- Creating the application database and user
 - Starting MariaDB as the main foreground process  
-This logic is essential when using **persistent volumes**, as containers may restart  while data must remain intact.
+This logic supports **persistent volumes**.
 
 ##### Background vs foreground execution
 During first startup:
@@ -580,14 +580,11 @@ During first startup:
 - MariaDB is restarted in **foreground mode** using `exec`  
 Running in the foreground ensures that MariaDB becomes **PID 1**, allowing Docker to properly manage lifecycle and signals.
 
-##### Configuración de puertos, volúemenes y seguridad
-falta especificar esto
-
 #### WordPress
 ##### Build time
 At build time, the WordPress image **does not install WordPress** itself. Instead, it prepares the execution environment:  
 - PHP and required extensions are installed
-- WP-CLI is installed (command-line interface used at runtime to download WordPress core files, generate wp-config.php, create users, and install and configure WordPress)
+- WP-CLI is installed  
 Installing WordPress at build time would embed application state into the image, breaking persistence and update safety. 
 > - **Build time = infrastructure**
 > - **Runtime = application state**  
@@ -599,8 +596,7 @@ Its responsibilities are:
 - waiting for MariaDB availability
 - installing WordPress only if not already present
 - preserving existing data
-- starting PHP-FPM in the **foreground** using `exec`
-PHP-FPM becomes **PID 1**, allowing Docker to manage signals and lifecycle correctly.  
+- starting PHP-FPM in the **foreground** using `exec` -> PHP-FPM becomes PID 1.
 
 ###### `wp-config.php` generation
 Application-specific configurations is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
@@ -617,7 +613,7 @@ WordPress runs using **PHP-FPM (FastCGI Process Manager)**.
 PHP-FPM:
 - manages pools of PHP worker processes
 - executes PHP scripts
-- communicates with NGINX via Fast-CGI on port `9000`
+- communicates with NGINX via FastCGI on port `9000`
 
 A custom `www.conf` is provided at build time, defining:  
 - execution user and group (`www-data`)
@@ -625,7 +621,7 @@ A custom `www.conf` is provided at build time, defining:
 - dynamic process manager (`pm = dynamic`)
 - worker limits to prevent resource exhaustion
 - environment variable preservation (`clear_env =  no`)   
-This configuration is **static infraestructure** and does not change at runtime.
+This configuration is **static infrastructure** and does not change at runtime.
 
 ##### WP-CLI role
 **WP-CLI** is the official WordPress command-Line interface.  
@@ -666,51 +662,50 @@ The configuration:
 - Listens on IPv4 and IPv6 over HTTPS
 - Defines TLS certificates and protocols
 - Serves WordPress files from `/var/www/html`
-- Redicrects non-existing paths to `index-php`
+- Redirects non-existing paths to `index.php`
 - Forwards `.php` requests to `wordpress:9000` via FastCGI
-This allows WordPress to handle "pretty URLs" withput physical files.
-
-⚠️  CONTRASTAR ESTE RESUMEN CON MI CÓDIGO!
+This allows WordPress to handle "pretty URLs" without physical files.
 
 ##### Foreground execution
-NGINX does not require a setup script. It starts **directly in foreground** as PID 1 using:
+NGINX does not require a setup script, it is executed **directly in foreground** as PID 1 using:
 
           CMD["nginx", "-g", "daemon off;"]
 
-Running in foreground:
-- Prevents container exit
-- Allows proper signal handling
-- Avoids daemonization issues
+> A daemon is a background process detached from the terminal.
+> Docker containers must not daemonize their main process. Running NGINX with `daemon off;` forces it to stay in foreground, allowing Docker to propperly track and control the container lifecycle.  
 
-⚠️ QUÉ ES DAEMON??? DEBERIA DEFINIRLO EN ALGUNA PARTE
-
-#### Docker Compose architecture
+### Docker Compose Orchestration
 **Docker Compose** is a tool that allows defining and running multiple Docker containers together, along with their networks and volumes. It is managed through a `docker-compose.yml` file, which acts as the **architectural blueprint** of the project.  
-Using Docker Compose, we can define:
+It specifies:
 - Which services are part of the system
-- How they communicate
-- Where persistent data is stored
+- How they communicate - networks
+- Where persistent data is stored - volumes
 - Which ports are exposed
 - How containers are built and restarted
-- The startup order of the services
-In this project, the `Makefile` is responsible for executing Docker Compose commands.
-The `docker-compose.yml` file defines the complete architecture of the project.  
+- The startup order of the services - dependencies
+In this project, the `Makefile` is responsible for executing Docker Compose commands.  
 
-##### Servicios, red interna y volumes
-The system is composed of three **services**:
-- `mariadb` -> data layer (database)
-- `wordpress` -> application layer (PHP)
-- `nginx` -> entry layer (reverse proxy + TLS)
-Each service corresponds to one Docker container built from a custom Dockerfile.
+#### Service, internal network, and volumes
+Three service compose the stack:
+- `mariadb` -> data layer
+- `wordpress` -> application layer
+- `nginx` -> entry layer
 
-A single internal **Docker network** is defined. This private bridge network allows containers to communicate with each other using their service names and hostnames, without exposing internal traffic to the host.  
+A single private Docker **bridge network** allows containers to communicate securely using service names as hostnames.  
+- Only NGINX exposes a port to the host: `443` -> HTTPS entry point
+- MariaDB (`3306`) and PHP-FPM (`9000´) remain internal and are accessible only inside the Docker network.
+This prevents direct external access to the database and application runtime, enforcing a layered architecture.
 
-> Note: unlike the `host` network mode, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures. For more infor, [see Docker Network](#docker-network).
+        Internet → NGINX → WordPress (PHP-FPM) → MariaDB
 
-Two **persistent volumes** are used:
-- WordPress (`/var/www/html`)
-- MariaDB (`/var/lib/mysql`)  
-These volumes are implemented as [**bind mounts**](#data-persistence) to the host filesystem.
+This design:
+- Isolates internal services
+- Reduces attack surface
+- Mirrors real-world production architectures
+
+Unlike `host` network, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures.  
+
+Two **persistent bind mounts** are defined:
 
               /home/login/data/wordpress
               /home/login/data/mariadb
@@ -719,7 +714,7 @@ This ensures that:
 - Website files and database data persist across container restarts.
 - Data is not lost when containers are removed or rebuilt.
 
-##### Startup flow
+##### Startup flow and dependencies
 When running:
 
         docker-compose up
@@ -731,37 +726,12 @@ Docker performs the following steps:
    - `mariadb`
    - `wordpress`
    - `nginx`
-   
-   > ⚠️ The `depends_on` directive only ensures startup order. It does **NOT** guarantee that service is ready to accept connections.
-   > For this reason, WordPress includes a waiting mechanism in its startup script to ensure MariaDB is available before continuing the installation process.
-   > NGINX does not require such a mechanism, as it only needs to listen on port 443. When a PHP request is received, NGINX attempts to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
-
-##### Mapeo de puertos y bind mounts
-Thanks to the internal Docker network:  
-- WordPress connects to MariaDB using `mariadb` as the database host (defined in `wp-config.php`)
-- NGINXforwards PHP requests to Wordpress using:
-
-                fastcgi_pass wordpress:9000
-
-(defined in `/nginx/conf/nginx.conf`)
-
-Overall request flow:
-
-          Internet → NGINX → WordPress → MariaDB
-Un contenedor puede morir, pero los datosimportantes deben sobrevivir. Por eso existen los volúmenes: YO NO USO VOLUMES, USO BIND MOUNTS, PONER EJEMPLO QUE TOCA
-
-      volumes:
-          wordpress_data:
-          mariadb_data:
-
-*Inception* exige que estén montados en:
-
-        /home/<login>/data/wordpress
-        /home/<login>/data/mariadb
   
-HAY COSAS QUE SE REPITEN!!
+`depends_on` controls order but not readiness - it does NOT guarantee that service is ready to accept connections.  
+- WordPress implements an explicit wait mechanism for MariaDB availability.
+- NGINX does nor require such a mechanism, as it only needs to listen on the corresponding port. When a PHP request is received, NGINX attemps to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
 
-##### Main `docker-compose.yml` keywords
+##### Key `docker-compose.yml` directives
 
 | Keyword | Description |
 |-----|------|
@@ -777,9 +747,8 @@ HAY COSAS QUE SE REPITEN!!
 | `restart` | Defines the container restart policy in case of failure. |
 | `bridge` driver | Allows containers on the same host to communicate through an isolated internal network. |
 
-##### Interacción de contenedores: flujo de peticiones Internet - NGINX - wordpress - mariadb
 
-#### Persistencia de datos
+#### Data Persistence
 ##### Persistent data location
 All persistent data is stored explicitly on the VM filesystem: 
 
@@ -787,22 +756,21 @@ All persistent data is stored explicitly on the VM filesystem:
         /home/<login>/data/wordpress
 
 - MariaDB stores its database files in the mariadb volume
-- WordPress stores uploads, plugins, and themes in `wp-content`
+- WordPress stores uploads, plugins, and themes in `wp-content`  
 
-This are **Docker bind mounts**, defined in `docker-compose.yml`, and ensure that data survives container restarts and rebuilds.  
-As long as these directories are preserved, all WordPress content, configuration and database state survive container restarts and rebuilds.  ##### Contenido de cada volumen
-##### Volume mounting and container paths
-The persistent volumes are mounted as follows:  
+Bind mounts ensure data survives container removal and rebuilds.
+
+##### Volume contents
 ###### MariaDB
 - Host path: `/home/login/data/mariadb`
 - Container path: `/var/lib/mysql`
-- This directory contains all MariaDB database files, meaning:
+- This directory contains all MariaDB database files -> all WordPress logical data:
   - WordPress users
   - Roles and permissions
   - Posts, pages, revisions
   - Comments
   - WordPress options
-  In short: all logically important WordPress data.
+
 ###### WordPress
 - Host path: `/home/login/data/wordpress`
 - Container path: `/var/www/html`
@@ -813,11 +781,7 @@ The persistent volumes are mounted as follows:
   - Uploads
   This ensures WordPress content and configuration persist across restarts.
 
-⚠️ COMPROBAR TODOS ESTOS ARCHIVOS... REPASAR  
-ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
-
-##### Relación con make down/clean/fclean
-⚠️ AÑADIR CÓDIGO DEL MAKEFILE PARA VER CÓMO ESTOY HACIENDO TODO ESTO ⚠️ ⚠️ 
+##### Relation with `make down / clean / fclean`
 - `make down`:
   - Stops and removes containers
   - Persistent data remains: volumes under `/home/login/data/...` are untouched
@@ -825,83 +789,51 @@ ABAJO: ESPECIFICACIONES SOBRE CÓMO FUNCIONA LA CONFIG Y TAL
   - Stops and removes:
     - containers
     - Docker networks
-    - Docker-managed volumes
+    - Docker-managed volumes (if any)
     - built images
   - Does not delete the bind-mounted directories / the persistent volumes
 - `make fclean`:
   - Removes everything:
-    - containers
-    - images
-    - networks
-    - persistent data directories
+    - executes `clean`
+    - explicitly deletes all persistent bind-mounted data
+    - performs a full Docker system prune
 
-⚠️ **Important distinction:**  
-`clean`preserves data, `fclean` deletes it entirely.
+> ⚠️ **Important distinction:**
+> `clean` preserves data, `fclean` deletes it entirely.
 
-#### Modelo de datos WordPress - MariaDB
-##### WordPress configuration: `wp-config.php`  
-`wp-config.php` is the central configuration file that links WordPress with its database and define its runtime behaviour. In this project, it is generated automatically by `wp-clip` in the WordPress `setup.sh` script and stored persistently in the wordpress volume.    
-###### Location
-
-          /home/login/data/wordpress/wp-config.php 
-
-###### Role in the WordPress-MariaDB architecture
-`wp-config.php` does not store content itself, but it defines how WordPress accesses and interprets persistent data stored in MariaDB.  
-It contains:
-1. Database connection settings
-   These values allow WordPress to connect to the MariaDB container over the Docker network:
+#### WordPress - MariaDB Data Model
+##### `wp-config.php`  
+`wp-config.php` is the central configuration file that links WordPress with its database and define its runtime behaviour.   
+It defines:
+- Database connection: these values allow WordPress to connect to the MariaDB container over the Docker network:
    - `DB_NAME`
    - `DB_USER`
    - `DB_PASSWORD`
    - `DB_HOST`  
    WordPress connects to MariaDB via the Docker network, not via `localhost`.
-
-2. Table prefix: `wp_`
-3. Security keys and salts
-   Used for:
+- Security keys: used for:
    - authentication
    - cookies
    - session security
    These are generated automatically by `wp-cli` during setup.
-4. Debug configuration
-   By default, `WP_DEBUG` is not enabled in this project.  
-   If enabled, it would:
-   - show PHP errors
-   - show warnings and notices
-   - help detect plugin or SQL errors  
-   
-   Optional configuration (not required for *Inception*):
-   - In `setup.sh`, after `wp config create` block:
-
-             wp config set WP_DEBUG true --allow-root
-             wp config set WP_DEBUG_LOG true --allow-root
-             wp config set WP_DEBUG_DISPLAY false --allow-root
-     
-   - ⚠️ Since `wp_config.php` is persistent, existing volumes would need to be removed for this change to take effect.
-
-5. WordPress bootstrap
-   At the end of the file:
+- Table prefix: `wp_`
+- Runtime behaviour: at the end of the file:
 
            define('ABSPATH', __DIR__ . '/');
            require_once ABSPATH . 'wp-settings.php';
    
    This loads and initializes the WordPress core.
-##### Database
-All WordPress logical data is stored in a single MariaDB database, which persists independently from container lifecycles. This includes users, roles, content, configuration and metadata.
 
-CAMBIAR LA EXPLICACIÓN: EXPLICAR TABLAS PPALES... IGUAL ALGUNA MÁS, NO? NO SOLO WP_USERS Y WP_POSTS...
+In this project, `wp-config.php` it is generated automatically by `wp-cli` in the WordPress `setup.sh` script and stored persistently in the wordpress volume:
 
-###### Users and roles (data model)
-User accounts are stored in the `wp_users` table.  
-Each user entry contains basic identity information such as:
-- login name
-- email
-- hashed password
-Additional information such as roles and permissions is stored in the related table `wp_usermeta`.
-Roles are stored under the `wp_capabilities` meta key as PHP serialized data, for example:
+              /home/login/data/wordpress/wp-config.php 
 
-      a:1:{s:13:"administrator";b:1;}
-      a:1:{s:10:"subscriber";b:1;}
+##### Database structure and tables
+Key tables:
+- `wp_users`: user accounts
+- `wp_usermeta`: roles and permissions
+- `wp_posts`: posts, pages, revisions, attachments
+- `wp_options`: global configuration
 
 ###### Posts, pages, uploads and revisions
 All WordPress content is stored in `wp_posts` table.  
@@ -918,20 +850,11 @@ Content types are differentiated using the `post_type` column:
 - `attachment` -> uploaded files (images, media)
 
 WordPress does not overwrite posts. Each update creates a new row with `post_type = revision`, preserving the edit history.  
-The `post_author` filed references `wp_users.ID`:  
+The `post_author` field references `wp_users.ID`:  
 - A positive value corresponds to the user who created the content: `1` usually correspondos to the admin user
 - `0` indicates system-generated content
 
-###### Global WordPress configuration
-Global WordPress condiguration is stored in the `wp_options` table.  
-This table includes:
-- site URL
-- active theme
-- enabled plugins
-- internal WordPress settings
-
-##### Contenido persistente: posts, páginas, roles, plugins, themes
-????
+-----------------------------------
 
 ### Inspección y testeo
 #### Docker useful commands
