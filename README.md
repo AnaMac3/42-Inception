@@ -250,6 +250,8 @@ Containers are ephemeral: deleting a container removes its filesystem. To avoid 
 | **Advantages** | - Easy to use <br> - More secure (Docker manages permissions) <br> - Portable <br> - Recommended for production | - Full control over host path <br> - Easy to inspect files directly |
 | **Disadvantages** | - Location on host is not directly visible <br> - Subject requires specific path <br> - Harder to demonstrate persistence in a specific directory | - More prone to permission issues <br> - Less portable <br> - Host interference possible |
 
+> ⚠️ CREO QUE UN DOCKER-COMPOSE CLEAN BORRA LOS DOCKER VOLUMES... POR ESO TB ES MEJOR QUE SUEMOS BIND MOUNTS, VERDAD???
+
 In this project, data persistance is implemented using **bind mounts** to host directories:
 
               /home/login/data/wordpress  -> /var/www/html (WordPress files)
