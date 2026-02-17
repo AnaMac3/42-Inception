@@ -169,7 +169,7 @@ Shared folders allow editing files on the host while running them inside the VM.
 Steps:  
 - VM Settings -> Shared Folders
 - Folder Path: local host directory
-- Mount point: `/home/<login>/inception´
+- Mount point: `/home/login/inception´
 - Enable auto-mount and make permanent
 
 - Inside the VM:
