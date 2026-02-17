@@ -16,7 +16,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
-    - [SSH tunneling (VM → host browser)](#ssh-tunneling-vm--host-browser)
+    - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
       - [Windows / WSL](#windows--wsl)
       - [42 iMacs / Linux (no sudo)](#42-imacs--linux-no-sudo)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
@@ -283,63 +283,55 @@ Verify that the domain resolves inside the VM:
 
 If it responds from `127.0.0.1`, the domain is configurated correctly inside the VM.  
 
-#### SSH tunneling (VM → host browser)
-Since the services run inside a VM, HTTPS traffic must be forwarded to the host machine.     
-##### Windows / WSL host:
-Edit the host machine's `hosts` file (`C:\Windows\System32\drivers\etc\host`) as Administrator:  
-- Open Notepad as Administrator
-- File -> Open
-- Navigate to: `C:\Windows\System32\drivers\etc`
-- Change file filtero to *All files*
-- Open `hosts`
-- Add: 
+#### SSH tunneling and SOCKS proxy (VM → host browser)
+Since the services run inside a VM, HTTPS traffic cannot be accessed directly from the host browser. To reach the website at the required URL (`https://login.42.fr`), use **SSH tunneling** if you have sudo privileges, or a **SOCKS proxy** if you do not (42 iMacs).  
+
+##### Windows / WSL host  
+1. Edit the host machine's `hosts` file (`C:\Windows\System32\drivers\etc\host`) as Administrator:
+   - Open Notepad as Administrator
+   - File -> Open
+   - Navigate to: `C:\Windows\System32\drivers\etc`
+   - Change file filtero to *All files*
+   - Open `hosts`
+   - Add: 
 
         127.0.0.1 <login>.42.fr
 
-- Save and close
+   - Save and close
 
-Forward port 443 from the V; to the host. In the shell:
+2. Forward port 443 from the VM to the host:
 
       ssh -L 443:localhost:443 <login>@<IP_VM>
 
 > ⚠️ The tunnel remains active while the SSH session is open. 
 
-Access from the host browser:
+3. Access from the host browser:
 
         https://<login>.42.fr
 
 
-##### 42 iMacs / Linux (no sudo)
-Forward an alternative local port (e.g., 8443) to VM port 443:  
-
-      ssh -L 8443:localhost:443 <login>@<VM_IP>
-
-Access:
-
-      https://localhost:8443 
-      
-  QUITAR ESTA OPCIÓN DE PUERTO 8443, PORQUE EL SUBJECT ESPECIFICA QUE HAY QUE ACCEDER AL BROWSER CON LOGIN.42.FR!1     
-
-Para poder acceder al browser con la url que especifica el subject (`https://login.42.fr`) hay que hacer un SOCKS proxy:
-Open a terminal on the host machine and run:
-
-En terminal del host??:
+##### 42 iMacs / Linux (no sudo)  
+Because you cannot bind to port 443 without sudo, you must use a **SOCKS proxy** to access the VM services without forwarding specific ports:  
+1. Open a terminal on the host machine and run:
 
         ssh -D 8080 <login>@<IP_VM>
 
-> This opens a SOCKS5 proxy to localhost:8080. Keep this terminal open while browsing.
-Configure Firefox to use the SOCKS proxy:  
-- Settings -> Network -> Manual proxy configuration
-- SOCKS Host: `localhost`
-- Port:`8080`
-- SOCKS v5
-- Enable "Proxy DNS when using SOCKS v5"
+> This opens a SOCKS5 proxy on `localhost:8080`. Keep this terminal open while browsing.
+> **What is a SOCKS proxy?**
+> A SOCKS proxy acts as a tunnel for your network traffic. Your browser sends requests to `localhost:8080`, which are then forwarded through the VM. This allows your hot browser to access the HTTPS website exactly as if you were inside the VM, without needing to forward specific ports.  
 
-Access the project domain in Firefox:
+2. Configure Firefox (or another browser) to use the SOCKS proxy:
+   - Settings -> Network -> Manual proxy configuration
+   - SOCKS Host: `localhost`
+   - Port:`8080`
+   - SOCKS v5
+   - Enable "Proxy DNS when using SOCKS v5"
+
+3. Access the project domain in Firefox:
 
           https://login.42.fr
 
-> The proxy will route traffic through the VM using the SOCKS proxy, allowing full access to the VM services without modifying local ports.  
+> The SOCKS proxy routes all HTTPS traffic through the VM, allowing access to the correct domain and services without requiring sudo or modifying local ports.  
 
 ## Build and launch the project using the Makefile and Docker Compose
 This section explains how the stack is built and managed using **Docker Compose**, abstracted through a **Makefile**.  
