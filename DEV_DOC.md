@@ -265,28 +265,28 @@ Environment variables are used to configure containers dynamically without modif
 
 ### Domain configuration and SSH tunneling
 Because the project runs inside a virtual machine, additional configuration is requried to access the HTTPS website from the host browser.  
-This section explains how to map the custom domain locally and forward port 443 from the VM to the host using SSH tunneling.  
+This section explains how to map the custom domain locally and forward HTTPS traffic from the VM to the host using SSH tunneling.  
 
-#### `/etc/hosts`  
-Inside the VM:
+#### `/etc/hosts`
+Open the VM terminal and edit the hosts file:
 
       sudo nano /etc/hosts
 
-Add:
+Add the following line:
 
     127.0.0.1 <login>.42.fr
 
 Save with `Ctrl+O`, press Enter, exit with `Ctrl+X`.  
-Verify with:
+Verify that the domain resolves inside the VM:
 
        ping <login>.42.fr
 
-If it responds from `127.0.0.1`, the domain is well configurated inside the VM.  
+If it responds from `127.0.0.1`, the domain is configurated correctly inside the VM.  
 
 #### SSH tunneling (VM → host browser)
-Since the services run inside a VM, HTTPS traffic must be forwarded to the host machine.   
-##### Windows / WSL
-Edit the host machine's `hosts` file (as administrator):
+Since the services run inside a VM, HTTPS traffic must be forwarded to the host machine.     
+##### Windows / WSL host:
+Edit the host machine's `hosts` file (`C:\Windows\System32\drivers\etc\host`) as Administrator:  
 - Open Notepad as Administrator
 - File -> Open
 - Navigate to: `C:\Windows\System32\drivers\etc`
@@ -298,27 +298,48 @@ Edit the host machine's `hosts` file (as administrator):
 
 - Save and close
 
-In the shell:
+Forward port 443 from the V; to the host. In the shell:
 
       ssh -L 443:localhost:443 <login>@<IP_VM>
 
-> The tunnel remains active while the SSH session is open. 
+> ⚠️ The tunnel remains active while the SSH session is open. 
 
 Access from the host browser:
 
-    https://<login>.42.fr
+        https://<login>.42.fr
 
 
 ##### 42 iMacs / Linux (no sudo)
-Port 443 cannot be used locally:
+Forward an alternative local port (e.g., 8443) to VM port 443:  
 
       ssh -L 8443:localhost:443 <login>@<VM_IP>
 
 Access:
 
-      https://localhost:8443
+      https://localhost:8443 
+      
+  QUITAR ESTA OPCIÓN DE PUERTO 8443, PORQUE EL SUBJECT ESPECIFICA QUE HAY QUE ACCEDER AL BROWSER CON LOGIN.42.FR!1     
 
-⚠️ SOCKS proxy alternative is still under investigation!! AVERIGUAR ESTO!!!
+Para poder acceder al browser con la url que especifica el subject (`https://login.42.fr`) hay que hacer un SOCKS proxy:
+Open a terminal on the host machine and run:
+
+En terminal del host??:
+
+        ssh -D 8080 <login>@<IP_VM>
+
+> This opens a SOCKS5 proxy to localhost:8080. Keep this terminal open while browsing.
+Configure Firefox to use the SOCKS proxy:  
+- Settings -> Network -> Manual proxy configuration
+- SOCKS Host: `localhost`
+- Port:`8080`
+- SOCKS v5
+- Enable "Proxy DNS when using SOCKS v5"
+
+Access the project domain in Firefox:
+
+          https://login.42.fr
+
+> The proxy will route traffic through the VM using the SOCKS proxy, allowing full access to the VM services without modifying local ports.  
 
 ## Build and launch the project using the Makefile and Docker Compose
 This section explains how the stack is built and managed using **Docker Compose**, abstracted through a **Makefile**.  
