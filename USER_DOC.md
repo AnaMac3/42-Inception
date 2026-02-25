@@ -1,6 +1,6 @@
 # 42-Inception - User Documentation
 
-⚠️ CÓMO TIENE QUE SER: orientado al usuario final / administrador. Que indique qué se puede hacer con esta web y cómo se usa. Indicar uso funcional.
+This document explains how to use and manage the website deployed by the Inception project from an end-user or administrator perspective. It focuses on the available services, how to access the website, manage users, and verify that the platform is working correctly.  
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@
 ## Services provided by the stack
 
 EXPLICAR QUE OFRECE WORDPRESS + NGINX + MARIADB
-- Website WordPress accesible por HTTPA
+- Website WordPress accesible por HTTP
 - Panel de administración (`/wp-admin`)
 - Sistema de usuarios (admin / user)
 - Publicación de entradas
