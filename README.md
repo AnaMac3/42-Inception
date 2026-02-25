@@ -20,10 +20,11 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Why Docker?](#why-docker?)
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
-  - [Service Architecture](#service-architecture)
-      - [Request flow](#request-flow)
+  - [Architecture Overview](#architecture-overview)
+      - [Services and responsibilities](#services-and-responsibilities)
+      - [Request flow](request-flow)
       - [Docker Network vs Host Network](docker-network-vs-host-network)
-  - [Volumes and Data Persistence](#volumes-and-data-persistence)
+  - [Data Persistence](#data-persistence)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
 - [Resources](#resources)
@@ -45,7 +46,8 @@ The goal of the project is to demonstrate fundamental DevOps concepts such as co
 ⚠️ ENTENDER QUÉ ES LO QUE HE APRENDIDO DE ORCHESTRATION
 
 ## Instructions
-⚠️ This sections explains ....   
+This sections explains how to set up, build, and run the *Inception* project from scratch.  
+For more detailed explanations about development environment configuration, refer to the [DEV_DOC](./DEV_DOC.md). 
 
 ### Prerequisites:
   - Acces to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
@@ -94,13 +96,10 @@ The goal of the project is to demonstrate fundamental DevOps concepts such as co
 > **Important**: Persistent data and `.env` files with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
 
 ## Project description
-This sections explains the core concepts and architecture of the *Inception* project:    
-- Introduction to Docker and containers
-- Docker images and Dockerfile
-- General stack architecture (services and their responsibilities)
-- How containers / services communicate (networking)
-- Data persistence and storage
-- Configuration via environment variables and secrets
+*Inception* is a containerized web infrastructure built with Docker and Docker Compose.  
+The project deploys a complete WordPress stack composed of independent services that cooperate through an isolated network while keeping persistent application data outside contianers.  
+This section provides a high-level overview of the technologies used, the system architecture, how services communicate, and how data persistence is achieved.  
+For detailed theoretical explanations and implementation details, see the [DEV_DOC](./DEV_DOC.md). 
 
 ### Docker and Containers
 **Docker** is a platform to run applications inside **containers** - isolated, lightweight, and reproducible environments that include only the necessary dependencies.  
@@ -148,34 +147,47 @@ A **Dockerfile** is a text file that defines **how a Docker image is built**, sp
 > **One container = one main service**  
 > In *Inception*, each service (`mariadb`, `wordpress`, `nginx`) runs in its own container, each with a dedicated Dockerfile.  
 
-### Service Architecture and networking
+### Architecture Overview
+The project follows a **layered multi-container architecture**, where each service has a single responsibility and runs in its own Docker container.  
 
-⚠️⚠️⚠️ REPENSAR ORGANIZACIÓN DE LOS APARTADOS DE SERVICE ARCHITECTURE, NETWORKING Y DOCKER NETWORK VS HOST NETWORK -> HAY QUE EXPLICAR LA DIFERENCIA ENTRE ESTAS DOS NETWORKS, NECESITO LA ARQUITECTURA Y EL REQUEST FLOW PARA INTRODUCIRLO??
+| Service | Role |
+|---|----|
+| **NGINX** | HTTPS reverse proxy and public entry point |
+| **WordPress (PHP-FPM)** | Application logic and PHP execution |
+| **MariaDB** | Persistent database storage |
 
-The stack follows a layered architecture:  
-- NGINX acts as the HTTPS entry point
-- WordPress (PHP-FPM) handles application logic
-- MariaDB stores persistent data  
+Services communicate through a private Docker network, while only one service is exposed to the outside world.  
 
-Services communicate through a private Docker network.
+#### Service responsibilities
+- **NGINX**
+  - Terminates HTTPS connections
+  - Serves static files
+  - Forwards PHP requests to WordPress via FastCGI
+- **WordPress / PHP-FPM**
+  - Executes PHP scripts
+  - Generates dynamic content
+  - Queries the database
+- **MariaDB**
+  - Stores users, posts, configuration, and metadata
+  - Provides persistent storage for the application
 
------------- IGUAL ESTO SOBRA
-###### Request flow
+#### Request flow
 
-        Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
+          Browser
+             ↓ HTTPS (443)
+          NGINX
+             ↓ FastCGI (9000)
+          WordPress (PHP-FPM)
+             ↓ SQL (3306)
+          MariaDB
 
-- **NGINX** receives all incoming HTTPS requests, serves static files, forwards `.php` requests to PHP-FPM via the FastCGI protocol
-- **PHP-FPM** executes PHP scripts
-- **WordPress** processes the PHP scripts and queries the MariaDB
-- **MariaDB** stores, retrieves and returns persistent application data
-- **WordPress** generates HTML
-- **NGINX** returns response to browser
+1. The browser connect to NGINX via HTTPS
+2. NGINX serves static files or forwards PHP request
+3. PHP-FPM executes WordPress code
+4. WordPress queries MariaDB when data is required
+5. The generated HTML response is returned to the browser  
 
-> Note: Docker Compose orchestrates this flow: defines services, networks, volumes, ports, and container dependencies.
-
---------- HASTA AQUÍ
-
-###### Docker Network vs Host Network
+#### Docker Network vs Host Network
 Containers communicate over networks. There are two main types:  
 - **Bridge network (default)**: private network for containers, allows secure communication using service names. Internal ports are not exposed to the host unless explicitly mapped.  
 - **Host network**: container shares the host's network stack; ports are exposed directly.
