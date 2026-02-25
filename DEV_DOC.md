@@ -54,6 +54,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [MariaDB inspection](#mariadb-inspection)
   - [Volume persistence verification](#volume-persistence-verification)
   - [Logs and debugging](#logs-and-debugging)
+  - [Verify clean shutdown](#verify-clean-shutdown)
  
 ---
 
@@ -1006,23 +1007,6 @@ This updates:
 
 ### Volume persistence verification
 
-⚠️ ⚠️ ⚠️  -> NOS HEMOS QUEDADO AQUÍ!!!
-
-### Logs and debugging
-
------------------------------------
-
-
-##### SQL inspection keywords
-| Keyword | Purpose |
-|---------|---------|
-| SHOW | List databases or tables |
-| USE | Select a database |
-| DESCRIBE | Show table structure |
-| SELECT | Query table contents |
-| FROM | Specify source table |
-
-#### Persistencia de volúmenes
 Persistent data is stored using bind-mounted volumes.  
 Useful commands:  
 
@@ -1032,24 +1016,37 @@ Useful commands:
 | `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
 | `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
 
-PULIR:
-- QUÉ VOLUMEN MONTA CADA SERVICIO
-- QUÉ DATOS PERSISTEN
-- QUÉ PASA EN MAKE FCLEAN...
+!!!! ESTOS COMANDOS SON PARA VER LOS BIND MOUNTS? SI NO, PONER HOST PATH Y CONTAINER PATH (REPETITIVO) -> CHECKEAR RUTAS!!!
 
-- explicar más sobre du -sh /home/<login>/data...
-- explicar qué datos persisten tras make down / clean / fclean...
+| Service | Host Path | Container Path |
+|-----|-----|-----|
+| WordPress | `/home/login/data/wordpress` | `/var/www/html` |
+| MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` |
 
-#### Logs and debugging
-WordPress does not store logs in MariaDB by default.  
-Existing logs:
+Persistence behavior:  
+
+| Command | Result |
+|----|-----|
+| `make down` | Containers removed, data preserved |
+| `make clean` | Conainters/images removed, data preserved |
+| `make fclean` | Everything deleted including `home/login/data` |
+
+
+### Logs and debugging
+Containers log to stdout/stderr:
+
+        docker logs wordpress
+        docker logs mariadb
+        docker logs nginx
+
+By default:
 - PHP-FPM logs -> inside WordPress container (not persistent)
-- MariaDB logs -> `/var/log/mysql` (not persistent)
+- MariaDB logs -> container filesystem (`var/lib/mysql`) (not persistent)
 ⚠️ COMPROBAR ESTO!!! VER DONDE SE GUARDA
-Persistent logging would require explicit configuration, which is not required for *Inception*. ❌❌ CREO QUE NO HACE FATLA HACER ESTO
-añadir cosas
-DÓNDE METO ESTO?
-To verify clean shutdown:  
+Persistent logging is not required by Inception.  
+
+### Verify clean shutdown
+After stopping:   
 
         docker inspect <container> | grep ExitCode
 
