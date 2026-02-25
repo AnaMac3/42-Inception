@@ -741,7 +741,7 @@ Docker performs the following steps:
    - `nginx`
   
 `depends_on` controls order but not readiness - it does NOT guarantee that service is ready to accept connections.  
-- WordPress implements an explicit wait mechanism for MariaDB availability.
+- WordPress implements an explicit wait mechanism for MariaDB availability. -> ⚠️ ⚠️ PONER DE EJMPLO LA QUE USO YO!! (LOOP, MYSQLADMIN PING..)
 - NGINX does nor require such a mechanism, as it only needs to listen on the corresponding port. When a PHP request is received, NGINX attemps to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
 
 ##### Key `docker-compose.yml` directives
