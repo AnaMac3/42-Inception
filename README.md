@@ -44,8 +44,6 @@ The purpose of this project is:
 - To ensure persistent storage of website content, configuration, and database data across container restarts and rebuilds.
 - To demonstrate proper container architecture, service orchestration, and persistent data management.
 
-> Note: Unlike VMs, Docker containers are lighweight, isolated environments that share the host kernel. Using containers insiede a VM allows for resource efficiency while maintaining reproducibility and isolation. ⚠️ NO SÉ SI ES NECESARIO CONTAR ESTO AQUÍ
-
 OPCION 1: 
 El proyecto **Inception** consiste en crear una infraestructura completa de servicios web utilziando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.  
 El objetivo del proyecto es desplegar un **stack de servicios interconectados** de manera modular y segura, gestionando contenedores, volúmenes persistentes, redes internas y variables de entorno, siguiendo buenas prácticas de desarrollo y DevOps.  
@@ -127,7 +125,7 @@ A **container** is an isolated, self-contained runtime instance of a **Docker im
 - Configuration files
 - Minimal runtime environment
 
-Containers are isolated processes for each component of your app. Each component runs independently, completely isolated from other containers and the host system.  
+Containers are isolated processes for each component of your app. Containers provide process, filesystem, and network isolation.  
 
 #### Why Docker?
 - Avoids dependency conflicts between projects
@@ -161,13 +159,12 @@ A **Dockerfile** is a text file that defines **how a Docker image is built**, sp
 - Configuration files to copy
 - Commands to run at container start (`ENTRYPOINT`, `CMD`)  
 
-> A core Docker principle is:   
+> A core Docker best practice is:   
 > **One container = one main service**  
 > In *Inception*, each service (`mariadb`, `wordpress`, `nginx`) runs in its own container, each with a dedicated Dockerfile.  
 
 ### Service Architecture
 The project stack consists of three isolated services, each running its own container:  
-
 | Service | Container |  Role | Exposed port |
 |---------|-----------|-------|--------------|
 | NGINX | `nginx` | TLS termination, reverse proxy - entry layer | 443 |
@@ -247,10 +244,8 @@ Containers are ephemeral: deleting a container removes its filesystem. To avoid 
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |
 |-----|------|------|
-| **Advantages** | - Easy to use <br> - More secure (Docker manages permissions) <br> - Portable <br> - Recommended for production | - Full control over host path <br> - Easy to inspect files directly |
+| **Advantages** | - Easy to use <br> - Docker manages permissions (less human error) <br> - Portable <br> - Recommended for production | - Full control over host path <br> - Easy to inspect files directly |
 | **Disadvantages** | - Location on host is not directly visible <br> - Subject requires specific path <br> - Harder to demonstrate persistence in a specific directory | - More prone to permission issues <br> - Less portable <br> - Host interference possible |
-
-> ⚠️ CREO QUE UN DOCKER-COMPOSE CLEAN BORRA LOS DOCKER VOLUMES... POR ESO TB ES MEJOR QUE SUEMOS BIND MOUNTS, VERDAD???
 
 In this project, data persistance is implemented using **bind mounts** to host directories:
 
