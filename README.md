@@ -21,10 +21,6 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Virtual Machine vs Docker](#virtual-machine-vs-docker)
   - [Docker images and Dockerfile](#docker-images-and-dockerfile)
   - [Service Architecture](#service-architecture)
-    - [MariaDB](#mariadb)
-    - [WordPress](#wordpress)
-    - [NGINX](#nginx)
-    - [Networking](#networking)
       - [Request flow](#request-flow)
       - [Docker Network vs Host Network](docker-network-vs-host-network)
   - [Volumes and Data Persistence](#volumes-and-data-persistence)
@@ -35,29 +31,18 @@ This project has been created as part of the 42 curriculum by amacarul.
 ----------------------------------------
 
 ## Description
-⚠️ CREO QUE ES MÁS IMPORTANTE INTRODUCIR INCEPTION COMO UN PROYECTO DE DOCKER ANTES QUE MENCIONAR LOS SERVICIOS... NO?? REPASAR ESTO
-OPCION 2:
-*Inception* is a **multi-container project** that deploys a persistent **WordPress website** with MariaDB as its database and **NGINX** as a reverse proxy with HTTPS support.  
-The project runs **Docker containers inside a Virtual Machine**. Containers handle the application runtime, while persistent data is stored on the VM filesystem.  
-The purpose of this project is:
-- To provide a fully functional WordPress website running inside a reproducible Docker environment.
-- To ensure persistent storage of website content, configuration, and database data across container restarts and rebuilds.
-- To demonstrate proper container architecture, service orchestration, and persistent data management.
 
-OPCION 1: 
-El proyecto **Inception** consiste en crear una infraestructura completa de servicios web utilziando **Docker** y **Docker Compose**, donde cada servicio se ejecuta en su propio contenedor, construido desde cero.  
-El objetivo del proyecto es desplegar un **stack de servicios interconectados** de manera modular y segura, gestionando contenedores, volúmenes persistentes, redes internas y variables de entorno, siguiendo buenas prácticas de desarrollo y DevOps.  
-El proyecto debe incluir:  
-- **Tres contenedores independientes**:
-  - **NGINX**: única puerta de entrada al sistema mediante HTTPS (TLS 1.2/1.3 ) en el puerto 443.
-  - **WordPress + PHP-FPM**: servidor de aplicación web sin NGINX
-  - **MariaDB**: base de datos independiente
-- **Dos volúmenes persistentes** disponibles en `/home/<login>/data` de la host machine que ejecute docker:
-  - Uno para la base de datos de MariaDB
-  - Otro para los archivos de WordPress
-- **Una Docker-network** que conecte los tres servicios entre sí:
-  - NGINX se comunica con PHP mediante el puerto 9000
-  - PHP conecta con MariaDB mediante el puerto 3306
+**Inception** is a Docker-based infrastructure project focused on building and orchestrating a complete web service stack using containerization.  
+The project consist of designing a modular and reproducible environment where each service runs inside its own container, built from scratch using Dockerfiles and managed with Docker Compose.  
+The deployed stack includes:
+- **NGINX** as the secure HTPPS entry point
+- **WordPress + PHP-FPM** as the application layer
+- **MariaDB** as the database service  
+
+All services communicate through an internal Docker network, while persistent data is stored on the host system.  
+The goal of the project is to demonstrate fundamental DevOps concepts such as container isolation, service orchestration, networking, and data persistence in a controlled environment.  
+
+⚠️ ENTENDER QUÉ ES LO QUE HE APRENDIDO DE ORCHESTRATION
 
 ## Instructions
 ⚠️ This sections explains ....   
@@ -163,54 +148,18 @@ A **Dockerfile** is a text file that defines **how a Docker image is built**, sp
 > **One container = one main service**  
 > In *Inception*, each service (`mariadb`, `wordpress`, `nginx`) runs in its own container, each with a dedicated Dockerfile.  
 
-### Service Architecture
-The project stack consists of three isolated services, each running its own container:  
-| Service | Container |  Role | Exposed port |
-|---------|-----------|-------|--------------|
-| NGINX | `nginx` | TLS termination, reverse proxy - entry layer | 443 |
-| WordPress (PHP-FPM) | `wordpress` | Application logic, PHP execution - application layer | 9000 |
-| MariaDB | `mariadb`| Persistent data storage - data layer | 3306 |  
+### Service Architecture and networking
 
--------------------
-VERSION LARGA - DEV_DOC (QUE IGUAL HAY QUE TRASLADAR AQUI)
-###
-This project follows a **multi-container architecture**, where each service runs inside its **own isolated container** with a **single responsibility**.  
-- **NGINX** handles HTTPS connections and acts as reverse proxy (entry layer)
-- **WordPress (PHP-FPM)** executes PHP application logic (application layer)
-- **MariaDB** stores persistent application data (data layer)
+⚠️⚠️⚠️ REPENSAR ORGANIZACIÓN DE LOS APARTADOS DE SERVICE ARCHITECTURE, NETWORKING Y DOCKER NETWORK VS HOST NETWORK -> HAY QUE EXPLICAR LA DIFERENCIA ENTRE ESTAS DOS NETWORKS, NECESITO LA ARQUITECTURA Y EL REQUEST FLOW PARA INTRODUCIRLO??
 
-Each container runs **one main process only**, and containers communicate through a **private Docker bridge network**. 
+The stack follows a layered architecture:  
+- NGINX acts as the HTTPS entry point
+- WordPress (PHP-FPM) handles application logic
+- MariaDB stores persistent data  
 
-Persistent application state is stored outside containers using **bind-mounted volumes** on the host system.  
+Services communicate through a private Docker network.
 
-------------------------------
-
-##### MariaDB
-**MariaDB** is a relational SQL database server (MySQL-compatible).  
-WordPress uses it to store:
-- Post and pages
-- Users and passwords
-- Configuration
-- Plugins and metadata
-MariaDB does not serve HTTP requests and is never exposed directly to the user.  
-
-##### WordPress
-**WordPress** is a PHP-based **Content Management System (CMS)**.  
-It allows easy creation and management of websites, blogs, users, plugins, and themes.  
-In this project, WordPress does not handle HTTP requests directly via Apache. Instead, it runs with **PHP-FPM**, while **NGINX** acts as the web server and reverse proxy.  
-- **PHP-FPM (PHP FastCGI Process Manage)** is a service that executes PHP scripts and manages PHP worker processes. It receives PHP requests from NGINX using the FastCGI protocol and returns the generated reponse.
-- **WP-CLI (WordPress Command-Line Interface)** is a command-line tool used to install, configure, and manage WordPress. In this project, WP-CLI is used at container startup tp perform the initial WordPress installation and configuration automatically.  
-
-##### NGINX
-**NGINX** is a high-performance web server and reverse proxy.  
-In this project, it handles:  
-- TLS termination (HTTPS)
-- Routing requests to PHP-FPM, proxying PHP requests to PHP-FPM
-- Serving static files
-
-NGINX runs as a **single, foreground process** inside its container. It does not manage application state or interact directly with the database. This separation allows NGINX to start directly as PID 1 without requiring intermediate setup scripts.  
-
-##### Networking
+------------ IGUAL ESTO SOBRA
 ###### Request flow
 
         Browser -> NGINX (443) -> PHP-FPM (9000) -> WordPress (PHP) -> MariaDB (3306)
@@ -222,7 +171,9 @@ NGINX runs as a **single, foreground process** inside its container. It does not
 - **WordPress** generates HTML
 - **NGINX** returns response to browser
 
-> Note: Docker Compose orchestrates this flow: defines services, networks, volumes, ports, and container dependencies.  
+> Note: Docker Compose orchestrates this flow: defines services, networks, volumes, ports, and container dependencies.
+
+--------- HASTA AQUÍ
 
 ###### Docker Network vs Host Network
 Containers communicate over networks. There are two main types:  
@@ -261,36 +212,6 @@ In this project, data persistance is implemented using **bind mounts** to host d
 - Docker secrets are **not committed**; they are provided to containers at runtime and securely managed by Docker.
 
 > This separation ensures credentials and configuration data are handled securely and follow best practices.  
-
-### Project Structure -> NO SE SI PASAR ESTO A DEV_DOC PARA PODER EXPLICAR EN ÉL UN POCO EL CÓDIGO DE CADA FILE, DE QUÉ SE ENCARGA...
-   
-           inception/
-                  │
-                  ├── Makefile
-                  ├── .gitignore
-                  ├── README.md (opcional)
-                  └── srcs/
-                      ├── .env
-                      ├── docker-compose.yml
-                      └── requirements/
-                          ├── nginx/
-                          │   ├── Dockerfile
-                          │   ├── conf/
-                          │       └── nginx.conf
-                          │
-                          ├── wordpress/
-                          │   ├── Dockerfile
-                          │   ├── conf/
-                          │   │   └── www.conf
-                          │   └── tools/
-                          │       └── setup.sh
-                          │
-                          └── mariadb/
-                              ├── Dockerfile
-                              ├── conf/
-                              │   └── my.conf
-                              └── tools/
-                                  └── setup.sh
 
 
 ## Resources
