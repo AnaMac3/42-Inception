@@ -33,6 +33,7 @@ This document describes the technical architecture of the *Inception* project. I
     - [Start, execution, and shutdown](#start-execution-and-shutdown)
     - [Signals and shutdown behavior](#signals-and-shutdown-behavior)
 - [Applied architecture in Inception](#applied-architecture-in-inception)
+  - [Project Structure](#project-structure)
   - [Services and Dockerfiles](#services-and-dockerfiles)
     - [MariaDB](#mariadb)
     - [WordPress](#wordpress)
@@ -554,6 +555,37 @@ This is why PID 1 must always be the real service.
 ## Applied Architecture in Inception
 This section describes **how the theoretical Docker concepts explained earlier are applied concretely in the Inception project**.  
 It focuses on the **practical implementation choices**, the role of each service, how containers are built and started, how Docker Compose orchestrates the system, and how data persistence is ensured.  
+
+### Project Structure
+
+             inception/
+                  │
+                  ├── Makefile
+                  ├── .gitignore
+                  ├── README.md (opcional)
+                  └── srcs/
+                      ├── .env
+                      ├── docker-compose.yml
+                      └── requirements/
+                          ├── nginx/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │       └── nginx.conf
+                          │
+                          ├── wordpress/
+                          │   ├── Dockerfile
+                          │   ├── conf/
+                          │   │   └── www.conf
+                          │   └── tools/
+                          │       └── setup.sh
+                          │
+                          └── mariadb/
+                              ├── Dockerfile
+                              ├── conf/
+                              │   └── my.conf
+                              └── tools/
+                                  └── setup.sh
+
 ### Services and Dockerfiles
 Each service runs in its own container, built from a dedicated Dockerfile.  
 #### MariaDB 
