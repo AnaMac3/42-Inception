@@ -9,6 +9,7 @@
 - [Access the website and the administrator panel](#access-the-website-and-the-administrator-panel)
 - [Locate and manage credentials](locate-and-manage-credentials)
 - [Check that the services are running correctly](check-that-the-services-are-running-correctly)
+- [What can you do with the website](#what-can-you-do-with-the-website)
 
 -------------------------------------------------
 
@@ -102,15 +103,6 @@ To manage users:
 
 Role changes take effect immediately and define what actions the user can perform on the website.  
 
-### Database credentials (internal)
-Database credentials are handled internally by the Docker stack and are not required for normal usage of the website.  
-They are:
-- defined in the `.env` file
-- used automatically by WordPress to connect to MariaDB
-- never required to be entered manually by users or administrators
-For these reasons, database credentials are documented in the Developer Documentation, not in this user guide.  
-CREO QUE ESTO SOBRA...
-
 ## Check that services are running correctly
 1. Acceso a la web:
    - Abrir el navegador
@@ -138,6 +130,13 @@ CREO QUE ESTO SOBRA...
    - MariaDB funciona
    - Conexión entre servicios OK
 
+## What can you do with the website
+- Create posts
+- Upload media
+- Manage users
+- Install themes/plugins (??)
+- Edit pages
 
+DESARROLLAR ESTE APARTADO
     
 
