@@ -318,9 +318,9 @@ Because you cannot bind to port 443 without sudo, you must use a **SOCKS proxy**
 
         ssh -D 8080 <login>@<IP_VM>
 
-> This opens a SOCKS5 proxy on `localhost:8080`. Keep this terminal open while browsing.
-> **What is a SOCKS proxy?**
-> A SOCKS proxy acts as a tunnel for your network traffic. Your browser sends requests to `localhost:8080`, which are then forwarded through the VM. This allows your hot browser to access the HTTPS website exactly as if you were inside the VM, without needing to forward specific ports.  
+This opens a SOCKS5 proxy on `localhost:8080`. Keep this terminal open while browsing.  
+**What is a SOCKS proxy?**  
+A SOCKS proxy acts as a tunnel for your network traffic. Your browser sends requests to `localhost:8080`, which are then forwarded through the VM. This allows your hot browser to access the HTTPS website exactly as if you were inside the VM, without needing to forward specific ports.  
 
 2. Configure Firefox (or another browser) to use the SOCKS proxy:
    - Settings -> Network -> Manual proxy configuration
@@ -333,7 +333,7 @@ Because you cannot bind to port 443 without sudo, you must use a **SOCKS proxy**
 
           https://login.42.fr
 
-> The SOCKS proxy routes all HTTPS traffic through the VM, allowing access to the correct domain and services without requiring sudo or modifying local ports.  
+The SOCKS proxy routes all HTTPS traffic through the VM, allowing access to the correct domain and services without requiring sudo or modifying local ports.  
 
 ## Build and launch the project using the Makefile and Docker Compose
 This section explains how the stack is built and managed using **Docker Compose**, abstracted through a **Makefile**.  
