@@ -1014,7 +1014,8 @@ Docker secrets must exists as runtime-mounte files.
   - database name
   - database user
   - table prefix
-  ⚠️ ES NORMAL QUE EN ESTE ARCHIVO SE GUARDE LA PASSWORD??
+
+  ⚠️ `wp config create` escribe la contraseña en `wp-config.php` usando el valor que se le pasa, aunque venga de un secret, la contraseña se harcodea. Lo único que se puede hacer es modificar luego el `wp-config.php` generado para que no muestre la contraseña.  
 
 ### MariaDB Inspection
 - Access MariaDB:
@@ -1022,7 +1023,7 @@ Docker secrets must exists as runtime-mounte files.
         docker exec -it mariadb bash
         mysql -u root -p
 
-ESTO NO ME FUNCIONA BIEN! NO ME DEJA ENTRAR CON NINGUNA CONTRASEÑA!!!
+⚠️⚠️ ESTO NO ME FUNCIONA BIEN! NO ME DEJA ENTRAR CON NINGUNA CONTRASEÑA!!!
 
 - Why root access is required:
   Usesrs in MariaDB are defined as `'user'@'host'`.
@@ -1086,7 +1087,7 @@ ESTO NO ME FUNCIONA BIEN! NO ME DEJA ENTRAR CON NINGUNA CONTRASEÑA!!!
   - `wp_user_level`
 
 
-### Volume Persistence Verification ⚠️ ⚠️ ⚠️ ESTAMOS AQUII
+### Volume Persistence Verification 
 
 Persistent data uses **bind mounts**.  
 - Verify host directories:
