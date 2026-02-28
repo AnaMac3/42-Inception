@@ -27,6 +27,8 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Data Persistence](#data-persistence)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
+    - [Environment variables (`.env`)](#environment-variables-env)
+    - [Docker secrets](#docker-secrets)
 - [Resources](#resources)
 
 ----------------------------------------
@@ -92,7 +94,7 @@ For more detailed explanations about development environment configuration, refe
 | `male clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
 | `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
-> **Important**: Persistent data and `.env` files with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
+> **Important**: Persistent data,`.env` files and `secrets` with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
 
 ## Project description
 *Inception* is a containerized web infrastructure built with Docker and Docker Compose.  
@@ -217,81 +219,41 @@ In this project, data persistance is implemented using **bind mounts** to host d
 > This ensures that website files and database data persist across container restarts and rebuilds. Docker volumes could be used in production, but bind mounts give precise control over paths for this project.  
 
 ### Secrets vs Environment Variables
-- Non-sensitive configuration (DB name, users, site title) is stored in `.env`.
-- Sensitive data (passwords) should use **Docker secrets** in production
-- `.env` must **never** be commited to GitHub
-- Docker secrets are **not committed**; they are provided to containers at runtime and securely managed by Docker.
+This project separates **configuration** data from **sensitive credentials** following Docker best practices.  
 
-> This separation ensures credentials and configuration data are handled securely and follow best practices.  
-
-QUÉ SON LOS DOCKER SECRETS?  
-Un `secrets` es un archivo montado dentro del contenedor solo en **runtime**, pensado para datos sensibles.  
-Diferencias clave:
-| `.env` | `secrets` |
-|---|----|
-| Variables visibles | Archivos protegidos |
-| Acaban en `docker inspect` qué significa esto???? | NO visibles |
-| Buenas para condig | Buenas para passwords |
-| Persisten en logs/env | No se exponen |
-
-Qué debe ir en secrets?:
-- root password y database user password de MariaDB
-- password del admin y del user de wordpress
-
-Qué debe ir en .env?:
+#### Environment variables (`.env`)
+Non-sensitive configuration (DB name, users, site title) is stored in the `.env` file.  
+Examples include:  
 - domain name
-- db name
-- db username
-- wordpress title
-...
+- database name
+- database username
+- WordPress site configuration
+- email addresses  
+The `.env` file:
+- contains **configuration only**
+- allows dynamic container configuration without modifying source code
+- **must NOT be commited** to versiol control  
+Environment variables are visible inside containers and may appear in container metadata.
+For details about how environment variables are configured in this project, see: [`.env` configuration](./DEV_DOC.md#environment-variables-env-file)  
 
-Cómo funcionan técnicamente los secretos?  
-- Docker monta un archivo en `/run/secrets/<secret_name>
-- No es una variable de entorno, es un archivo.
+#### Docker Secrets
+Sensitive data such as passwords are managed using Docker secrets.  
+A Docker secret is a file securely mounted inside a container **at runtime only**, specially designed to store **confidential information**.  
+In this project, secrets are used for:
+- MariaDB root and user passwords
+- WordPress admin and user passwords
 
-recomendado: carpeta secrets con un txt por password  
+Unlike enviroment variables:
 
-En docker compose: añadir:
-
-          secrets: 
-            password1:
-              file: ./secrets/password.txt
-            password2:-...
-
-
-Y luego en servicio:
-
-          services:
-            mariadb:
-              secrets:
-                - password1
-                - password2...
+| Environment variables | Secrets |
+|--|--|
+| Stored as container variables | Mounted as protected files |
+| Visible via container inspection (`docker inspect`) | Not exposed in container metadata |
+| Suitable for configuration | Suitable for credentials |
+| May appear in logs or environment dumps | Limited runtime exposure |
 
 
-MariaDB espera variables, pero los secrets son archivos ->  
-Antes hacíammos:
-
-          MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
-
-Ahora, en entrypoint script:
-
-        MYSQL_ROOT_PASSWORD=$(cat /run/secrets/password)
-
-Cuando tenga secrets, cómo mostrar que no aparecen:
-
-        docker inspect mariadb
-
--> password no visible
-
-Mostrar existencia:
-
-        docker exec -it mariadb ls /run/secrets
-
-Mostrar lectura
-
-        docker exec mariadb cat /run/secrets/password
-
-Para ver cómo se han configurado cada uno de estos archivos, ver: [`.env`](./DEV_DOC.md/environment-variables-env-file) y [`secrets`](./DEV_DOC.md/secrets). 
+For implementation details, see: [`secrets` configuration](./DEV_DOC.md#secrets). 
 
 ## Resources
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
