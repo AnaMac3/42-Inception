@@ -1022,6 +1022,8 @@ Docker secrets must exists as runtime-mounte files.
         docker exec -it mariadb bash
         mysql -u root -p
 
+ESTO NO ME FUNCIONA BIEN! NO ME DEJA ENTRAR CON NINGUNA CONTRASEÑA!!!
+
 - Why root access is required:
   Usesrs in MariaDB are defined as `'user'@'host'`.
   In this project:
