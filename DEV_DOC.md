@@ -14,6 +14,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
   - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
+  - [`secrets`)](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
     - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
@@ -241,29 +242,20 @@ Example structure:
       MYSQL_HOSTNAME=mariadb
       MYSQL_DATABASE=database
       MYSQL_USER=amacarul
-      MYSQL_PASSWORD=***
       MYSQL_ROOT_USER=root
-      MYSQL_ROOT_PASSWORD=***
       
       WORDPRESS_TITLE=amacarulsWebsite
       WORDPRESS_ADMIN_USER=boss
-      WORDPRESS_ADMIN_PASSWORD=***
       WORDPRESS_ADMIN_EMAIL=boss@inception.fr 
       WORDPRESS_USER=user1
       WORDPRESS_USER_EMAIL=user1@inception.fr
-      WORDPRESS_USER_PASSWORD=***
+
 
 Environment variables are used to configure containers dynamically without modifying source files.  
-⚠️ HAY QUE USER SECRETS -> PARA LAS CONTRASEÑAS, NO??
-⚠️ AÑADIR TABLA EXPLICATIVA !!!
 
-| Variable | Purpose | 
-|----------|---------|
-| `DOMAIN_NAME` | |
-| `MYSQL_HOSTNAME`| |
-| `MYSQL_DATABASE` | |
-| `MYSQL_PASSWORD` | |
-| | |
+### `secrets`
+
+⚠️ AÑADIR EXPLICACIÓN + EL QUE HE USADO YO
 
 ### Domain configuration and SSH tunneling
 Because the project runs inside a virtual machine, additional configuration is requried to access the HTTPS website from the host browser.  
@@ -563,6 +555,11 @@ It focuses on the **practical implementation choices**, the role of each service
                   ├── Makefile
                   ├── .gitignore
                   ├── README.md (opcional)
+                  ├── secrets/
+                  │    ├── mysql_root_passqord.txt
+                  │    ├── mysql_password.txt
+                  │    ├── wp_admin_password.txt
+                  │    └── wp_user_password.txt
                   └── srcs/
                       ├── .env
                       ├── docker-compose.yml
