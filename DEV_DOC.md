@@ -14,7 +14,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
   - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
-  - [`secrets`](#secrets)
+  - [Secrets](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
     - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
@@ -232,30 +232,43 @@ These directories are later mounted as Docker bind mounts and store all persiste
 The `.env` file defines all configuration values used by Docker Compose and the containers.  
 - It contains no executable code
 - It must NOT be committed to version control
-- It avoids hardcoding secrets in configuration files
+- It avoids hardcoding configuration values in source files
 - It must be located in `./srcs` 
 
 Example structure:  
 
-      DOMAIN_NAME=amacarul.42.fr
+      DOMAIN_NAME=<login>.42.fr
 
       MYSQL_HOSTNAME=mariadb
       MYSQL_DATABASE=database
-      MYSQL_USER=amacarul
+      MYSQL_USER=<login>
       MYSQL_ROOT_USER=root
       
-      WORDPRESS_TITLE=amacarulsWebsite
+      WORDPRESS_TITLE=MyWebsite
       WORDPRESS_ADMIN_USER=boss
       WORDPRESS_ADMIN_EMAIL=boss@inception.fr 
       WORDPRESS_USER=user1
       WORDPRESS_USER_EMAIL=user1@inception.fr
 
+Environment variables allow containers to be configured dynamically without modifying source files.  
 
-Environment variables are used to configure containers dynamically without modifying source files.  
+### Secrets
+Docker secrets is a file securely mounted inside a container **at runtime only**, specifically designed to sotre confidential information.  
+Docker mounts secrets inside the container at:
 
-### `secrets`
+        /run/secrets/<secret_name>
 
-⚠️ AÑADIR EXPLICACIÓN + EL QUE HE USADO YO
+Applications reads credentials directly from these fies instead of environmental variables.  
+Secrets directory structure in this project:
+
+            srcs/secrets/
+              ├── mysql_root_password.txt
+              ├── mysql_password.txt
+              ├── wp_admin_password.txt
+              └── wp_user_password.txt
+
+Each fie contains only one password on a single line.  
+Docker Compose mounts these files securely into the containers during startups.  
 
 ### Domain configuration and SSH tunneling
 Because the project runs inside a virtual machine, additional configuration is requried to access the HTTPS website from the host browser.  
@@ -897,182 +910,194 @@ The `post_author` field references `wp_users.ID`:
 - `0` indicates system-generated content
 
 ## Inspection and testing
-This section explains how to inspect, verify, and debug the running *Inception* stack.  
-It foucses on practical commands used to:
-- observe container state
-- access services interactively
-- inspect MariaDB content
-- verify persistent volumes
-- analyze logs and shutdown behavior
-  
-### Useful Docker commands
-Basic Docker commands used to monitor the system:  
+This section explains how to **inspect, verify, and debug** the running *Inception* infrastructure.  
+The goal is to validate that:
+- containers run correctly
+- configuration is injected properly
+- secrets are securely handled
+- services communicate correctly
+- persistent data behaves as expected
+- containers stop gracefully
 
-| Command | Purpose |
-|----|----|
-| `docker ps` | Lists running containers |
-| `docker ps -a` | Lists all containers, including stopped ones |
-| `docker logs <container>` | Shows container stdout/stderr |
-| `docker inspect <container>` | Shows low-level container configuration and runtime details | 
-| `docker inspect <container> | grep ExitCode` | Shows exit code after stop. `0` -> clean shutdown; `137` -> SIGKILL. This is usefull to confirm correct PID 1 behavior |
-| `docker stop <container>` | Sends SIGTERM (graceful stop) |
-| `docker kill <container>` | Sends SIGKILL (forced stop) |
-| `docker exec -it <container> bash` | Interactive shell inside the container |
+### Containers State Verification
+- List running containers:
 
-⚠️ FALTA PROBAR TODOS LOS COAMNDSO!!!
+          docker ps
 
-### Container access and inspection
-Containers can be accessed interactively using `docker exec`.  
-This is useful for debugging, inspecting files and verifying runtime state.  
-Examples:
+  Expected containers:
+  - `mariadb`
+  - `wordpress`
+  - `nginx`  
+ 
+  To include stopped containers:
+
+        docker ps -a
+
+- Inspect container configuration:
+
+
+        docker inspect <container>
+
+
+ 
+### Container Access (Interactive Debugging)
+Containers can be accessed interactively using:  
 
         docker exec -it mariadb bash
         docker exec -it wordpress bash
         docker exec -it nginx sh
 
-Once inside a container, you can:  ⚠️ ESPECIFICAR EN QUÉ CONTENEDORES TE TIENES QUE METER PARA VER ESTAS COSAS
-#### Inspect WordPress files
-⚠️  TESTEAR ESTO!!!
+This allows inspection of:
+- runtime files
+- mounted volumes
+- secrets
+- environment variables
 
-        ls /var/www/html
+### Environment Variables Verification
+Inside a container:
 
-This directory is bind-mounted from:
+      env | grep MYSQL
+
+⚠️ esto es un ejemplo, otro sería usando WORDPRES... hay alguna manera de ver todas las variables de entorno a la vez?
+This confirms `.env` variables are injected correctly at runtime.  
+
+### Docker Secrets Verification
+Docker secrets must exists as runtime-mounte files.  
+- Check mounted secrets:
+  
+      docker exec mariadb ls /run/secrets
+      docker exec wordpress ls /run/secrets
+
+  Expected output: passsword files.
+
+- Read a secret manually:
+
+      docker exec mariadb cat /run/secrets/<secret_name>
+
+  Expected output: the stored password.  
+
+- Verify secrets are NOT exposed as environment variables:
+
+        docker inspect mariadb | grep -i password
+
+  Expected result: no passwords visible.
+  This confirms credentials are handled securely.
+
+### WordPress Runtime Inspection
+- Enter the WordPress container:
+
+        docker exec -it wordpress bash
+
+- Inspect WordPress directory:
+
+      ls /var/www/html
+
+  This directory is bind-mounted from:
 
       /home/<login>/data/wordpress
 
-It contains:
-- WordPress core
-- `wp-config.php`
-- themes
-- plugins
-- uploads  
-This confirms volume persistence.  
+  It shoud contain:
+  - WordPress core file
+  - `wp-config.php`
+  - themes
+  - plugins
+  - uploads  
+  This confirms volume persistence.
+⚠️  DE TODOS LOS ARCHIVOS QUE HAY, ME FALLTA SABER CUÁLES SON PARA QUÉ. NO BEO THEMES NI PLUGINS...
 
-#### Check environment variables ⚠️ ⚠️ 
+- Verify WordPress configuration:
 
-      env  | grep MYSQL
+        cat var/www/html/wp-config.php
 
-Verifies that `.env` variables are injected correctly at runtime.  
+  Check:
+  - DB host -> `mariadb`
+  - database name
+  - database user
+  - table prefix
+  ⚠️ ES NORMAL QUE EN ESTE ARCHIVO SE GUARDE LA PASSWORD??
 
-#### Check Docker built secrets ⚠️ ⚠️ 
-
-
-        docker exec -it mariadb ls /run/secrets
-        docker exec -it wordpress ls /run/secrets
-
-You must see the password files.  
-
-
-      docker exec mariadb cat /run/secrets/file_name
-
-Must print the password.
-
-Verify that passwords aren't in environment variables:
-
-      docker inspect mariadb | grep -i password
-
-Mustn't appear any password. 
-
-#### Verify WordPress configuration ⚠️ ⚠️ 
-
-      cat wp-config.php
-
-Confirms:
-- database hostname (`mariadb`)
-- credentials
-- table prefix
-
-### MariaDB inspection
-The database is not exposed to the host; the access is performed via `docker exec`:
+### MariaDB Inspection
+- Access MariaDB:
 
         docker exec -it mariadb bash
         mysql -u root -p
 
-Root access is required for manual inspection:  
-- MariaDB users are defined as `'user'@'host'`
-- In this project, the WordPress database user is created as:
+- Why root access is required:
+  Usesrs in MariaDB are defined as `'user'@'host'`.
+  In this project:
 
-      CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-
+          CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '...';
   `%` means **any host on the Docker network**.
   Therefore:
   - WordPress connects succesfully from another container
   - Manual login using `mysql -u user -p` fails (defaults to `user@localhost`)
   - Inspection must be done as root
  
-List databases:
+- Basic database checks:
 
-      SHOW DATABASES;
-      USE database;
-      SHOW TABLES;
+        SHOW DATABASES;
+        USE database;
+        SHOW TABLESS;
 
-Typicall databases:
-- `mysql` -> system database
-- `information_schema`
-- `performance_schema`
-- `sys`
-- `test`
-- `database`-> WordPress database
+  Typicall databases:
+  - `mysql` -> system database
+  - `information_schema`
+  - `performance_schema`
+  - `sys`
+  - `test`
+  - `database`-> WordPress database
 
-Main wordPress tables:
-- `wp_users` -> users
-- `wp_usermeta` -> roles and permissions
-- `wp_posts`-> post, pages, revisions, attachments
-- `wp_postmeta` -> post metadata
-- `wp_comments`, `wp_commentmeta`
-- `wp_options` -> global configuration
-- `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`  
-
-Example inspections:  
-- List users:
+⚠️  LO DE DEBAJO SIGUE YENDO DENTRO DE MARIADB??? COMPROBAR ORDEN!
+- Important WordPress tables:
+  - `wp_users` -> users
+  - `wp_usermeta` -> roles and permissions
+  - `wp_posts`-> post, pages, revisions, attachments
+  - `wp_postmeta` -> post metadata
+  - `wp_comments`, `wp_commentmeta`
+  - `wp_options` -> global configuration
+  - `wp_terms`, `wp_term_taxonomy`, `wp_term_relationships`, `wp_termmeta`
+ 
+- Example inspections:
+  - List users:
 
           DESCRIBE wp_users;
           SELECT ID, user_login, user_email FROM wp_users;
 
+  - View roles:
 
-- View roles:
+          SELECT user_id, meta_key, meta_value
+          FROM wp_usermeta
+          WHERE meta_key LIKE '%capabilities%';
 
-      SELECT user_id, meta_key, meta_value
-      FROM wp_usermeta
-      WHERE meta_key LIKE '%capabilities%';
+  - View posts:
+ 
+        SELECT ID, post_title, post_type, post_status
+        FROM wp_posts;
 
-
-- View posts:
-
-      SELECT ID, post_title, post_type, post_status
-      FROM wp_posts;
-
-
-Modify roles from WordPress container:
-
-
+- Modify roles usinf WP-CLI
+  
         docker exec -it wordpress bash
         wp user set-role user1 author --allow-root
 
-This updates:
-- `wp_capabilities`
-- `wp_user_level`
+  This updates:
+  - `wp_capabilities`
+  - `wp_user_level`
 
-### Volume persistence verification
 
-Persistent data is stored using bind-mounted volumes.  
-Useful commands:  
+### Volume Persistence Verification ⚠️ ⚠️ ⚠️ ESTAMOS AQUII
 
-| Command | Purpose |
-|----|----|
-| `docker volume ls` | Lists Docker-managed volumes |
-| `docker volume inspect <volume>` | Shows where a Docker-managed volume is stored |
-| `du -sh /home/<login>/data/*` | Checks disk usage of persistent bind-mounted data |
+Persistent data uses **bind mounts**.  
+- Verify host directories:
 
-!!!! ESTOS COMANDOS SON PARA VER LOS BIND MOUNTS? SI NO, PONER HOST PATH Y CONTAINER PATH (REPETITIVO) -> CHECKEAR RUTAS!!!
+        du -sh /home/<login>/data/*
 
+- Mount mapping
 | Service | Host Path | Container Path |
 |-----|-----|-----|
 | WordPress | `/home/login/data/wordpress` | `/var/www/html` |
 | MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` |
 
-Persistence behavior:  
-
+- Persistent behavior
 | Command | Result |
 |----|-----|
 | `make down` | Containers removed, data preserved |
@@ -1081,24 +1106,32 @@ Persistence behavior:
 
 
 ### Logs and debugging
-Containers log to stdout/stderr:
+Containers log to **stdout/stderr**:
 
         docker logs wordpress
         docker logs mariadb
         docker logs nginx
 
-By default:
-- PHP-FPM logs -> inside WordPress container (not persistent)
-- MariaDB logs -> container filesystem (`var/lib/mysql`) (not persistent)
-⚠️ COMPROBAR ESTO!!! VER DONDE SE GUARDA
-Persistent logging is not required by Inception.  
+Used to debug:
+- startup failures
+- connection errors
+- PHP or database issues
 
-### Verify clean shutdown
-After stopping:   
 
-        docker inspect <container> | grep ExitCode
+### Clean Shutdown Verification
+- Stop containers:  
 
-- `0` -> clean exit
-- `137` -> SIGKILL (bad)
+        docker stop <container>
+
+- Then, inspect container:
+
+
+              docker inspect <container> | grep ExitCode
+
+  Exit codes:
+  - `0` -> clean shutdown
+  - `137` -> Forced stop (SIGKILL)
+
+
 
 
