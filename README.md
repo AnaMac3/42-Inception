@@ -291,6 +291,8 @@ Mostrar lectura
 
         docker exec mariadb cat /run/secrets/password
 
+Para ver cómo se han configurado cada uno de estos archivos, ver: [`.env`](./DEV_DOC.md/environment-variables-env-file) y [`secrets`](./DEV_DOC.md/secrets). 
+
 ## Resources
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
