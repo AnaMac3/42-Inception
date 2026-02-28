@@ -27,6 +27,12 @@
 # Exit inmediately if any command fails
 set -e 
 
+# ------------------------------------------------------------------
+# Load secrets
+# ------------------------------------------------------------------
+MYSQL_ROOT_PASSWORD=$(cat /run/secrets/mysql_root_password)
+MYSQL_PASSWORD=$(cat /run/secrets/mysql_password)
+
 # Default MariaDB data directory
 DATADIR="/var/lib/mysql"
 
@@ -36,22 +42,17 @@ DATADIR="/var/lib/mysql"
 # MariaDB uses a UNIX socket located in /run/mysql to accept local
 # connections from clients.
 #
-# This directory may no exist in a fresh container filesystem
-# and must be created manually. It also needs to be owned by the 
-# mysql user so that the MariaDB server can write to it.
-#
-# - mkdir -p creates the directory if it does not exist and does
-# - chown ensures correct ownership and prevents startup errors
+# This directory may must be created manually and it needs to be 
+# owned by the mysql user
+
 mkdir -p /run/mysqld
 chown mysql:mysql /run/mysqld
 
 # ------------------------------------------------------------------
 # Database initialization (first container startup only)
 # ------------------------------------------------------------------
-# The presence of the 'mysql' system directory indicates that the
-# database has already been initialized. 
-# If it does not exists, this is the first time the container runs
-# and the database must be initialized.
+# If 'mysql' system directory does not exists, it means this is the  
+# first time the container runs and the database must be initialized.
 
 if [ ! -d "$DATADIR/mysql" ]; then
 		echo "Initializing MariaDB database..."
@@ -77,21 +78,36 @@ if [ ! -d "$DATADIR/mysql" ]; then
 			sleep 2
 		done
 
-		# Create the application database and user.
-		# Env variables are provided through the .env file and injected
-		# by Docker Compose at runtime.
-		# The MariaDB client is executed as the database root user 
-		# (not password at this stage).
-		# A heredoc is used to pass multiple SQL commands
+		echo "Configurating database..."
+
+		# ------------------------------------------------------------------
+		# Secure root account and create app DB/user
+		# ------------------------------------------------------------------
+		# - Root password is set for 'root'@'localhost'
+		# - Remote root access ('root'@'%') is removed for security
+		# - Applciation db is created if it doesn't exist
+		# - Application user is created for both:
+		#		- 'localhost' for internal container connections
+		#		- '%' for external/remote connections (for wordpress)
+		#   with privileges limited to the app db
 		mysql -u root <<EOF
+-- Set root password
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+-- Remove remote root access (security best practice)
+DELETE FROM mysql.user WHERE User='root' AND Host='%';
+-- Create app DB
 CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
+-- Create app user for remote connections
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
+-- Create app user for local connections
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'localhost';
+
 FLUSH PRIVILEGES;
 EOF
 	# Stop the temporary MariaDB instance.
-	# This ensures a clean shutdown before restarting the server
-	# in foreground mode.
+	# This ensures a clean shutdown before restarting the server in foreground
 	kill "$pid"
 	wait "$pid"
 fi
@@ -101,7 +117,6 @@ fi
 # ------------------------------------------------------------------
 # Start MariaDB in foreground mode.
 # Using 'exec' replaces the shell process (PID 1) with the MariaDB
-# server process, allowing Docker to properly track signals and manage
-# the container lifecycle
+# server process
 echo "Starting MariaDB..."
 exec mysqld --user=mysql --datadir="$DATADIR"

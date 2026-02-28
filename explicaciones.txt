@@ -1,0 +1,89 @@
+EXPLICACIONES DEFENSA:
+
+Inceptión es un proyecto de infraestructura basado en docker.
+Va de desplegar un stack web completo usando múltiples contenedores: uno para cada servicio:
+- WordPress para la lógica / capa de app
+- MariaDB para la caba de base de datos
+- NGINX como punto de entrada HTTPS / de Internet (único puerto expuesto al exterior)
+
+El objetivo es aprender a construir, aislar y orquestrar sevicios usando Docker, redes internas y almacenamiento persistente. 
+
+Arquitectura general:
+Sistema de 3 servicios: NGINX, WordPress + PHP-FPM, MariaDB
+Cada servicio corre en su propio contenedor, construido desde su propio Dockerfile (no imágenes descargadas, creamos todo desde cero)
+Funcionamiento general:
+
+1. En navegador conecta con NGINX via HTTPS (puerto 443)
+2. NGNIX sirve contenido estático y reenvia solicitudes HTTPS
+3. PHP-FPM ejecuta código WordPress (WordPress corre utilizando PHP-FP (FastCGI Process Manager)). PHP-FPM ejecuta PHP scripts, se comunica con NGINX via FastCGI por el pueryo 9000
+4. WordPress hace queries a MariaDB
+5. La respuesta HTML se devuelve al navegador
+
+Se utiliza una Bridge Network privada en el Docker compose para comunicar los contendores entre sí. 
+La bridge network permite una comunicación segura usando los nombres de los serivicos.
+Los puertos internos no se exponen al exterior, el único servicio que expone puerto es NGINX (443).
+En esta red interna:
+- NGINX conecta a wordpress:9000
+- wordpress conecta a mariadb:3306
+
+Persistencia de datos:
+Los contenedores son efímeros, así que usamos bind mounts para guardar datos persistentes, para que si se eliminan  contendores o se reconstruyen imágenes, no se pierdan las datos de la bbdd de MariDB y los archivos de WordPress (⚠️⚠️ añadir qué infor es esta).
+
+CONCEPTOS CLAVE:
+1. Docker image: plantilla inmutable que se usa para crear contenedores.
+Incluye: app files, dependencias, archivos de configuración, instrucciones de startup.
+Las imágenes se construyen una vez y se reutilizan para crear contenedores.
+
+2. Container: instancia en ejecución de una imagen. Son efímeros: borrar un contenedor implica borrar sus datos de ejecución, a no ser que se guarden externamente.
+
+3. Dockerfile: archivo que define cómo se construye una imagen Docker.
+Especifica el sistm operativo, los paquetes a instalar, los archivos de configuración a copiar, los comandos a ejecutar cuando el container ejecute 
+
+
+En la construcción de contenedores/servicios, distinguimos entre BUILD TIME y RUNTIME:
+- Build time - Dockerfile: 
+	- creación de la imagen
+	- se instalan paquetes y dependencias
+	- se copian las templates y scripts de configuraciones
+	- NO se crea application state - las imágenes se mantienen inmutables y sin estado
+- Runtime:
+	- Se inicializa la application state si se necesita
+	- La configuración se genera dinámicamente
+	- Se lee / escriben los datos 
+	
+Las imágenes definen la infraestructura vs Los contendores gestionan estado.
+Toda operación que dependa de contenido de bbdd, usuarios existentes, generación de credenciales, configuración del runtime -> ocurre en runtime, no durante la construcción de imagen.
+
+
+LIFECYCLE DEL CONTENEDOR:
+Un contenedor vive mientras su PID1 (proceso ppal) esté activo.
+Por eso:
+- Los servicios corren en foreground (⚠️⚠️ qué era eso)
+- Usamos exec para que el servicio real sea PID1 (⚠️⚠️ qué es si no usasemos exec)
+Esto permite que Docker envíe signals correctamente a dodne toca cuando hacemos docker compose stop. ⚠️⚠️ si no a dónde las mandaria??
+
+⚠️⚠️ REPASAR EN MI TEORIA AMPLIA, PORQUE ESTAS COSAS ME CUESTA ENTENDER
+
+La orquestación de todo esto se hace con Docker compose (.yml). Aquí se definen:
+- servicios
+- red interna
+- volúmenes persistentes
+- dependencias
+
+El Makefile simplifica los comandos
+
+
+EVALUACIÓN:
+- Acceso HTTPS al sitio
+- Login admin
+- Crear post
+- Reiniciar contenedores
+- Los datos tienen que seguir existiendo
+Esto demuestra:
+- networking OK
+- DB OK
+- persistencia OK
+
+
+
+

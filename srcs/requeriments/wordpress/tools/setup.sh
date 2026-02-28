@@ -22,6 +22,13 @@
 set -e
 
 # ------------------------------------------------------------------
+# Load secrets
+# ------------------------------------------------------------------
+MYSQL_PASSWORD=$(cat /run/secrets/mysql_password)
+WORDPRESS_ADMIN_PASSWORD=$(cat /run/secrets/wp_admin_password)
+WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wp_user_password)
+
+# ------------------------------------------------------------------
 # File ownership and permissions
 # ------------------------------------------------------------------
 # PHP-FPM runs as the 'www-data' user. Correct ownership and 
