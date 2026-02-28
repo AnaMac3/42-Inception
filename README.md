@@ -43,7 +43,6 @@ The deployed stack includes:
 All services communicate through an internal Docker network, while persistent data is stored on the host system.  
 The goal of the project is to demonstrate fundamental DevOps concepts such as container isolation, service orchestration, networking, and data persistence in a controlled environment.  
 
-⚠️ ENTENDER QUÉ ES LO QUE HE APRENDIDO DE ORCHESTRATION
 
 ## Instructions
 This sections explains how to set up, build, and run the *Inception* project from scratch.  
