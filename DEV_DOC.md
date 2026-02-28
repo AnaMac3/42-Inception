@@ -14,7 +14,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
   - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
-  - [`secrets`)](#secrets)
+  - [`secrets`](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
     - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
@@ -953,6 +953,25 @@ This confirms volume persistence.
       env  | grep MYSQL
 
 Verifies that `.env` variables are injected correctly at runtime.  
+
+#### Check Docker built secrets ⚠️ ⚠️ 
+
+
+        docker exec -it mariadb ls /run/secrets
+        docker exec -it wordpress ls /run/secrets
+
+You must see the password files.  
+
+
+      docker exec mariadb cat /run/secrets/file_name
+
+Must print the password.
+
+Verify that passwords aren't in environment variables:
+
+      docker inspect mariadb | grep -i password
+
+Mustn't appear any password. 
 
 #### Verify WordPress configuration ⚠️ ⚠️ 
 
