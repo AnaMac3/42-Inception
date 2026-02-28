@@ -224,6 +224,72 @@ In this project, data persistance is implemented using **bind mounts** to host d
 
 > This separation ensures credentials and configuration data are handled securely and follow best practices.  
 
+QUÉ SON LOS DOCKER SECRETS?  
+Un `secrets` es un archivo montado dentro del contenedor solo en **runtime**, pensado para datos sensibles.  
+Diferencias clave:
+| `.env` | `secrets` |
+|---|----|
+| Variables visibles | Archivos protegidos |
+| Acaban en `docker inspect` qué significa esto???? | NO visibles |
+| Buenas para condig | Buenas para passwords |
+| Persisten en logs/env | No se exponen |
+
+Qué debe ir en secrets?:
+- root password y database user password de MariaDB
+- password del admin y del user de wordpress
+
+Qué debe ir en .env?:
+- domain name
+- db name
+- db username
+- wordpress title
+...
+
+Cómo funcionan técnicamente los secretos?  
+- Docker monta un archivo en `/run/secrets/<secret_name>
+- No es una variable de entorno, es un archivo.
+
+recomendado: carpeta secrets con un txt por password  
+
+En docker compose: añadir:
+
+          secrets: 
+            password1:
+              file: ./secrets/password.txt
+            password2:-...
+
+
+Y luego en servicio:
+
+          services:
+            mariadb:
+              secrets:
+                - password1
+                - password2...
+
+
+MariaDB espera variables, pero los secrets son archivos ->  
+Antes hacíammos:
+
+          MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+
+Ahora, en entrypoint script:
+
+        MYSQL_ROOT_PASSWORD=$(cat /run/secrets/password)
+
+Cuando tenga secrets, cómo mostrar que no aparecen:
+
+        docker inspect mariadb
+
+-> password no visible
+
+Mostrar existencia:
+
+        docker exec -it mariadb ls /run/secrets
+
+Mostrar lectura
+
+        docker exec mariadb cat /run/secrets/password
 
 ## Resources
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
