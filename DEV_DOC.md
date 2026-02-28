@@ -603,7 +603,7 @@ The default MariaDB binds the server to `127.0.0.1`, which prevents connections 
 The custom configuration overrides this behaviour:
 - MariaDB listens on `0.0.0.0`
 - This allows WordPress to connect through the Docker bridge network
-- The database remains inaccessible from the host unless explicitly exposed
+- The database remains inaccessible from the host unless explicitly exposed  
 Access from the host is only possible via `docker exec`.  
 This configuration allows controlled inter-container communication while preserving isolation from the host system.
 
@@ -693,7 +693,7 @@ During **image construction**, the NGINX Dockerfile:
 NGINX handles:
 - TLS negotiation (TLSv1.2 / TLSv1.3)
 - Traffic decryption
-- Secure client communication
+- Secure client communication   
 This isolates cryptographic concerns from the application layer.
 
 ###### Reverse proxy role
