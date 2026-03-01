@@ -51,12 +51,15 @@ This document describes the technical architecture of the *Inception* project. I
     - [`wp-config.php`](#wp-configphp)
     - [Database structure and tables](#database-structure-and-tables)
 - [Inspection and testing](#inspection-and-testing)
-  - [Useful Docker commands](#useful-docker-commands)
-  - [Container access and inspection](#container-acces-and-inspection)
+  - [Containers state verification](#containers-state-verification)
+  - [Container access (interactive debugging)](#container-access-interactive-debugging)
+  - [Environment variables verification](#environment-variables-verification)
+  - [Docker secrets verification](#docker-secrets-verification)
+  - [WordPress runtime inspection](#wordpress-runtime-inspection)
   - [MariaDB inspection](#mariadb-inspection)
   - [Volume persistence verification](#volume-persistence-verification)
   - [Logs and debugging](#logs-and-debugging)
-  - [Verify clean shutdown](#verify-clean-shutdown)
+  - [Clean shutdown verification](#verify-clean-shutdown)
  
 ---
 
@@ -938,7 +941,6 @@ The goal is to validate that:
 
         docker inspect <container>
 
-
  
 ### Container Access (Interactive Debugging)
 Containers can be accessed interactively using:  
@@ -983,6 +985,24 @@ Docker secrets must exists as runtime-mounte files.
   Expected result: no passwords visible.
   This confirms credentials are handled securely.
 
+### NGINX Inspection
+
+- Enter the NGINX container:
+
+          docker exec -it nginx bash
+
+- Inspect logs:
+
+          tail -f /var/log/nginx/access.log
+
+  Shows every HTTP request handled by NGINX.
+
+- Error log:
+
+            tail -f /var/log/nginx/error.log
+
+  Empty if NGINX and WordPress communicate correctly.  
+      
 ### WordPress Runtime Inspection
 - Enter the WordPress container:
 
@@ -1119,11 +1139,7 @@ Docker secrets must exists as runtime-mounte files.
   - View posts:
  
         SELECT ID, post_title, post_type, post_status
-        FROM wp_posts;
-
-
-  
-
+        FROM wp_posts;  
 
 ### Volume Persistence Verification 
 
@@ -1166,12 +1182,15 @@ Used to debug:
 
 - Then, inspect container:
 
-
               docker inspect <container> | grep ExitCode
 
   Exit codes:
   - `0` -> clean shutdown
   - `137` -> Forced stop (SIGKILL)
+ 
+- Start the container again:
+
+        docker start <container>
 
 
 
