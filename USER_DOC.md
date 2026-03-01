@@ -14,22 +14,27 @@ This document explains how to use and manage the website deployed by the Incepti
 -------------------------------------------------
 
 ## Services provided by the stack
-
-EXPLICAR QUE OFRECE WORDPRESS + NGINX + MARIADB
-- Website WordPress accesible por HTTP
-- Panel de administración (`/wp-admin`)
-- Sistema de usuarios (admin / user)
-- Publicación de entradas
-- Subida de archivos (media)
-- Persistencia de datos (usuarios, posts, uploads)
-
-NO HACE FALTA HABLAR DE CÓMO CAMBIAR PERMISOS, SOLO QUÉ EXISTE
+The *Inception* stack deploys a complete WordPress website accessible through a secure HTTPS connection.  
+The platform provides the following services:  
+- WordPress website accesible via HTTP
+- WordPress administration dashboard (`/wp-admin`)
+- User authentification system
+- Role-based permission management
+- Content creation (posts and pages)
+- Media upload and management
+- Persistent storage of website data  
 
 ## Start and stop the project
-1. Start the project
-   - `make`: hace `build` y `up` de los contenedores.
+### Start the project
 
-2. Stop and clean
+         make
+         
+This command:
+- builds the Docker images (if needed)+
+- starts all services
+- deploys the website automatically
+
+### Stop and clean
 
    - `make stop`: para los contenedores, sin eliminar los contenedores ni los volúmenes
    - `make down`: para y borra los contenedores y redes, pero conserva los volúmenes persistentes
