@@ -992,18 +992,23 @@ Docker secrets must exists as runtime-mounte files.
 
       ls /var/www/html
 
-  This directory is bind-mounted from:
+  This directory is bind-mounted from the host:
 
       /home/<login>/data/wordpress
 
-  It shoud contain:
+  It contains:
   - WordPress core file
   - `wp-config.php`
   - themes
   - plugins
-  - uploads  
-  This confirms volume persistence.
-⚠️  DE TODOS LOS ARCHIVOS QUE HAY, ME FALLTA SABER CUÁLES SON PARA QUÉ. NO BEO THEMES NI PLUGINS...
+  - uploads
+  - configuration files  
+
+- Example: verify uploads
+
+        ls /var/www/html/wp-content/uploads
+
+  Then entry automatically generated folders (YEAR/MONTH). Uploaded media files should appear inside these directories.    
 
 - Verify WordPress configuration:
 
@@ -1015,26 +1020,40 @@ Docker secrets must exists as runtime-mounte files.
   - database user
   - table prefix
 
-  ⚠️ `wp config create` escribe la contraseña en `wp-config.php` usando el valor que se le pasa, aunque venga de un secret, la contraseña se harcodea. Lo único que se puede hacer es modificar luego el `wp-config.php` generado para que no muestre la contraseña.  
+  > ⚠️ `wp config create` generates `wp-config.php` using provided environment variables. Even when the password originates fron Docker secrets, the generated file stores it as a PHP constant. Therefore:
+  > - Secrets protect passwords during container startup
+  > - WordPress requires the password in plaintext at runtime
+  > - The password becamos embedded in `wp-config.php`  
 
 ### MariaDB Inspection
 - Access MariaDB:
 
         docker exec -it mariadb bash
         mysql -u root -p
-
-⚠️⚠️ ESTO NO ME FUNCIONA BIEN! NO ME DEJA ENTRAR CON NINGUNA CONTRASEÑA!!!
-
-- Why root access is required:
-  Usesrs in MariaDB are defined as `'user'@'host'`.
+ 
+- User authentication model:  
+  MariaDB users are defined using `'user'@'host'`.
   In this project:
 
-          CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '...';
-  `%` means **any host on the Docker network**.
-  Therefore:
-  - WordPress connects succesfully from another container
-  - Manual login using `mysql -u user -p` fails (defaults to `user@localhost`)
-  - Inspection must be done as root
+        CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '...';
+        CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '...';
+
+  Meaning:
+  - `'user'@'%'` -> allows connections from other containers on the Docker network (WordPress)
+  - `'user'@'localhost'` -> allows local inspection from inside the MariaDB container.
+
+- Root vs application user:
+  - Root user is used for administration (manage users, inspect system tables, full database access)
+
+           mysql -u root -p
+
+  - Application user: access only the WordPress database.
+
+          mysql -u <user> -p
+ 
+    Check privileges:
+
+        SHOW GRANTS FOR 'user'@'localhost';
  
 - Basic database checks:
 
@@ -1043,15 +1062,15 @@ Docker secrets must exists as runtime-mounte files.
         SHOW TABLESS;
 
   Typicall databases:
-  - `mysql` -> system database
-  - `information_schema`
-  - `performance_schema`
-  - `sys`
-  - `test`
+  - `mysql` -> users and privilege system tables
+  - `information_schema` -> database metadata
+  - `performance_schema`-> performance metrics
+  - `sys` -> diagnostic views
+  - `test` -> default testing database
   - `database`-> WordPress database
+ 
 
-⚠️  LO DE DEBAJO SIGUE YENDO DENTRO DE MARIADB??? COMPROBAR ORDEN!
-- Important WordPress tables:
+- Important WordPress tables (`database`):
   - `wp_users` -> users
   - `wp_usermeta` -> roles and permissions
   - `wp_posts`-> post, pages, revisions, attachments
