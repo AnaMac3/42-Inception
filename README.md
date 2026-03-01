@@ -36,9 +36,9 @@ This project has been created as part of the 42 curriculum by amacarul.
 ## Description
 
 **Inception** is a Docker-based infrastructure project focused on building and orchestrating a complete web service stack using containerization.  
-The project consist of designing a modular and reproducible environment where each service runs inside its own container, built from scratch using Dockerfiles and managed with Docker Compose.  
+The project consists of designing a modular and reproducible environment where each service runs inside its own container, built from scratch using Dockerfiles and managed with Docker Compose.  
 The deployed stack includes:
-- **NGINX** as the secure HTPPS entry point
+- **NGINX** as the secure HTTPS entry point
 - **WordPress + PHP-FPM** as the application layer
 - **MariaDB** as the database service  
 
@@ -47,12 +47,12 @@ The goal of the project is to demonstrate fundamental DevOps concepts such as co
 
 
 ## Instructions
-This sections explains how to set up, build, and run the *Inception* project from scratch.  
+This section explains how to set up, build, and run the *Inception* project from scratch.  
 For more detailed explanations about development environment configuration, refer to the [DEV_DOC](./DEV_DOC.md). 
 
 ### Prerequisites:
-  - Acces to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
-  - Dockera and Docker Compose installed ([see DEV_DOC](./DEV_DOC.md#installing-docker-docker-compose-and-build-tools))
+  - Access to a Linux machine / VM ([see DEV_DOC](./DEV_DOC.md#virtual-machine-setup-virtualbox-debian))
+  - Docker and Docker Compose installed ([see DEV_DOC](./DEV_DOC.md#installing-docker-docker-compose-and-build-tools))
 
 ### Installation
    - Clone the repository:
@@ -74,7 +74,7 @@ For more detailed explanations about development environment configuration, refe
 
          make
 
-  > Note: `make` builds thee Docker images and starts all containers in the stack.
+  > Note: `make` builds the Docker images and starts all containers in the stack.
 
   - Networking / SHH tunneling:
     - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
@@ -91,7 +91,7 @@ For more detailed explanations about development environment configuration, refe
 |---------|--------------|
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `male clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
 | `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 > **Important**: Persistent data,`.env` files and `secrets` with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
@@ -239,6 +239,7 @@ For details about how environment variables are configured in this project, see:
 #### Docker Secrets
 Sensitive data such as passwords are managed using Docker secrets.  
 A Docker secret is a file securely mounted inside a container **at runtime only**, specially designed to store **confidential information**.  
+Secrets protect credentials during container startup.  
 In this project, secrets are used for:
 - MariaDB root and user passwords
 - WordPress admin and user passwords
@@ -255,14 +256,28 @@ Unlike enviroment variables:
 
 For implementation details, see: [`secrets` configuration](./DEV_DOC.md#secrets). 
 
-## Resources
-[Forstman1 repo](https://github.com/Forstman1/inception-42)  
-[gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
-[Grademe tutorial](https://tuto.grademe.fr/inception/)  
+## Resources 
 [dockerdocs](https://docs.docker.com/)  
+[dockerdocs - Overview](https://docs.docker.com/get-started/docker-overview/)
 [dockerdocs - Building best practices](https://docs.docker.com/build/building/best-practices/)  
+
+[hynek - docker signals](https://hynek.me/articles/docker-signals/)  
+
 [Docker compose commands](https://iesgn.github.io/curso_docker_2021/sesion5/comando.html)   
 [Docker commands](https://kinsta.com/es/blog/comandos-docker/)  
 [Dockerfile keywords](https://www.nicelydev.com/docker/mots-cles-supplementaires-dockerfile#:~:text=Le%20mot%2Dcl%C3%A9%20EXPOSE%20permet,utiliser%20l'option%20%2Dp%20.)  
+
+
 [SQL keywords](https://www.w3schools.com/sql/sql_ref_keywords.asp)  
 [WordPress documentation](https://wordpress.org/documentation/)  
+
+[Grademe tutorial](https://tuto.grademe.fr/inception/)  
+[Forstman1 repo](https://github.com/Forstman1/inception-42)  
+[gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
+
+
+
+
+
+
+
