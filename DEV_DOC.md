@@ -1,6 +1,6 @@
 # 42-Inception - Developer Documentation
 
-This document describes the technical architecture of the *Inception* project. It focuses on how the system is built, deployed, configured, persisted and inspected, and is intended for developers and evaluators.  
+This document describes the technical architecture of the *Inception* project. It focuses on how the system is built, deployed, configured, persisted and inspected. It is intended for developers and evaluators.  
 
 ## Table of Contents
 - [Set up the environment from scratch](#set-up-the-environment-from-scratch)
@@ -61,7 +61,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Logs and debugging](#logs-and-debugging)
   - [Clean shutdown verification](#verify-clean-shutdown)
  
----
+--------
 
 ## Set up the environment from scratch
 
@@ -95,13 +95,13 @@ The Debian ISO is a disk image containing the full Debian installer. When mounte
 
 #### Creating the Virtual Machine
 In VirtualBox -> `New`:
-- Name: inception
-- Folder: sgoinfree (on 42 computers)
+- Name: `inception`
+- Folder: `sgoinfree` (on 42 computers)
 - OS: Linux
 - OS Distribution: Debian
 - OS Version: Debian (64-bit)
 - RAM: minimum 2048 MB (recommended 4096 MB)
-- Number of CPU: 2
+- Number of CPUs: 2
 
 ##### VM settings before installation  
 System -> Motherboard
@@ -150,7 +150,6 @@ After instalation, reboot the VM.
 | Switch to root | `su -` |
 | Return to user | `su - <login>` |
 
-⚠️ AÑADIR MÁS COSAS ÚTILES!!
 
 ### Installing Docker, Docker Compose and build tools
 Inside the Debian VM:
@@ -175,7 +174,7 @@ Shared folders allow editing files on the host while running them inside the VM.
 Steps:  
 - VM Settings -> Shared Folders
 - Folder Path: local host directory
-- Mount point: `/home/login/inception´
+- Mount point: `/home/login/inception` 
 - Enable auto-mount and make permanent
 
 - Inside the VM:
@@ -222,11 +221,11 @@ Steps:
 ### Persistent volumes
 Persistent data is stored on the VM filesystem and mounted into containers.
 
-       # Create the directories
        mkdir -p /home/<login>/data/wordpress
        mkdir -p /home/<login>/data/mariadb
 
-       #Adjust the permissions so that Docker can write
+Adjust the permissions so that Docker can write:
+
        sudo chown -R <login>:<login> /home/<login>/data
 
 These directories are later mounted as Docker bind mounts and store all persistent project data.    
@@ -238,7 +237,7 @@ The `.env` file defines all configuration values used by Docker Compose and the 
 - It avoids hardcoding configuration values in source files
 - It must be located in `./srcs` 
 
-Example structure:  
+Example:  
 
       DOMAIN_NAME=<login>.42.fr
 
@@ -256,7 +255,7 @@ Example structure:
 Environment variables allow containers to be configured dynamically without modifying source files.  
 
 ### Secrets
-Docker secrets is a file securely mounted inside a container **at runtime only**, specifically designed to sotre confidential information.  
+Docker secrets is a file securely mounted inside a container **at runtime only**, specifically designed to sotre confidential information.    
 Docker mounts secrets inside the container at:
 
         /run/secrets/<secret_name>
@@ -294,7 +293,7 @@ Verify that the domain resolves inside the VM:
 If it responds from `127.0.0.1`, the domain is configurated correctly inside the VM.  
 
 #### SSH tunneling and SOCKS proxy (VM → host browser)
-Since the services run inside a VM, HTTPS traffic cannot be accessed directly from the host browser. To reach the website at the required URL (`https://login.42.fr`), use **SSH tunneling** if you have sudo privileges, or a **SOCKS proxy** if you do not (42 iMacs).  
+Since the services run inside a VM, HTTPS traffic cannot be accessed directly from the host browser. To reach the website at `https://login.42.fr`, use **SSH tunneling** if you have sudo privileges, or a **SOCKS proxy** if you do not (42 iMacs).  
 
 ##### Windows / WSL host  
 1. Edit the host machine's `hosts` file (`C:\Windows\System32\drivers\etc\host`) as Administrator:
@@ -341,7 +340,6 @@ A SOCKS proxy acts as a tunnel for your network traffic. Your browser sends requ
 
           https://login.42.fr
 
-The SOCKS proxy routes all HTTPS traffic through the VM, allowing access to the correct domain and services without requiring sudo or modifying local ports.  
 
 ## Build and launch the project using the Makefile and Docker Compose
 This section explains how the stack is built and managed using **Docker Compose**, abstracted through a **Makefile**.  
@@ -397,7 +395,8 @@ Occurs when an image is created using a `Dockerfile`:
 - Configuration templates and scripts are copied
 - No application state is created
 
-Images must remain **stateless and immutable**.  
+Images must remain **stateless and immutable**.   
+
 ##### Runtime
 Occurs when a container is started from an image: 
 - Application state is initialized if needed
@@ -405,7 +404,7 @@ Occurs when a container is started from an image:
 - Persistent data is read from or written to volumes    
 
 > **Key principle**:
-> **Images define infrastruture - containers manage state**
+> **Images define infrastructure - containers manage state**
 
 Any operation that depends on:
 - Database contents
@@ -503,7 +502,7 @@ This is **explicitly forbidden** in *Inception*:
 
 ### Container lifecycle
 #### Start, execution, and shutdown
-Docker containers are designed to run **one main proces**.  
+Docker containers are designed to run **one main process**.  
 At a theoretical level, the lifecycle is:  
 1. Container starts
 2. PID 1 process starts
@@ -538,7 +537,7 @@ When running:
 
 Docker performs the following steps:
 1. Sends `SIGTERM` to PID 1
-2. Wits a short grace period
+2. Waits a short grace period
 3. Sends `SIGKILL` if the process does not exit
 
 If PID 1:
@@ -552,7 +551,7 @@ Then shutdown is clean:
 - NGINX closes sockets
 If PID 1 does not handle signals properly, Docker is forced to kill the container.  
 
-##### What appens if PID 1 exits
+##### What happens if PID 1 exits
 If PID 1 exits:
 - The container stops immediately
 - Docker considers the container terminated
@@ -572,7 +571,7 @@ It focuses on the **practical implementation choices**, the role of each service
                   ├── .gitignore
                   ├── README.md (opcional)
                   ├── secrets/
-                  │    ├── mysql_root_passqord.txt
+                  │    ├── mysql_root_password.txt
                   │    ├── mysql_password.txt
                   │    ├── wp_admin_password.txt
                   │    └── wp_user_password.txt
@@ -605,7 +604,7 @@ Each service runs in its own container, built from a dedicated Dockerfile.
 ##### Build time
 During image construction, the MariaDB Dockerfile prepares the **database infrastructure**:
 - Installs the MariaDB server packages
-- Copies a custom MariaDB configuration file (`my_conf`)
+- Copies a custom MariaDB configuration file (`my.conf`)
 - Copies an initialization script (`setup.sh`)
 - Exposes port `3306` for inter-container communication
 - Defines `setup.sh` as the container `ENTRYPOINT`.
@@ -632,7 +631,7 @@ This logic supports **persistent volumes**.
 
 ##### Background vs foreground execution
 During first startup:
-- MariaDB is launched **temporarily in background**
+- MariaDB is launched **temporarily in background** (only used during initialization, terminted before the final foreground exeuction begins)  
 - This allows execution of SQL commands (`CREATE DATABASE`, `CREATE USE`...)
 - The temporary process is stopped
 - MariaDB is restarted in **foreground mode** using `exec`  
@@ -657,7 +656,7 @@ Its responsibilities are:
 - starting PHP-FPM in the **foreground** using `exec` -> PHP-FPM becomes PID 1.
 
 ###### `wp-config.php` generation
-Application-specific configurations is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
+Application-specific configuration is handled by WordPress through `wp-config.php`, not by PHP-FPM.  
 This file contains:
 - database connection parameters
 - authentication key and salts
@@ -678,7 +677,7 @@ A custom `www.conf` is provided at build time, defining:
 - listening on port `9000`
 - dynamic process manager (`pm = dynamic`)
 - worker limits to prevent resource exhaustion
-- environment variable preservation (`clear_env =  no`)   
+- environment variable preservation (`clear_env = no`)   
 This configuration is **static infrastructure** and does not change at runtime.
 
 ##### WP-CLI role
@@ -727,7 +726,7 @@ This allows WordPress to handle "pretty URLs" without physical files.
 ##### Foreground execution
 NGINX does not require a setup script, it is executed **directly in foreground** as PID 1 using:
 
-          CMD["nginx", "-g", "daemon off;"]
+          CMD ["nginx", "-g", "daemon off;"]
 
 > A daemon is a background process detached from the terminal.
 > Docker containers must not daemonize their main process. Running NGINX with `daemon off;` forces it to stay in foreground, allowing Docker to propperly track and control the container lifecycle.  
@@ -744,7 +743,7 @@ It specifies:
 In this project, the `Makefile` is responsible for executing Docker Compose commands.  
 
 #### Service, internal network, and volumes
-Three service compose the stack:
+Three services compose the stack:
 - `mariadb` -> data layer
 - `wordpress` -> application layer
 - `nginx` -> entry layer
@@ -786,8 +785,8 @@ Docker performs the following steps:
    - `nginx`
   
 `depends_on` controls order but not readiness - it does NOT guarantee that service is ready to accept connections.  
-- WordPress implements an explicit wait mechanism for MariaDB availability. -> ⚠️ ⚠️ PONER DE EJMPLO LA QUE USO YO!! (LOOP, MYSQLADMIN PING..)
-- NGINX does nor require such a mechanism, as it only needs to listen on the corresponding port. When a PHP request is received, NGINX attemps to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
+- WordPress implements an explicit wait mechanism for MariaDB availability (for example, `mysqladmin ping`)  
+- NGINX does not require such a mechanism, as it only needs to listen on the corresponding port. When a PHP request is received, NGINX attempts to forward it to `wordpress:9000`. If WordPress is not yet ready, a temporary error may occur until the service becomes available.
 
 ##### Key `docker-compose.yml` directives
 
@@ -958,10 +957,10 @@ This allows inspection of:
 ### Environment Variables Verification
 Inside a container:
 
+      env
       env | grep MYSQL
-
-⚠️ esto es un ejemplo, otro sería usando WORDPRES... hay alguna manera de ver todas las variables de entorno a la vez?
-This confirms `.env` variables are injected correctly at runtime.  
+      env | grep WP
+      ...
 
 ### Docker Secrets Verification
 Docker secrets must exists as runtime-mounte files.  
