@@ -1008,8 +1008,33 @@ Docker secrets must exists as runtime-mounte files.
 
         ls /var/www/html/wp-content/uploads
 
-  Then entry automatically generated folders (YEAR/MONTH). Uploaded media files should appear inside these directories.    
+  Then navigate the automatically generated folders (YEAR/MONTH). Uploaded media files should appear inside these directories.    
 
+- Verify users and their roles using WP-CLI:
+
+      wp user list --allow-root
+
+- Modify roles using WP-CLI:
+
+      wp user set-role <username> <role> --allow-root
+
+  This updates:
+  - `wp_capabilities` 
+  - `wp_user_level`
+  
+  Default roles:
+  - `administrator` -> full access
+  - `editor` -> manage posts/pages
+  - `author` -> write own posts
+  - `contributor` -> write posts but cannot publish
+  - `subscriber` -> read only
+
+  Verify the change with:
+
+        wp user get <username> --field=roles --allow-root
+
+  Or check the `wp_usermeta` table.  
+  
 - Verify WordPress configuration:
 
         cat var/www/html/wp-config.php
@@ -1096,14 +1121,8 @@ Docker secrets must exists as runtime-mounte files.
         SELECT ID, post_title, post_type, post_status
         FROM wp_posts;
 
-- Modify roles usinf WP-CLI
-  
-        docker exec -it wordpress bash
-        wp user set-role user1 author --allow-root
 
-  This updates:
-  - `wp_capabilities`
-  - `wp_user_level`
+  
 
 
 ### Volume Persistence Verification 
