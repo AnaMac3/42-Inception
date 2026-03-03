@@ -570,13 +570,13 @@ It focuses on the **practical implementation choices**, the role of each service
                   ├── Makefile
                   ├── .gitignore
                   ├── README.md (opcional)
-                  ├── secrets/
-                  │    ├── mysql_root_password.txt
-                  │    ├── mysql_password.txt
-                  │    ├── wp_admin_password.txt
-                  │    └── wp_user_password.txt
                   └── srcs/
                       ├── .env
+                      ├── secrets/
+                      │    ├── mysql_root_password.txt
+                      │    ├── mysql_password.txt
+                      │    ├── wp_admin_password.txt
+                      │    └── wp_user_password.txt
                       ├── docker-compose.yml
                       └── requirements/
                           ├── nginx/
