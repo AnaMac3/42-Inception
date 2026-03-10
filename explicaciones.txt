@@ -2,19 +2,19 @@ EXPLICACIONES DEFENSA:
 
 Inceptión es un proyecto de infraestructura basado en docker.
 Va de desplegar un stack web completo usando múltiples contenedores: uno para cada servicio:
+- NGINX como punto de entrada HTTPS / de Internet (único puerto expuesto al exterior)
 - WordPress para la lógica / capa de app
 - MariaDB para la caba de base de datos
-- NGINX como punto de entrada HTTPS / de Internet (único puerto expuesto al exterior)
 
 El objetivo es aprender a construir, aislar y orquestrar sevicios usando Docker, redes internas y almacenamiento persistente. 
 
 Arquitectura general:
-Sistema de 3 servicios: NGINX, WordPress + PHP-FPM, MariaDB
+Sistema de 3 servicios / multiconentenedor: NGINX, WordPress + PHP-FPM, MariaDB
 Cada servicio corre en su propio contenedor, construido desde su propio Dockerfile (no imágenes descargadas, creamos todo desde cero)
 Funcionamiento general:
 
 1. En navegador conecta con NGINX via HTTPS (puerto 443)
-2. NGNIX sirve contenido estático y reenvia solicitudes HTTPS
+2. NGNIX sirve contenido estático y reenvia peticiones PHP
 3. PHP-FPM ejecuta código WordPress (WordPress corre utilizando PHP-FP (FastCGI Process Manager)). PHP-FPM ejecuta PHP scripts, se comunica con NGINX via FastCGI por el pueryo 9000
 4. WordPress hace queries a MariaDB
 5. La respuesta HTML se devuelve al navegador
@@ -25,9 +25,13 @@ Los puertos internos no se exponen al exterior, el único servicio que expone pu
 En esta red interna:
 - NGINX conecta a wordpress:9000
 - wordpress conecta a mariadb:3306
+- NGINX expone puerto al exterior: 443
 
 Persistencia de datos:
-Los contenedores son efímeros, así que usamos bind mounts para guardar datos persistentes, para que si se eliminan  contendores o se reconstruyen imágenes, no se pierdan las datos de la bbdd de MariDB y los archivos de WordPress (⚠️⚠️ añadir qué infor es esta).
+Los contenedores son efímeros, así que usamos bind mounts para guardar datos persistentes, para que si se eliminan  contendores o se reconstruyen imágenes, no se pierdan las datos de la bbdd de MariDB y los archivos de WordPress.
+Persisten los volúmenes:
+- /var/lib/mysql -> tablas, usuarios, posts, config de bbdd
+- /var/www/html -> plugins, themes, uploads, archivos de config de wordpress
 
 CONCEPTOS CLAVE:
 1. Docker image: plantilla inmutable que se usa para crear contenedores.
@@ -39,30 +43,84 @@ Las imágenes se construyen una vez y se reutilizan para crear contenedores.
 3. Dockerfile: archivo que define cómo se construye una imagen Docker.
 Especifica el sistm operativo, los paquetes a instalar, los archivos de configuración a copiar, los comandos a ejecutar cuando el container ejecute 
 
-
-En la construcción de contenedores/servicios, distinguimos entre BUILD TIME y RUNTIME:
+BUILD TIME VS RUNTIME:
 - Build time - Dockerfile: 
 	- creación de la imagen
 	- se instalan paquetes y dependencias
-	- se copian las templates y scripts de configuraciones
+	- se copian configuraciones y scripts de inicialización
 	- NO se crea application state - las imágenes se mantienen inmutables y sin estado
-- Runtime:
-	- Se inicializa la application state si se necesita
+- Runtime - scripts setup.sh usados como entrypoint:
+	- Se inicia el contenedor
+	- Se cargan variables de entorno y secrets
 	- La configuración se genera dinámicamente
-	- Se lee / escriben los datos 
-	
-Las imágenes definen la infraestructura vs Los contendores gestionan estado.
-Toda operación que dependa de contenido de bbdd, usuarios existentes, generación de credenciales, configuración del runtime -> ocurre en runtime, no durante la construcción de imagen.
+	- Se lee / escriben los datos (usuarios, bbdd)
+	- Se arranca (exec, cmd) el servicio ppal
 
+
+por ejemplo:
+-> Dockerfile de mariadb:
+	- Usa Debian Bookworm como base
+	- Instala servidor mariadb
+	- copia config personalizada
+	- pone el setup.sh cono emtrypoint
+
+-> setup.sh de mariadb:
+	- script que se ejecuta como entrypoint del contenedor -> ejecuta cada vez que el contenedor arranca
+	- carga las contraseñas
+	- detecta si la db ha sido inicializada
+		- si no lo ha sido, la inicializa, crea la db y los usuarios
+		- para hacer esto, arranca un mariadb temporal en background (no en foreground) para poder usar comandos SQL; luego nos cargamos esta instancia temporal de mariadb
+	- Y arranca mariadb en foreground con exec -> para ser PID1 y poder leer signals correctamente
+
+-> config de mariadb:
+	- se hace binding a 0.0.0.0 para aceptar conexiones desde el bridge network de docker
+	- escucha en puerto 3306
+
+
+-> Docker de wordpress: 
+	- no instala wordpress, sino que prepara todas las dependencias para que wordpress pueda instalarse en runtime
+	- debian imagen
+	- instala PHP, PHP-FPM (intérpretes requeridos por wordpress) y otras dependeicas como curl (para poder descargar wp-cli)
+	- no se incluye web server proque NGINX va en otro contenedor
+	- instala WP-CLI (command line interface para administrar wordpress)
+	- se copia custom config
+	- se copia el setup.sh
+	- se expone el puerto 9000
+	- entrypoint: setup.sh
+
+-> setup.sh de wordpress:
+	- carga contraseñas
+	- se asegura los permisos de los archivos de wordpress
+	- espera a que mariadb esté disponible (mysqladmin ping)
+	- si no hay wp-config.PHP	
+		- descarga wordpress
+		- genera wp-config.php con variables de entorno
+		- crea usuarios, inicializa db y credenciales
+	- arranca PHP-FPM en foreground con exec
+
+-> config de wordpress:
+	- configura la gestión de php-fpm para ejecutar scripts de php
+	- establece usuarios y grupo
+	- escucha a puerto 9000
+	- determina que es un gestor de procesos dinámico, crea procesos hijos hasta 5, no limpia env variables...
+
+-> Dockerfile de NGINX:
+	- usa debian Bookworm
+	- instala paquetes
+	- genera certificado TLS para HTTPS (transport layer security - protocolo que cifra comunicación entre cliente - servidor, protege datos)
+	- copia custom config
+	- expone 443
+	- entrypoint: NGINX debe ejecutarse en foreground. daemon off previene que NGINX haga fork en background; si pasase eso, no podriamos mandar señales al proceso que toca con docker compose, y no se controlaria el ciclo de vida del servicio/contenedor
+		-> DAEMON: proceso que se ejecuta en segundo plano
+		normalmente NGINX se ejecuta como daemon (background)
+NGINX actua como reverse proxy y envia peticiones PHP a wordpress usando FastCGI.
 
 LIFECYCLE DEL CONTENEDOR:
 Un contenedor vive mientras su PID1 (proceso ppal) esté activo.
 Por eso:
-- Los servicios corren en foreground (⚠️⚠️ qué era eso)
-- Usamos exec para que el servicio real sea PID1 (⚠️⚠️ qué es si no usasemos exec)
-Esto permite que Docker envíe signals correctamente a dodne toca cuando hacemos docker compose stop. ⚠️⚠️ si no a dónde las mandaria??
-
-⚠️⚠️ REPASAR EN MI TEORIA AMPLIA, PORQUE ESTAS COSAS ME CUESTA ENTENDER
+- Los servicios corren en foreground (EN PRIMER PLANO, NO EN BACKGROUND)
+- Usamos exec para que el servicio real sea PID1 
+Esto permite que Docker envíe signals correctamente a donde toca cuando hacemos docker compose stop. 
 
 La orquestación de todo esto se hace con Docker compose (.yml). Aquí se definen:
 - servicios
@@ -83,7 +141,5 @@ Esto demuestra:
 - networking OK
 - DB OK
 - persistencia OK
-
-
 
 
