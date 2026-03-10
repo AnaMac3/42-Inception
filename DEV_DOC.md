@@ -568,8 +568,9 @@ It focuses on the **practical implementation choices**, the role of each service
              inception/
                   │
                   ├── Makefile
-                  ├── .gitignore
-                  ├── README.md (opcional)
+                  ├── README.md
+                  ├── DEV_DOC.md
+                  ├── USER_DOC.md
                   └── srcs/
                       ├── .env
                       ├── secrets/
@@ -581,7 +582,7 @@ It focuses on the **practical implementation choices**, the role of each service
                       └── requirements/
                           ├── nginx/
                           │   ├── Dockerfile
-                          │   ├── conf/
+                          │   └── conf/
                           │       └── nginx.conf
                           │
                           ├── wordpress/
