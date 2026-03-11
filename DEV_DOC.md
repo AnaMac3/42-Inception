@@ -18,7 +18,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
     - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
-      - [Windows / WSL](#windows--wsl)
+      - [Windows / WSL host](#windows--wsl-host)
       - [42 iMacs / Linux (no sudo)](#42-imacs--linux-no-sudo)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
   - [Core Docker Compose commands](#core-docker-compose-commands)
@@ -40,12 +40,12 @@ This document describes the technical architecture of the *Inception* project. I
     - [WordPress](#wordpress)
     - [NGINX](#nginx)
   - [Docker Compose Orchestration](#docker-compose-orchestration)
-    - [Service, internal network, and volumes](#service,-internal-network,-and-volumes)
+    - [Service, internal network, and volumes](#service-internal-network-and-volumes)
     - [Startup flow and dependencies](#startup-flow-and-dependencies)
     - [Key `docker-compose.yml` directives](#key-docker-composeyml-directives)
   - [Data Persistence](#data-persistence)
     - [Persistent data locations](#persistent-data-locations)
-    - [Volume contents](#content-of-each-volume)
+    - [Volume contents](volume-contents)
     - [Relation with `make down / clean / fclean`](#relation-with-make-down--clean--fclean)
   - [WordPress - MariaDB Data Model](#wordpress---mariadb-data-model)
     - [`wp-config.php`](#wp-configphp)
@@ -59,7 +59,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [MariaDB inspection](#mariadb-inspection)
   - [Volume persistence verification](#volume-persistence-verification)
   - [Logs and debugging](#logs-and-debugging)
-  - [Clean shutdown verification](#verify-clean-shutdown)
+  - [Clean shutdown verification](#clean-shutdown-verification)
  
 --------
 
@@ -807,7 +807,7 @@ Docker performs the following steps:
 
 
 #### Data Persistence
-##### Persistent data location
+##### Persistent data locations
 All persistent data is stored explicitly on the VM filesystem: 
 
         /home/<login>/data/mariadb
