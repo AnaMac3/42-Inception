@@ -43,7 +43,7 @@ This document describes the technical architecture of the *Inception* project. I
     - [Service, internal network, and volumes](#service,-internal-network,-and-volumes)
     - [Startup flow and dependencies](#startup-flow-and-dependencies)
     - [Key `docker-compose.yml` directives](#key-docker-composeyml-directives)
-  - [Data persistence](#data-persistence)
+  - [Data Persistence](#data-persistence)
     - [Persistent data locations](#persistent-data-locations)
     - [Volume contents](#content-of-each-volume)
     - [Relation with `make down / clean / fclean`](#relation-with-make-down--clean--fclean)
