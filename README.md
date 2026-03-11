@@ -23,7 +23,7 @@ This project has been created as part of the 42 curriculum by amacarul.
   - [Architecture Overview](#architecture-overview)
       - [Services and responsibilities](#services-and-responsibilities)
       - [Request flow](request-flow)
-      - [Docker Network vs Host Network](docker-network-vs-host-network)
+      - [Docker Network vs Host Network](#docker-network-vs-host-network)
   - [Data Persistence](#data-persistence)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
