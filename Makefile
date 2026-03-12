@@ -30,7 +30,8 @@ clean:
 	@echo "$(CYAN)Cleaning containers, networks, and volumes... $(RESET)"
 	docker compose -f $(COMPOSE_FILE) down --volumes --rmi all
 
-fclean: clean #falta un @echo "$(CYAN)Deleting persistent data... $(RESET) -> DESPUÉS DEL CLEAN"
+fclean: clean 
+	@echo "$(CYAN)Deleting persistent data... $(RESET)"
 	@sudo rm -rf /home/amacarul/data/wordpress/*
 	@sudo rm -rf /home/amacarul/data/mariadb/*
 	@docker system prune -a --force

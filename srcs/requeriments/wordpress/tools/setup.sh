@@ -7,10 +7,10 @@
 # runs every time the WordPress container starts. 
 # 
 # Responsibilities:
-#	- Ensure correct ownership and permissions of WordPress files
 #	- Wait until the MariaDB service is reachable
 #	- Install and configure WordPress only on first container startup
 #	- Create the admin user and an additional application user
+#	- Ensure correct ownership and permissions of WordPress files
 #	- Start PHP-FPM in foreground as the main container process
 #
 # This script implements an "initialize-once" pattern:
@@ -27,15 +27,6 @@ set -e
 MYSQL_PASSWORD=$(cat /run/secrets/mysql_password)
 WORDPRESS_ADMIN_PASSWORD=$(cat /run/secrets/wp_admin_password)
 WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wp_user_password)
-
-# ------------------------------------------------------------------
-# File ownership and permissions
-# ------------------------------------------------------------------
-# PHP-FPM runs as the 'www-data' user. Correct ownership and 
-# permissions are required so that PHP can read/write plugins, uploads
-# and updates
-chown -R www-data:www-data /var/www/html
-chmod -R 755 /var/www/html
 
 # ------------------------------------------------------------------
 # Wait for MariaDB to become available
@@ -103,6 +94,15 @@ if [ ! -f wp-config.php ]; then
 		--role=subscriber \
 		--allow-root
 fi
+
+# ------------------------------------------------------------------
+# File ownership and permissions
+# ------------------------------------------------------------------
+# PHP-FPM runs as the 'www-data' user. Correct ownership and 
+# permissions are required so that PHP can read/write plugins, uploads
+# and updates
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
 
 # ------------------------------------------------------------------
 # Start PHP-FPM in foreground
