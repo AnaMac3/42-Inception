@@ -17,7 +17,7 @@ This document describes the technical architecture of the *Inception* project. I
   - [Secrets](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
     - [`/etc/hosts`](#etchosts)
-    - [SSH tunneling and SOCKS proxy (VM → host browser)](#ssh-tunneling-and-socks-proxy-vm--host-browser)
+    - [SSH tunneling and SOCKS proxy (VM to host browser)](#ssh-tunneling-and-socks-proxy-vm-to-host-browser)
       - [Windows / WSL host](#windows--wsl-host)
       - [42 iMacs / Linux (no sudo)](#42-imacs--linux-no-sudo)
 - [Build and launch the project using the Makefile and Docker Compose](#build-and-launch-the-project-using-the-makefile-and-docker-compose)
@@ -292,7 +292,7 @@ Verify that the domain resolves inside the VM:
 
 If it responds from `127.0.0.1`, the domain is configurated correctly inside the VM.  
 
-#### SSH tunneling and SOCKS proxy (VM → host browser)
+#### SSH tunneling and SOCKS proxy (VM to host browser)
 Since the services run inside a VM, HTTPS traffic cannot be accessed directly from the host browser. To reach the website at `https://login.42.fr`, use **SSH tunneling** if you have sudo privileges, or a **SOCKS proxy** if you do not (42 iMacs).  
 
 ##### Windows / WSL host  
