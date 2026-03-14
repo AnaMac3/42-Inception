@@ -205,12 +205,15 @@ Containers are ephemeral: deleting a container removes its filesystem. To avoid 
   - **Docker volumes**: managed by Docker, path hidden, recommended in production because they are safer.
   - **Bind mounts**: host-controlled path, easy to inspect, allows explicit paths. 
 
+⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
+
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |
 |-----|------|------|
 | **Advantages** | - Easy to use <br> - Docker manages permissions (less human error) <br> - Portable <br> - Recommended for production | - Full control over host path <br> - Easy to inspect files directly |
 | **Disadvantages** | - Location on host is not directly visible <br> - Subject requires specific path <br> - Harder to demonstrate persistence in a specific directory | - More prone to permission issues <br> - Less portable <br> - Host interference possible |
 
+⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
 In this project, data persistance is implemented using **bind mounts** to host directories:
 
               /home/login/data/wordpress  -> /var/www/html (WordPress files)
@@ -275,7 +278,7 @@ For implementation details, see: [`secrets` configuration](./DEV_DOC.md#secrets)
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
 
-
+⚠️ ⚠️  AÑADIR USO DE LA IA!!
 
 
 
