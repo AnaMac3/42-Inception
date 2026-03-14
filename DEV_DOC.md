@@ -1142,13 +1142,14 @@ Docker secrets must exists as runtime-mounte files.
         FROM wp_posts;  
 
 ### Volume Persistence Verification 
+ ⚠️ ⚠️ ⚠️CAMBIAR ESTO!!! COMPROBACIÓN DE QUE EXISTE VOLUMES:  
 
-Persistent data uses **bind mounts**.  
-- Verify host directories:
+          docker volume ls
 
-        du -sh /home/<login>/data/*
+          docker volume inspect inception_mariadb_data
+          docker volume inspect inception_wordpress_data
 
-- Mount mapping
+      
 | Service | Host Path | Container Path |
 |-----|-----|-----|
 | WordPress | `/home/login/data/wordpress` | `/var/www/html` |
