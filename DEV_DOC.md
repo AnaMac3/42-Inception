@@ -1149,11 +1149,11 @@ Docker secrets must exists as runtime-mounte files.
           docker volume inspect inception_mariadb_data
           docker volume inspect inception_wordpress_data
 
-      
-| Service | Host Path | Container Path |
+⚠️ ⚠️ ⚠️ sigue existiendo el /var/www/html y el var/lib/mysql???      
+| Service | Host Path | Container Path / Docker volume |
 |-----|-----|-----|
-| WordPress | `/home/login/data/wordpress` | `/var/www/html` |
-| MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` |
+| WordPress | `/home/login/data/wordpress` | `/var/www/html` / `/var/lib/docker/volumes/inception_wordpress_data/_data"` |
+| MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` / `/var/lib/docker/volumes/inception_mariadb_data/_data` |
 
 - Persistent behavior
 | Command | Result |
