@@ -51,6 +51,14 @@ done
 echo "MariaDB is ready!"
 
 # ------------------------------------------------------------------
+# Ensure initial WordPress files are present in the volume
+# ------------------------------------------------------------------
+#if [ -z "$(ls -A /var/www/html)" ]; then
+#	echo "Initializing WordPress files in volume..."
+#	cp -R /usr/src/wordpress/* /var/www/html || true
+#fi
+
+# ------------------------------------------------------------------
 # WordPress installation (first container startup only)
 # ------------------------------------------------------------------
 # The presence of 'wp-config.php' indicates that WordPress has 

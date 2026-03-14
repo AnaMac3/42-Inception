@@ -9,15 +9,7 @@
 #
 # All services communicate through a private Docker bridge network
 # and use persistent volumes to ensure data durability.
-secrets:
-  mysql_root_password:
-    file: ./secrets/mysql_root_password.txt
-  mysql_password:
-    file: ./secrets/mysql_password.txt
-  wp_admin_password:
-    file: ./secrets/wp_admin_password.txt
-  wp_user_password:
-    file: ./secrets/wp_user_password.txt
+
 services:
   # ==================================================================
   # NGINX 
@@ -42,8 +34,8 @@ services:
       - .env
     ports:
       - "443:443"
-    volumes:
-      - /home/amacarul/data/wordpress:/var/www/html
+    #volumes:
+    #  - wordpress_data:/var/www/html
     depends_on:
       - wordpress
     networks: 
@@ -75,7 +67,7 @@ services:
       - wp_admin_password
       - wp_user_password
     volumes:
-      - /home/amacarul/data/wordpress:/var/www/html
+      - wordpress_data:/var/www/html
     depends_on:
       - mariadb
     networks:
@@ -88,8 +80,7 @@ services:
   # - Uses an explicit container name
   # - Loads env variables (database name, user, passwords, and root
   # credentials)
-  # - Mounts the MariaDB data directory to the host. This
-  # ensures full persistence of database data
+  # - Mounts a Docker-managed volume used to persist MariaDB data
   # - Connects MariaDB to the internal network
   # - Automatically restarts if needed
   # ==================================================================
@@ -102,7 +93,7 @@ services:
       - mysql_password
       - mysql_root_password
     volumes:
-      - /home/amacarul/data/mariadb:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     networks:
       - inceptionnet
     restart: always
@@ -116,3 +107,35 @@ services:
 networks:
   inceptionnet:
     driver: bridge
+# ==================================================================
+# DOCKER VOLUMES
+# Uses the default Docker volume driver.
+# This creates named volumes for persistent data storage
+# ==================================================================
+volumes:
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/amacarul/data/wordpress
+      o: bind
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/amacarul/data/mariadb
+      o: bind
+
+# ==================================================================
+# DOCKER SECRETS
+# This section defines the secrets used by the services
+# ==================================================================
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+  mysql_password:
+    file: ./secrets/mysql_password.txt
+  wp_admin_password:
+    file: ./secrets/wp_admin_password.txt
+  wp_user_password:
+    file: ./secrets/wp_user_password.txt

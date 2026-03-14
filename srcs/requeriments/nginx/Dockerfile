@@ -30,7 +30,8 @@ FROM debian:bookworm
 #	- openssl: used to generate self-signed certificates
 # Temporary package lists are removed to reduce the final image size
 RUN apt-get update && apt-get install -y nginx openssl \
-&& rm -rf /var/lib/apt/lists/*
+&& rm -rf /var/lib/apt/lists/* \
+&& rm -f /var/www/html/index.nginx-debian.html
 
 # Create directory for SSL certificates
 # NGINX requires a location to store TLS keys and certificates
