@@ -21,12 +21,23 @@
 # Exit immediately if any command fails
 set -e
 
+cd /var/www/html
+
 # ------------------------------------------------------------------
 # Load secrets
 # ------------------------------------------------------------------
 MYSQL_PASSWORD=$(cat /run/secrets/mysql_password)
 WORDPRESS_ADMIN_PASSWORD=$(cat /run/secrets/wp_admin_password)
 WORDPRESS_USER_PASSWORD=$(cat /run/secrets/wp_user_password)
+
+# ------------------------------------------------------------------
+# File ownership and permissions
+# ------------------------------------------------------------------
+# PHP-FPM runs as the 'www-data' user. Correct ownership and 
+# permissions are required so that PHP can read/write plugins, uploads
+# and updates
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
 
 # ------------------------------------------------------------------
 # Wait for MariaDB to become available
@@ -49,14 +60,6 @@ do
 done
 
 echo "MariaDB is ready!"
-
-# ------------------------------------------------------------------
-# Ensure initial WordPress files are present in the volume
-# ------------------------------------------------------------------
-#if [ -z "$(ls -A /var/www/html)" ]; then
-#	echo "Initializing WordPress files in volume..."
-#	cp -R /usr/src/wordpress/* /var/www/html || true
-#fi
 
 # ------------------------------------------------------------------
 # WordPress installation (first container startup only)

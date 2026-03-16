@@ -34,8 +34,8 @@ services:
       - .env
     ports:
       - "443:443"
-    #volumes:
-    #  - wordpress_data:/var/www/html
+    volumes:
+      - wordpress_data:/var/www/html
     depends_on:
       - wordpress
     networks: 
@@ -132,10 +132,10 @@ volumes:
 # ==================================================================
 secrets:
   mysql_root_password:
-    file: ./secrets/mysql_root_password.txt
+    file: ../secrets/mysql_root_password.txt
   mysql_password:
-    file: ./secrets/mysql_password.txt
+    file: ../secrets/mysql_password.txt
   wp_admin_password:
-    file: ./secrets/wp_admin_password.txt
+    file: ../secrets/wp_admin_password.txt
   wp_user_password:
-    file: ./secrets/wp_user_password.txt
+    file: ../secrets/wp_user_password.txt

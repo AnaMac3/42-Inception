@@ -1,13 +1,22 @@
 NAME = inception
 
 COMPOSE_FILE = srcs/docker-compose.yml
-
 PROJECT_NAME = inception
+
+DATA_PATH = /home/amacarul/data
+WP_DATA = $(DATA_PATH)/wordpress
+DB_DATA = $(DATA_PATH)/mariadb
 
 CYAN = \033[0;36m
 RESET = \033[0m
 
-all: build up
+all: dirs build up
+
+dirs:
+	@echo "$(CYAN)Creating data directories... $(RESET)"
+	@mkdir -p $(DATA_PATH)
+	@mkdir -p $(WP_DATA)
+	@mkdir -p $(DB_DATA)
 
 build:
 	@echo "$(CYAN)Building images... $(RESET)"
@@ -29,16 +38,14 @@ status:
 	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) ps
 
 clean:
-	@echo "$(CYAN)Cleaning containers, networks, and volumes... $(RESET)"
+	@echo "$(CYAN)Cleaning containers, networks, and images... $(RESET)"
 	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) down --rmi all
 
 fclean: clean 
 	@echo "$(CYAN)Deleting persistent data... $(RESET)"
-	@sudo rm -rf /home/amacarul/data/wordpress/*
-	@sudo rm -rf /home/amacarul/data/mariadb/*
+	@sudo rm -rf $(DATA_PATH)
 	@docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) down --volumes
 	@docker system prune -a --force
-
 
 re: fclean all
 

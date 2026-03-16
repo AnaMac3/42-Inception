@@ -64,14 +64,17 @@ For more detailed explanations about development environment configuration, refe
      - Clone directly inside the VM (requires installing `git` in the VM)
 
    - Create the `.env` file in `srcs/` ([see DEV_DOC](./DEV_DOC.md#environment-variables-env-file))
-   - Create `secrets` directory ([see DEV_DOC](./DEV_DOC.md#secrets))
+   - Create the persistent volume folders in the VM:
+
+         mkdir -p /home/<login>/data/mariadb
+         mkdir -p /home/<login>/data/wordpress
 
 ### Build & Run
    - Start all services:
 
          make
 
-  > Note: `make` builds the bind-mounts in local path ¿¿?¿?⚠️⚠️⚠️, builds the Docker images and starts all containers in the stack.
+  > Note: `make` builds the Docker images and starts all containers in the stack.
 
   - Networking / SHH tunneling:
     - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
@@ -88,8 +91,8 @@ For more detailed explanations about development environment configuration, refe
 |---------|--------------|
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
-| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and docker volumes and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+| `make clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 > **Important**: Persistent data,`.env` files and `secrets` with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
 
@@ -203,7 +206,6 @@ Containers are ephemeral: deleting a container removes its filesystem. To avoid 
   - **Bind mounts**: host-controlled path, easy to inspect, allows explicit paths. 
 
 ⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
-⚠️⚠️ no usamos las dos cosas en realidad? docker volumes + bind mouints para tener los directorios en local??
 
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |

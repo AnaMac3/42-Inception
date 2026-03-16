@@ -65,7 +65,7 @@ This command:
 |---|---|
 |  `make stop`| Stops containers without removing them |
 | `make down` | Stops and removes containers and networks, keeps persistent data |
-| `make clean`| Removes containers, images, and network but preserves persistent data |
+| `make clean`| Removes containers, images, and Docker resources but preserves persistent data |
 | `make fclean` | Fully rests the project, including persitent website data |
      
 ## Access the website and the administrator panel

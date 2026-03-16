@@ -12,6 +12,7 @@ This document describes the technical architecture of the *Inception* project. I
     - [Basic VM management](#basic-vm-management)
   - [Installing Docker, Docker Compose and build tools](#installing-docker-docker-compose-and-build-tools)
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
+  - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Secrets](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
@@ -72,8 +73,8 @@ The setup includes:
 - Network and SSH access
 - Docker and Docker Compose
 - Shared folders (optional)
+- Persistent volumes
 - Environment variables (`.env`)
-- Secrets
 - Domain configuration and SSH tunneling
 
 ### Virtual Machine setup (VirtualBox + Debian)
@@ -217,6 +218,18 @@ Steps:
 
     If `vbpxsf` appears, the shared folders must work. 
 
+### Persistent volumes
+Persistent data is stored on the VM filesystem and mounted into containers.
+
+       mkdir -p /home/<login>/data/wordpress
+       mkdir -p /home/<login>/data/mariadb
+
+Adjust the permissions so that Docker can write:
+
+       sudo chown -R <login>:<login> /home/<login>/data
+
+These directories are later mounted as Docker bind mounts and store all persistent project data.    
+
 ### Environment variables (`.env` file)
 The `.env` file defines all configuration values used by Docker Compose and the containers.  
 - It contains no executable code
@@ -250,13 +263,12 @@ Docker mounts secrets inside the container at:
 Applications reads credentials directly from these fies instead of environmental variables.  
 Secrets directory structure in this project:
 
-            inception/secrets/
+            srcs/secrets/
               ├── mysql_root_password.txt
               ├── mysql_password.txt
               ├── wp_admin_password.txt
               └── wp_user_password.txt
 
-The structure of the project must be like [this](#project-structure).   
 Each fie contains only one password on a single line.  
 Docker Compose mounts these files securely into the containers during startups.  
 
@@ -359,8 +371,8 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 | `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
-| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and docker volumes and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+| `make clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 ⚠️ **Implication regarding images:**  
 If images are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
@@ -559,13 +571,13 @@ It focuses on the **practical implementation choices**, the role of each service
                   ├── README.md
                   ├── DEV_DOC.md
                   ├── USER_DOC.md
-                  ├── secrets/
-                  │    ├── mysql_root_password.txt
-                  │    ├── mysql_password.txt
-                  │    ├── wp_admin_password.txt
-                  │    └── wp_user_password.txt
                   └── srcs/
                       ├── .env
+                      ├── secrets/
+                      │    ├── mysql_root_password.txt
+                      │    ├── mysql_password.txt
+                      │    ├── wp_admin_password.txt
+                      │    └── wp_user_password.txt
                       ├── docker-compose.yml
                       └── requirements/
                           ├── nginx/
@@ -835,12 +847,13 @@ Bind mounts ensure data survives container removal and rebuilds.
   - Stops and removes:
     - containers
     - Docker networks
+    - Docker-managed volumes (if any)
     - built images
-  - Does not delete the bind-mounted directories nor docker volumes
+  - Does not delete the bind-mounted directories / the persistent volumes
 - `make fclean`:
   - Removes everything:
     - executes `clean`
-    - explicitly deletes all persistent bind-mounted data and docker volumes
+    - explicitly deletes all persistent bind-mounted data
     - performs a full Docker system prune
 
 > ⚠️ **Important distinction:**
@@ -1146,8 +1159,8 @@ Docker secrets must exists as runtime-mounte files.
 | Command | Result |
 |----|-----|
 | `make down` | Containers removed, data preserved |
-| `make clean` | Conainters/images/network removed, data preserved |
-| `make fclean` | Everything deleted including `home/login/data` and docker volumes |
+| `make clean` | Conainters/images removed, data preserved |
+| `make fclean` | Everything deleted including `home/login/data` |
 
 
 ### Logs and debugging
