@@ -12,7 +12,6 @@ This document describes the technical architecture of the *Inception* project. I
     - [Basic VM management](#basic-vm-management)
   - [Installing Docker, Docker Compose and build tools](#installing-docker-docker-compose-and-build-tools)
   - [Shared folders between host and VM](#shared-folders-between-host-and-vm)
-  - [Persistent volumes](#persistent-volumes)
   - [Environment variables (`.env` file)](#environment-variables-env-file)
   - [Secrets](#secrets)
   - [Domain configuration and SSH tunneling](#domain-configuration-and-ssh-tunneling)
@@ -73,8 +72,8 @@ The setup includes:
 - Network and SSH access
 - Docker and Docker Compose
 - Shared folders (optional)
-- Persistent volumes
 - Environment variables (`.env`)
+- Secrets
 - Domain configuration and SSH tunneling
 
 ### Virtual Machine setup (VirtualBox + Debian)
@@ -218,18 +217,6 @@ Steps:
 
     If `vbpxsf` appears, the shared folders must work. 
 
-### Persistent volumes
-Persistent data is stored on the VM filesystem and mounted into containers.
-
-       mkdir -p /home/<login>/data/wordpress
-       mkdir -p /home/<login>/data/mariadb
-
-Adjust the permissions so that Docker can write:
-
-       sudo chown -R <login>:<login> /home/<login>/data
-
-These directories are later mounted as Docker bind mounts and store all persistent project data.    
-
 ### Environment variables (`.env` file)
 The `.env` file defines all configuration values used by Docker Compose and the containers.  
 - It contains no executable code
@@ -263,12 +250,13 @@ Docker mounts secrets inside the container at:
 Applications reads credentials directly from these fies instead of environmental variables.  
 Secrets directory structure in this project:
 
-            srcs/secrets/
+            inception/secrets/
               ├── mysql_root_password.txt
               ├── mysql_password.txt
               ├── wp_admin_password.txt
               └── wp_user_password.txt
 
+The structure of the project must be like [this](#project-structure).   
 Each fie contains only one password on a single line.  
 Docker Compose mounts these files securely into the containers during startups.  
 
@@ -571,13 +559,13 @@ It focuses on the **practical implementation choices**, the role of each service
                   ├── README.md
                   ├── DEV_DOC.md
                   ├── USER_DOC.md
+                  ├── secrets/
+                  │    ├── mysql_root_password.txt
+                  │    ├── mysql_password.txt
+                  │    ├── wp_admin_password.txt
+                  │    └── wp_user_password.txt
                   └── srcs/
                       ├── .env
-                      ├── secrets/
-                      │    ├── mysql_root_password.txt
-                      │    ├── mysql_password.txt
-                      │    ├── wp_admin_password.txt
-                      │    └── wp_user_password.txt
                       ├── docker-compose.yml
                       └── requirements/
                           ├── nginx/
