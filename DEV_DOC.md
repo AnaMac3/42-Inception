@@ -371,8 +371,8 @@ The Makefile wraps the Docker Compose commands above and defines the project's p
 | `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `make clean` | Stops and removes containers, networks, Docker-managed volumes, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
-| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+| `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
+| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and docker volumes and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 ⚠️ **Implication regarding images:**  
 If images are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
@@ -847,13 +847,12 @@ Bind mounts ensure data survives container removal and rebuilds.
   - Stops and removes:
     - containers
     - Docker networks
-    - Docker-managed volumes (if any)
     - built images
-  - Does not delete the bind-mounted directories / the persistent volumes
+  - Does not delete the bind-mounted directories nor docker volumes
 - `make fclean`:
   - Removes everything:
     - executes `clean`
-    - explicitly deletes all persistent bind-mounted data
+    - explicitly deletes all persistent bind-mounted data and docker volumes
     - performs a full Docker system prune
 
 > ⚠️ **Important distinction:**
@@ -1159,8 +1158,8 @@ Docker secrets must exists as runtime-mounte files.
 | Command | Result |
 |----|-----|
 | `make down` | Containers removed, data preserved |
-| `make clean` | Conainters/images removed, data preserved |
-| `make fclean` | Everything deleted including `home/login/data` |
+| `make clean` | Conainters/images/network removed, data preserved |
+| `make fclean` | Everything deleted including `home/login/data` and docker volumes |
 
 
 ### Logs and debugging
