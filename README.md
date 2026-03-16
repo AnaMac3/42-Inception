@@ -64,6 +64,7 @@ For more detailed explanations about development environment configuration, refe
      - Clone directly inside the VM (requires installing `git` in the VM)
 
    - Create the `.env` file in `srcs/` ([see DEV_DOC](./DEV_DOC.md#environment-variables-env-file))
+   - Create `secrets` directory ([see DEV_DOC](./DEV_DOC.md#secrets))
 
 ### Build & Run
    - Start all services:
