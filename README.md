@@ -70,7 +70,7 @@ For more detailed explanations about development environment configuration, refe
 
          make
 
-  > Note: `make` builds the Docker images and starts all containers in the stack.
+  > Note: `make` builds the bind-mounts in local path ¿¿?¿?⚠️⚠️⚠️, builds the Docker images and starts all containers in the stack.
 
   - Networking / SHH tunneling:
     - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
@@ -202,6 +202,7 @@ Containers are ephemeral: deleting a container removes its filesystem. To avoid 
   - **Bind mounts**: host-controlled path, easy to inspect, allows explicit paths. 
 
 ⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
+⚠️⚠️ no usamos las dos cosas en realidad? docker volumes + bind mouints para tener los directorios en local??
 
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |
