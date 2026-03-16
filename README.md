@@ -64,10 +64,6 @@ For more detailed explanations about development environment configuration, refe
      - Clone directly inside the VM (requires installing `git` in the VM)
 
    - Create the `.env` file in `srcs/` ([see DEV_DOC](./DEV_DOC.md#environment-variables-env-file))
-   - Create the persistent volume folders in the VM:
-
-         mkdir -p /home/<login>/data/mariadb
-         mkdir -p /home/<login>/data/wordpress
 
 ### Build & Run
    - Start all services:
