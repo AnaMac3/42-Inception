@@ -1,7 +1,6 @@
 NAME = inception
 
 COMPOSE_FILE = srcs/docker-compose.yml
-PROJECT_NAME = inception
 
 DATA_PATH = /home/amacarul/data
 WP_DATA = $(DATA_PATH)/wordpress
@@ -20,31 +19,33 @@ dirs:
 
 build:
 	@echo "$(CYAN)Building images... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) build
+	docker compose -f $(COMPOSE_FILE) build
 
 up:
 	@echo "$(CYAN)Launching containers... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d
 
 stop:
 	@echo "$(CYAN)Stopping containers... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) stop
+	docker compose -f $(COMPOSE_FILE) stop
 down:
 	@echo "$(CYAN)Shutting down containers... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) down
+	docker compose -f $(COMPOSE_FILE) down
 
 status:
 	@echo "$(CYAN)Checking status... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) ps
+	docker compose -f $(COMPOSE_FILE) ps
 
 clean:
 	@echo "$(CYAN)Cleaning containers, networks, and images... $(RESET)"
-	docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) down --rmi all
+	docker compose -f $(COMPOSE_FILE) down --rmi all
 
 fclean: clean 
 	@echo "$(CYAN)Deleting persistent data... $(RESET)"
+#	@docker compose -f $(COMPOSE_FILE) down --volumes
+	@docker volume rm -f $(docker volume ls -q) || true
+#	@docker volume prune -f
 	@sudo rm -rf $(DATA_PATH)
-	@docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE) down --volumes
 	@docker system prune -a --force
 
 re: fclean all

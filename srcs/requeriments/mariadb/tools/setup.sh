@@ -27,6 +27,9 @@
 # Exit inmediately if any command fails
 set -e 
 
+echo "DEBUG BEFORE ANYTHING:"
+ls -la /var/lib/mysql
+
 # ------------------------------------------------------------------
 # Load secrets
 # ------------------------------------------------------------------
@@ -54,14 +57,20 @@ chown mysql:mysql /run/mysqld
 # If 'mysql' system directory does not exists, it means this is the  
 # first time the container runs and the database must be initialized.
 
-if [ ! -d "$DATADIR/mysql" ]; then
+echo "DEBUG BEFORE IF:"
+ls -la /var/lib/mysql
+
+if [ ! -f "$DATADIR/.initialized" ]; then
 		echo "Initializing MariaDB database..."
+		echo "ENTERING INIT BLOCK"
 
 		# Create the internal MariaDB system tables.
 		# This must be done before the server can start.
 		# This process is performed as the mysql user, not as root,
 		# because MariaDB should never run with root privileges.
 		mariadb-install-db --user=mysql --datadir="$DATADIR"
+
+## CUIDADO!!! ESTAMOS REINSTALANDO DB CUANDO EN ALGUN MOMENTO SE HA INSTALADO ANTERIORMENTE! CORREGIR ESTO, NO DEBERIA INSTALARSE ANTES!!
 
 		# Start MariaDB temporarily in the background ('&')
 		# This allows executing SQL commands (to create databases
@@ -110,6 +119,8 @@ EOF
 	# This ensures a clean shutdown before restarting the server in foreground
 	kill "$pid"
 	wait "$pid"
+
+touch "$DATADIR/.initialized"
 fi
 
 # ------------------------------------------------------------------

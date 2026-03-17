@@ -70,11 +70,20 @@ echo "MariaDB is ready!"
 if [ ! -f wp-config.php ]; then
 	echo "Installing WordPress..."
 
+	#DEBUG
+	echo "Current dir: $(pwd)"
+	echo "Before download, contents:"
+	ls -la /var/www/html
+	echo "Downloading WordPress core..."
+	wp core download --allow-root || { echo "WP download failed!"; exit 1; }
+	echo "After download, contents:"
+	ls -la /var/www/html
+
 	# Download WordPress core files
 	# --allow-root: WP-CLI normally refuses to run as root (for
 	# security), but the container starts as root, so this flag
 	# is required
-	wp core download --allow-root
+	# wp core download --allow-root
 
 	# Generate wp-config.php using env variables
 	# Connets WordPress to MariaDB
