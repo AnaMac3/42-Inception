@@ -60,7 +60,7 @@ chown mysql:mysql /run/mysqld
 echo "DEBUG BEFORE IF:"
 ls -la /var/lib/mysql
 
-if [ ! -f "$DATADIR/.initialized" ]; then
+if [ ! -d "$DATADIR/mysql" ]; then
 		echo "Initializing MariaDB database..."
 		echo "ENTERING INIT BLOCK"
 
@@ -69,8 +69,6 @@ if [ ! -f "$DATADIR/.initialized" ]; then
 		# This process is performed as the mysql user, not as root,
 		# because MariaDB should never run with root privileges.
 		mariadb-install-db --user=mysql --datadir="$DATADIR"
-
-## CUIDADO!!! ESTAMOS REINSTALANDO DB CUANDO EN ALGUN MOMENTO SE HA INSTALADO ANTERIORMENTE! CORREGIR ESTO, NO DEBERIA INSTALARSE ANTES!!
 
 		# Start MariaDB temporarily in the background ('&')
 		# This allows executing SQL commands (to create databases
@@ -120,7 +118,6 @@ EOF
 	kill "$pid"
 	wait "$pid"
 
-touch "$DATADIR/.initialized"
 fi
 
 # ------------------------------------------------------------------

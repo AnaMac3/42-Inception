@@ -16,6 +16,7 @@ dirs:
 	@mkdir -p $(DATA_PATH)
 	@mkdir -p $(WP_DATA)
 	@mkdir -p $(DB_DATA)
+	sudo chown -R 999:999 /home/amacarul/data
 
 build:
 	@echo "$(CYAN)Building images... $(RESET)"
@@ -43,7 +44,8 @@ clean:
 fclean: clean 
 	@echo "$(CYAN)Deleting persistent data... $(RESET)"
 #	@docker compose -f $(COMPOSE_FILE) down --volumes
-	@docker volume rm -f $(docker volume ls -q) || true
+#	@docker volume rm -f $(docker volume ls -q) || true
+	@docker volume ls -q | xargs -r docker volume rm -f
 #	@docker volume prune -f
 	@sudo rm -rf $(DATA_PATH)
 	@docker system prune -a --force

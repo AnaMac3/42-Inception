@@ -32,7 +32,8 @@ FROM debian:bookworm
 # The package list is updated first to ensure the latest metadata.
 RUN apt-get update \
 && apt-get install -y mariadb-server \
-&& rm -rf /var/lib/apt/lists/*
+&& rm -rf /var/lib/apt/lists/* \
+&& rm -rf /var/lib/mysql/*
 
 # Copy a custom MariaDB configuration file.
 # By default, MariaDB binds only to localhost (127.0.0.1), which would
