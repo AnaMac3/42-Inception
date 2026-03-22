@@ -24,7 +24,7 @@ This project has been created as part of the 42 curriculum by amacarul.
       - [Services and responsibilities](#services-and-responsibilities)
       - [Request flow](request-flow)
       - [Docker Network vs Host Network](#docker-network-vs-host-network)
-  - [Data Persistence](#data-persistence)
+  - [Volumes and Data Persistence](#volumes-and-data-persistence)
     - [Docker Volumes vs Bind Mounts](#docker-volumes-vs-bind-mounts)
   - [Secrets vs Environment Variables](#secrets-vs-environment-variables)
     - [Environment variables (`.env`)](#environment-variables-env)
@@ -198,26 +198,22 @@ Thanks to the internal bridge network:
 This ensures internal traffic is isolated, secure, and predictable.  
 
 ### Volumes and Data Persistence
-Containers are ephemeral: deleting a container removes its filesystem. To avoid this, Docker allows the **data persistant outside the container** by two different ways:
-  - **Docker volumes**: managed by Docker, path hidden, recommended in production because they are safer.
-  - **Bind mounts**: host-controlled path, easy to inspect, allows explicit paths. 
+Containers are ephemeral: deleting a container removes its filesystem. To persist data, Docker provides different storage mechanisms.   
+In this project, we use a **hybrid approach based on Docker volumes configured with bind-backed storage**.   
+There are two main concepts:  
+  - **Docker volumes**: storage objects fully managed by Docker. The physical location on host is abstracted internally by Docker.   
+  - **Bind mounts**: direct mapping between a specific directory on the host and a path inside the container. Host-controlled path, easy to inspect.
 
-⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
-⚠️⚠️ no usamos las dos cosas en realidad? docker volumes + bind mouints para tener los directorios en local??
+In this project, we use **Docker volumes with bind-backedn configuration (driver_opts)**. This means Docker volumes are defined and managed by Docker, but physically stored in specific host directories.  
 
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |
 |-----|------|------|
-| **Advantages** | - Easy to use <br> - Docker manages permissions (less human error) <br> - Portable <br> - Recommended for production | - Full control over host path <br> - Easy to inspect files directly |
-| **Disadvantages** | - Location on host is not directly visible <br> - Subject requires specific path <br> - Harder to demonstrate persistence in a specific directory | - More prone to permission issues <br> - Less portable <br> - Host interference possible |
+| **Advantages** | - Managed by Docker <br> - Safer abstraction layer <br> - Portable configuration <br> - Standard in containerized apps <br> - Recommended for production | - Full control over host path <br> - Easy direct inspection <br> - Inmediate visibility of files |
+| **Disadvantages** | - Location on host is not directly visible, host path is abstracted <br> - Requires Docker tooling to inspect | - More prone to permission issues <br> - Less portable <br> - Strong dependecy on host structure |
 
-⚠️ ⚠️ EN ESTE PROYECTO HAY QUE USAR DOCKER VOLUMES
-In this project, data persistance is implemented using **bind mounts** to host directories:
+> ⚠️ In this project we do not use raw bind mounts directly in services. Instead, we define Docker volumes that are physically stored in specific host paths.
 
-              /home/login/data/wordpress  -> /var/www/html (WordPress files)
-              /home/login/data/mariadb    -> /var/lib/mysql (database files)
-
-> This ensures that website files and database data persist across container restarts and rebuilds. Docker volumes could be used in production, but bind mounts give precise control over paths for this project.  
 
 ### Secrets vs Environment Variables
 This project separates **configuration** data from **sensitive credentials** following Docker best practices.  
