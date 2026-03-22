@@ -909,6 +909,42 @@ The goal is to validate that:
 - persistent data behaves as expected
 - containers stop gracefully
 
+❌❌FALTA AÑADIR:
+- infraestructura general:
+  - make fclean y make fucionan bien
+  - no quedan restos previos
+  - directorios bind mounts se crean correctamente
+- MARIADB
+  - inicializa solo un a vez
+  - usuarios y db se crean correctamente
+  - permisos correctos (sin errores en logs)
+  - persistencia de datoa
+- WordPress
+  - conecta correctamente con mariadb
+  - instalación funcional
+  - persistencia de datos
+- NGINX + https
+  - solo conecta con peurto 443
+  - no responde a otros puertos
+  - certificado tls funciona
+  - acceso por navegador OK
+- red docker
+  - todos los contenedores están en la misma red
+  - comunicación interna OK
+- volumenes / bind mounts
+  -  daots en /home/login/data
+  -  persistencia real tras reinicio
+  -  no mezcla rara entre volumen docker y host
+-  reinicios y comportamient
+  - docker compose down/up no rompe nada
+  - servicios se levantan solos (restart:always)
+- seguridad básica
+  - mariadb no expuesto al host
+  - credenciales via secrets
+  - root remoto deshbailitado
+  - 
+
+
 ### Containers State Verification
 - List running containers:
 
