@@ -912,8 +912,22 @@ The goal is to validate that:
 ❌❌FALTA AÑADIR:
 - infraestructura general:
   - make fclean y make fucionan bien
-  - no quedan restos previos
-  - directorios bind mounts se crean correctamente
+      - Comprobar que no hay restos: después del make fclean
+   
+            docker ps -a -> sirve para ver stopped containers
+            docker images
+            docker volumes ls
+        
+        No tienen que mostrar nada
+
+      - Tras hacer make
+   
+            docker ps -> muestra los tres contenedores
+            docker network ls -> aparece inceptionnet, de tipo bridge
+            docker volumen ls -> aparecen los dos volúmenes
+  
+        Y aparecen los directorios en el host con datos
+  
 - MARIADB
   - inicializa solo un a vez
   - usuarios y db se crean correctamente
