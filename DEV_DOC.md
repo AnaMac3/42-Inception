@@ -356,7 +356,7 @@ Although no source code is compiled, `make` orchestrates Docker Compose commands
 The Makefile wraps the Docker Compose commands above and defines the project's persistence policy.  
 | Makefile command | Description |
 |---------|--------------|
-| `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d` |
+| `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d`. Also creates the bind-mount directories. Requires sudo to set correct permissions for mariadb. |
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
 | `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
 | `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
