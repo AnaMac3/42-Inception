@@ -30,6 +30,7 @@ This project has been created as part of the 42 curriculum by amacarul.
     - [Environment variables (`.env`)](#environment-variables-env)
     - [Docker secrets](#docker-secrets)
 - [Resources](#resources)
+  - [AI Usage](#ai-usage)
 
 ----------------------------------------
 
@@ -71,11 +72,11 @@ For more detailed explanations about development environment configuration, refe
 
          make
 
-  > Note: `make` creates the persistent storage directories on the host, builds the Docker images, creates the container stack, and starts all services defined in docker-compose.  
+  > Note: `make` prepares the host environment by creating the required persistent storage directories and setting proper permissions for Docker volume binding. It then builds the Docker images, creates the container stack, and starts all services defined in docker-compose.  
 
   - Networking / SHH tunneling:
     - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
-    - Domain configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC#domain-configuration-and-ssh-tunneling).
+    - Domain configuration and SSH tunneling: [see DEV_DOC](./DEV_DOC.md#domain-configuration-and-ssh-tunneling).
 
    - Access to the website
      - Open in your browser:
@@ -182,18 +183,18 @@ Services communicate through a private Docker network, while only one service is
 1. The browser connect to NGINX via HTTPS
 2. NGINX serves static files or forwards PHP request
 3. PHP-FPM executes WordPress code
-4. WordPress queries MariaDB when data is required
+4. WordPress (PHP-FPM) queries MariaDB via SQL using credentials defined in `wp-config.php` 
 5. The generated HTML response is returned to the browser  
 
 #### Docker Network vs Host Network
 Containers communicate over networks. There are two main types:  
-- **Bridge network (default)**: private network for containers, allows secure communication using service names. Internal ports are not exposed to the host unless explicitly mapped.  
+- **Bridge network (default)**: private network for containers, allows secure communication using service names. Internal ports are not exposed to the host unless explicitly mapped, they are only accessible inside the Docker network.    
 - **Host network**: container shares the host's network stack; ports are exposed directly.
 
 > In *Inception*, all services uses a bridge network for security and isolation. This network is defined in the `docker-compose.yml` file.  
 
 Thanks to the internal bridge network:
-- WordPress connects to MariaD using the service name `mariadb` (`setup.sh`)
+- WordPress connects to MariaDB using the service name `mariadb` (`setup.sh`)
 - NGINX forwards PHP requests to WordPress using `fastcgi_pass wordpress:9000` (defined in `nginx.conf`)
 This ensures internal traffic is isolated, secure, and predictable.  
 
@@ -201,18 +202,16 @@ This ensures internal traffic is isolated, secure, and predictable.
 Containers are ephemeral: deleting a container removes its filesystem. To persist data, Docker provides different storage mechanisms.   
 In this project, we use a **hybrid approach based on Docker volumes configured with bind-backed storage**.   
 There are two main concepts:  
-  - **Docker volumes**: storage objects fully managed by Docker. The physical location on host is abstracted internally by Docker.   
-  - **Bind mounts**: direct mapping between a specific directory on the host and a path inside the container. Host-controlled path, easy to inspect.
-
-In this project, we use **Docker volumes with bind-backedn configuration (driver_opts)**. This means Docker volumes are defined and managed by Docker, but physically stored in specific host directories.  
+  - **Docker volumes**: storage objects fully managed by Docker. The physical location on host filesystem location is abstracted internally by Docker, unless configured otherwise.     
+  - **Bind mounts**: direct mapping between a specific directory on the host and a path inside the container. Host-controlled path, easy to inspect.  
 
 #### Docker Volumes vs Bind Mounts
 | Feature | Docker Volume | Bind Mount |
 |-----|------|------|
-| **Advantages** | - Managed by Docker <br> - Safer abstraction layer <br> - Portable configuration <br> - Standard in containerized apps <br> - Recommended for production | - Full control over host path <br> - Easy direct inspection <br> - Inmediate visibility of files |
-| **Disadvantages** | - Location on host is not directly visible, host path is abstracted <br> - Requires Docker tooling to inspect | - More prone to permission issues <br> - Less portable <br> - Strong dependecy on host structure |
+| **Advantages** | - Managed by Docker <br> - Safer abstraction layer <br> - Portable configuration <br> - Standard in containerized apps <br> - Recommended for production | - Full control over host path <br> - Easy direct inspection <br> - Immediate visibility of files |
+| **Disadvantages** | - Location on host is not directly visible, host path is abstracted <br> - Requires Docker tooling to inspect | - More prone to permission issues <br> - Less portable <br> - Strong dependency on host structure |
 
-> ⚠️ In this project we do not use raw bind mounts directly in services. Instead, we define Docker volumes that are physically stored in specific host paths.
+In this project, we do not use raw bind mounts in service definition. Instead, we define **Docker volumes with bind-backend configuration (driver_opts)**. This means Docker volumes are defined and managed by Docker, but physically stored in specific host directories.  
 
 
 ### Secrets vs Environment Variables
@@ -230,7 +229,7 @@ The `.env` file:
 - contains **configuration only**
 - allows dynamic container configuration without modifying source code
 - **must NOT be commited** to versiol control  
-Environment variables are visible inside containers and may appear in container metadata.
+Environment variables **are not considered secure** because they are visible through container inspection.  
 For details about how environment variables are configured in this project, see: [`.env` configuration](./DEV_DOC.md#environment-variables-env-file)  
 
 #### Docker Secrets
@@ -272,8 +271,17 @@ For implementation details, see: [`secrets` configuration](./DEV_DOC.md#secrets)
 [Forstman1 repo](https://github.com/Forstman1/inception-42)  
 [gemartin99 repo](https://github.com/gemartin99/Inception?tab=readme-ov-file)  
 
-⚠️ ⚠️  AÑADIR USO DE LA IA!!
+### AI Usage
+During the development of this project, AI tools were used as an auxiliary learning and productivity resource.  
+AI assitance was used for:
+- Understanding theoretical concepts related to Docker, networking, system architecture and the deployed stack
+- Helping structure and organize the development workflow
+- Debugging issues and analyzing errors
+- Writting the documentation
 
+All AI-generated suggestions were critically reviewed, tested, and validated manually. No code or configuration was blindly copied without full understanding of its behavior and implications.  
+The final implementation reflects personal understanding of all components.  
+AI tools were used strictly as a support mechanism to enhance learning, not as replacement for development work.  
 
 
 
