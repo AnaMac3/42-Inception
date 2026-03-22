@@ -64,14 +64,14 @@ For more detailed explanations about development environment configuration, refe
      - Clone directly inside the VM (requires installing `git` in the VM)
 
    - Create the `.env` file in `srcs/` ([see DEV_DOC](./DEV_DOC.md#environment-variables-env-file))
-   - Create `secrets` directory ([see DEV_DOC](./DEV_DOC.md#secrets))
+   - Create `secrets` directory and files ([see DEV_DOC](./DEV_DOC.md#secrets))
 
 ### Build & Run
    - Start all services:
 
          make
 
-  > Note: `make` builds the bind-mounts in local path ¿¿?¿?⚠️⚠️⚠️, builds the Docker images and starts all containers in the stack.
+  > Note: `make` creates the persistent storage directories on the host, builds the Docker images, creates the container stack, and starts all services defined in docker-compose.  
 
   - Networking / SHH tunneling:
     - As services run inside the VM, HTTPS traffic must be forwarded to your host to access the site from the browser.
