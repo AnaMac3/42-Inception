@@ -56,6 +56,7 @@ Run:
          make
          
 This command:
+- builds the bind mount directories. Requires sudo to set correct permissions for mariadb
 - builds the Docker images (if needed)
 - starts all services
 - deploys the website automatically
