@@ -350,17 +350,16 @@ Although no source code is compiled, `make` orchestrates Docker Compose commands
 | `docker compose down --volumes --rmi all` | Removes containers, networks, Docker-managed volumes, and images |
 | `docker system prune -a --force` | Removes all unused Docker objects (containers, images, networks, cache) |
 
-⚠️ Bind-mounted directories (`/home/login/data/...`) are not removed unless explicitly deleted.  
-
 ### Makefile shortcuts
 The Makefile wraps the Docker Compose commands above and defines the project's persistence policy.  
 | Makefile command | Description |
 |---------|--------------|
-| `make` | Builds Docker images (if needed) and starts the full stack in detached mode. Internally, runs - it does `docker compose build` followed by `docker compose up -d`. Also creates the bind-mount directories. Requires sudo to set correct permissions for mariadb. |
+| `make` | Creates required host directories for persistent storage, sets correct permissions (required for MariaDB UID alignment), builds Docker images if needed, and starts the full stack in detached mode.|
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
-| `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
-| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and docker volumes and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+| `make down` | Stops and removes containers and Docker Compose networks. Persistent data stored in bind-backed host directories is preserved. Docker volumes are not removed. Images are not deleted. |
+| `make clean` | Stops and removes containers, networks, and project images.Persistent data stored in bind-backed host directories is preserved. |
+| `make fclean` | Performs `clean`, then deletes all persistent host data directories, removes all Docker volumes, and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+
 
 ⚠️ **Implication regarding images:**  
 If images are not removed (`make down`), changes in `Dockerfile` or `setup.sh` will not be applied unles `docker compose build` (or `make`) is run again.  
@@ -372,7 +371,7 @@ It focuses on **how Docker containers behave**, how their lifecycle is managed, 
 ### Container execution model
 This project uses a **multi-container architecture**, where each service runs inside its **own isolated container** with a **single responsibility**.  
 Containers communicate through a **private Docker bridge network**.    
-Persistent application state is stored outside containers using **bind-mounted volumes** on the host system.   
+Persistent application state is stored outside containers using Docker volumes configured with bind-backed storage on the host system.   
 
 #### Build time vs runtime
 A fundamental concept in Docker is the strict separation between **build time** and **runtime**.
@@ -751,7 +750,7 @@ This design:
 
 Unlike `host` network, which exposes containers directly to the host network, a bridge network provides isolation and controlled communication between services. This approach is more secure and better suited for multi-container architectures.  
 
-Two **persistent bind mounts** are defined:
+Two **persistent bind-backed Docker volumes** are defined:
 
               /home/login/data/wordpress
               /home/login/data/mariadb
@@ -787,7 +786,7 @@ Docker performs the following steps:
 | `env_file` | Specifies a file containing environment variables that are injected into the container at runtime. |
 | `image` | Specifies an existing image to use. In *Inception*, custom images are built instead, as required by the subject. |
 | `ports` | Maps ports from the host to the container (`HOST_PORT:CONTAINER_PORT`) |
-| `volumes` | Defines persistent storage by mounting host directories into containers. |
+| `volumes` | Defines persistent storage using Docker volumes. |
 | `depends_on` | Defines startup order between services, but does not ensure service readiness. |
 | `networks` | Specifies the networks the container is connected to. |
 | `restart` | Defines the container restart policy in case of failure. |
@@ -801,10 +800,9 @@ All persistent data is stored explicitly on the VM filesystem:
         /home/<login>/data/mariadb
         /home/<login>/data/wordpress
 
-- MariaDB stores its database files in the mariadb volume
-- WordPress stores uploads, plugins, and themes in `wp-content`  
-
-Bind mounts ensure data survives container removal and rebuilds.
+- MariaDB stores its database files in a Docker volume that is **bind-backed** to `/home/<login>/data/mariadb` 
+- WordPress stores its core files, uploads, plugins, and themes in a Docker volume **bind backed** to `/home/<login>/data/wordpress`  
+- These **bind-backed Docker volumes** ensure data survives container removal, rebuilds, and restarts.  
 
 ##### Volume contents
 ###### MariaDB
@@ -836,11 +834,11 @@ Bind mounts ensure data survives container removal and rebuilds.
     - containers
     - Docker networks
     - built images
-  - Does not delete the bind-mounted directories nor docker volumes
+  - Does not delete the bind-backed directories nor docker volumes
 - `make fclean`:
   - Removes everything:
     - executes `clean`
-    - explicitly deletes all persistent bind-mounted data and docker volumes
+    - explicitly deletes all persistent bind-backed data and Docker volumes
     - performs a full Docker system prune
 
 > ⚠️ **Important distinction:**
@@ -945,7 +943,7 @@ The goal is to validate that:
 - red docker
   - todos los contenedores están en la misma red
   - comunicación interna OK
-- volumenes / bind mounts
+- volumenes / bind-backed directories
   -  daots en /home/login/data
   -  persistencia real tras reinicio
   -  no mezcla rara entre volumen docker y host
