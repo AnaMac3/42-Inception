@@ -88,9 +88,9 @@ For more detailed explanations about development environment configuration, refe
 | Makefile command | Description |
 |---------|--------------|
 | `make stop` | Stops all running containers without removing them. Containers, networks, images, and volumes remain intact. |
-| `make down` | Stops and removes containers and Docker Compose networks. Docker-managed volumes are removed, but bind-mounted persistent data in `/home/login/data/...` is preserved. Images are not deleted. |
-| `make clean` | Stops and removes containers, networks, and project images. Persistent data directories in `/home/login/data/...` are not deleted. |
-| `make fclean` | Performs `make clean`, then deletes all persistent data in `/home/login/data/...` and docker volumes and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
+| `make down` |  Stops and removes containers and Docker Compose networks. Persistent data stored in bind-backed host directories is preserved. Docker volumes are not removed. Images are not deleted. |
+| `make clean` | Stops and removes containers, networks, and project images.Persistent data stored in bind-backed host directories is preserved.|
+| `make fclean` | Performs `clean`, then deletes all persistent host data directories, removes all Docker volumes, and runs `docker system prune -a --force`. This fully resets the project to a fresh state.|
 
 > **Important**: Persistent data,`.env` files and `secrets` with sensitive credentials should **never** be pushed to Github. Only Makefile, Dockerfiles, docker-compose.yml, scripts, and configuration files are versioned.   
 
