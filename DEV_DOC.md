@@ -899,247 +899,127 @@ The `post_author` field references `wp_users.ID`:
 
 ## Inspection and testing
 This section explains how to **inspect, verify, and debug** the running *Inception* infrastructure.  
-The goal is to validate that:
-- containers run correctly
-- configuration is injected properly
-- secrets are securely handled
-- services communicate correctly
-- persistent data behaves as expected
-- containers stop gracefully
 
-❌❌FALTA AÑADIR:
-- infraestructura general:
-  - make fclean y make fucionan bien
-      - Comprobar que no hay restos: después del make fclean
-   
-            docker ps -a -> sirve para ver stopped containers
-            docker images
-            docker volumes ls
-        
-        No tienen que mostrar nada
+### Infrastructure and clean state verification
+- Before starting the project, ensure a clean environment:
 
-      - Tras hacer make
-   
-            docker ps -> muestra los tres contenedores
-            docker network ls -> aparece inceptionnet, de tipo bridge
-            docker volumen ls -> aparecen los dos volúmenes
+        make fclean
+
+- Verify no leftover resources exist:
+
+      docker ps -a
+      docker images
+      docker volumes ls
   
-        Y aparecen los directorios en el host con datos
+  Expected result:
+  - No project container (neither stopped ones)
+  - No project images
+  - No project volumes
   
-- MARIADB
-  - inicializa solo un a vez
-  - usuarios y db se crean correctamente
-  - permisos correctos (sin errores en logs)
-  - persistencia de datoa
-- WordPress
-  - conecta correctamente con mariadb
-  - instalación funcional
-  - persistencia de datos
-- NGINX + https
-  - solo conecta con peurto 443
-  - no responde a otros puertos
-  - certificado tls funciona
-  - acceso por navegador OK
-- red docker
-  - todos los contenedores están en la misma red
-  - comunicación interna OK
-- volumenes / bind-backed directories
-  -  daots en /home/login/data
-  -  persistencia real tras reinicio
-  -  no mezcla rara entre volumen docker y host
--  reinicios y comportamient
-  - docker compose down/up no rompe nada
-  - servicios se levantan solos (restart:always)
-- seguridad básica
-  - mariadb no expuesto al host
-  - credenciales via secrets
-  - root remoto deshbailitado
-  - 
+- Start the project
 
+      make
 
-### Containers State Verification
-- List running containers:
+- Verify created resources:
 
-          docker ps
+      docker ps
 
   Expected containers:
   - `mariadb`
   - `wordpress`
-  - `nginx`  
- 
-  To include stopped containers:
+  - `nginx`
 
-        docker ps -a
+- Check network:
 
-- Inspect container configuration:
+      docker network ls
 
+  Expected:
+  - `inceptionnet` (bridge network)    
+
+- Check volumes:
+
+      docker volume ls
+
+  Expected:
+  - MariDB volume
+  - WordPress volume
+
+- Check host directories_
+
+      ls -l /home/<login>/data
+
+  Expected:
+  - `mariadb/`
+  - `wordpress/`
+  And must contain data.
+
+### Container state and Debug access
 
         docker inspect <container>
+        docker exec -it <container> bash
 
- 
-### Container Access (Interactive Debugging)
-Containers can be accessed interactively using:  
-
-        docker exec -it mariadb bash
-        docker exec -it wordpress bash
-        docker exec -it nginx sh
-
-This allows inspection of:
+Used to verify:
 - runtime files
-- mounted volumes
+- mounted storage
 - secrets
 - environment variables
 
-### Environment Variables Verification
-Inside a container:
+### Network verification
+All containers must communicate through the same Docker bridge network.  
 
-      env
-      env | grep MYSQL
-      env | grep WP
-      ...
+      docker network inspect inceptionnet
 
-### Docker Secrets Verification
-Docker secrets must exists as runtime-mounte files.  
-- Check mounted secrets:
-  
-      docker exec mariadb ls /run/secrets
-      docker exec wordpress ls /run/secrets
+Expected:
+- All containers attached  
 
-  Expected output: passsword files.
+Test internal resolution:
 
-- Read a secret manually:
+      docker exec wordpress ping mariadb
+      docker exec nginx ping wordpress
 
-      docker exec mariadb cat /run/secrets/<secret_name>
+  o
 
-  Expected output: the stored password.  
+      getent host mariadb
 
-- Verify secrets are NOT exposed as environment variables:
+  ❌ PROBAR ESTO!!
+  Expected:
+  - Success (container resolves service name vis Docker DNS)
 
-        docker inspect mariadb | grep -i password
-
-  Expected result: no passwords visible.
-  This confirms credentials are handled securely.
-
-### NGINX Inspection
-
-- Enter the NGINX container:
-
-          docker exec -it nginx bash
-
-- Inspect logs:
-
-          tail -f /var/log/nginx/access.log
-
-  Shows every HTTP request handled by NGINX.
-
-- Error log:
-
-            tail -f /var/log/nginx/error.log
-
-  Empty if NGINX and WordPress communicate correctly.  
-      
-### WordPress Runtime Inspection
-- Enter the WordPress container:
-
-        docker exec -it wordpress bash
-
-- Inspect WordPress directory:
-
-      ls /var/www/html
-
-  This directory is bind-mounted from the host:
-
-      /home/<login>/data/wordpress
-
-  It contains:
-  - WordPress core file
-  - `wp-config.php`
-  - themes
-  - plugins
-  - uploads
-  - configuration files  
-
-- Example: verify uploads
-
-        ls /var/www/html/wp-content/uploads
-
-  Then navigate the automatically generated folders (YEAR/MONTH). Uploaded media files should appear inside these directories.    
-
-- Verify users and their roles using WP-CLI:
-
-      wp user list --allow-root
-
-- Modify roles using WP-CLI:
-
-      wp user set-role <username> <role> --allow-root
-
-  This updates:
-  - `wp_capabilities` 
-  - `wp_user_level`
-  
-  Default roles:
-  - `administrator` -> full access
-  - `editor` -> manage posts/pages
-  - `author` -> write own posts
-  - `contributor` -> write posts but cannot publish
-  - `subscriber` -> read only
-
-  Verify the change with:
-
-        wp user get <username> --field=roles --allow-root
-
-  Or check the `wp_usermeta` table.  
-  
-- Verify WordPress configuration:
-
-        cat var/www/html/wp-config.php
-
-  Check:
-  - DB host -> `mariadb`
-  - database name
-  - database user
-  - table prefix
-
-  > ⚠️ `wp config create` generates `wp-config.php` using provided environment variables. Even when the password originates fron Docker secrets, the generated file stores it as a PHP constant. Therefore:
-  > - Secrets protect passwords during container startup
-  > - WordPress requires the password in plaintext at runtime
-  > - The password becamos embedded in `wp-config.php`  
-
-### MariaDB Inspection
+### MariaDB verification
 - Access MariaDB:
 
         docker exec -it mariadb bash
         mysql -u root -p
  
-- User authentication model:  
-  MariaDB users are defined using `'user'@'host'`.
-  In this project:
+> User authentication model:
+> MariaDB users are defined using `'user'@'host'`.
+> In this project:
 
-        CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '...';
-        CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '...';
+>        CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '...';
+>        CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '...';
 
-  Meaning:
-  - `'user'@'%'` -> allows connections from other containers on the Docker network (WordPress)
-  - `'user'@'localhost'` -> allows local inspection from inside the MariaDB container.
+> Meaning:
+>  - `'user'@'%'` -> allows connections from other containers on the Docker network (WordPress)
+>  - `'user'@'localhost'` -> allows local inspection from inside the MariaDB container.
 
-- Root vs application user:
-  - Root user is used for administration (manage users, inspect system tables, full database access)
+> - Root vs application user:
+>  - Root user is used for administration (manage users, inspect system tables, full database access)
 
-           mysql -u root -p
+>           mysql -u root -p
 
-  - Application user: access only the WordPress database.
+>  - Application user: access only the WordPress database.
 
-          mysql -u <user> -p
+>          mysql -u <user> -p
  
-    Check privileges:
+ >   Check privileges:
 
-        SHOW GRANTS FOR 'user'@'localhost';
+>        SHOW GRANTS FOR 'user'@'localhost';
  
 - Basic database checks:
 
         SHOW DATABASES;
         USE database;
-        SHOW TABLESS;
+        SHOW TABLES;
 
   Typicall databases:
   - `mysql` -> users and privilege system tables
@@ -1176,40 +1056,197 @@ Docker secrets must exists as runtime-mounte files.
         SELECT ID, post_title, post_type, post_status
         FROM wp_posts;  
 
-### Volume Persistence Verification 
- ⚠️ ⚠️ ⚠️CAMBIAR ESTO!!! COMPROBACIÓN DE QUE EXISTE VOLUMES:  
 
-          docker volume ls
+### WordPress testing
+- Enter the WordPress container:
 
-          docker volume inspect inception_mariadb_data
-          docker volume inspect inception_wordpress_data
+        docker exec -it wordpress bash
 
-⚠️ ⚠️ ⚠️ sigue existiendo el /var/www/html y el var/lib/mysql???      
-| Service | Host Path | Container Path / Docker volume |
-|-----|-----|-----|
-| WordPress | `/home/login/data/wordpress` | `/var/www/html` / `/var/lib/docker/volumes/inception_wordpress_data/_data"` |
-| MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` / `/var/lib/docker/volumes/inception_mariadb_data/_data` |
+- Inspect WordPress directory:
 
-- Persistent behavior
-| Command | Result |
-|----|-----|
-| `make down` | Containers removed, data preserved |
-| `make clean` | Conainters/images/network removed, data preserved |
-| `make fclean` | Everything deleted including `home/login/data` and docker volumes |
+      ls /var/www/html
+
+  This directory is bind-backed from the host:
+
+      /home/<login>/data/wordpress
+
+  It contains:
+  - WordPress core file
+  - `wp-config.php`
+  - themes
+  - plugins
+  - uploads
+  - configuration files  
+
+- Check uploads:
+
+        ls /var/www/html/wp-content/uploads
+
+- Check users:
+
+      wp user list --allow-root
+
+- Modify roles using WP-CLI:
+
+      wp user set-role <username> <role> --allow-root
+  
+  Default roles:
+  - `administrator` -> full access
+  - `editor` -> manage posts/pages
+  - `author` -> write own posts
+  - `contributor` -> write posts but cannot publish
+  - `subscriber` -> read only
+
+  Verify the change with:
+
+        wp user get <username> --field=roles --allow-root
+  
+- Check WordPress configuration:
+
+        cat var/www/html/wp-config.php
+
+  Check:
+  - DB host =`mariadb`
+  - database name
+  - database user
+  - table prefix
+
+  > ⚠️ `wp config create` generates `wp-config.php` using provided environment variables. Even when the password originates fron Docker secrets, the generated file stores it as a PHP constant. Therefore:
+  > - Secrets protect passwords during container startup
+  > - WordPress requires the password in plaintext at runtime
+  > - The password becamos embedded in `wp-config.php`   
+
+### NGINX + HTTPS testing
+- Check service listening:
+
+        nc -zv localhost 443
+
+  Expected:
+  - Success on 443
+  - Failure on other ports
+
+- Test browser
+
+      https://<login>.42.fr
+
+- Verify TLS certificate:
+  The browser will show a security warning, because the project  uses a self-signed TLS certificate.
+  This is expected behavior in a development environment.
+  To validate TLS is correctly configured:
+  1. Access the site using HTTPS:
+
+           https://<login>.42.fr
+     
+  3. Confirm that:
+     - The connection uses HTTPS (not HTTP)
+     - The certificate is present
+     - The browser warns about trust (expected)
+
+  4. CLI verification:
+
+           openssl s_client -connect localhost:443 -servername <login>.42.fr
+
+     Expected:
+     - TLS handshake is successful
+     - Certificate is shown (self-signed is valid) 
 
 
-### Logs and debugging
-Containers log to **stdout/stderr**:
+- Enter the NGINX container:
 
-        docker logs wordpress
-        docker logs mariadb
-        docker logs nginx
+          docker exec -it nginx bash
 
-Used to debug:
-- startup failures
-- connection errors
-- PHP or database issues
+- Inspect logs:
 
+          docker logs nginx
+
+  Used to verify:
+  - incoming HTTPS requests
+  - TLS termination
+  - FastCGI forwarding to WordPress
+
+
+### Network isolation test
+- From host, try:
+
+      nc -zv localhost 3306
+
+  Expected:
+  - Failed (MariaDB not exposed)
+ 
+- From containers:
+
+      docker exec wordpress ping mariadb
+
+  Expected:
+  - DNS resolution works between containers
+  - WordPress can resolve mariadb service name
+      
+### Persistent layer test
+- Check host storage
+
+      ls /home/<login>/data
+
+  Expected:
+  - data persist
+
+- Verify Docker volumes
+
+        docker volume ls
+        docker volume inspect <volume_name>
+
+- Persistent test procedure:
+  1. Create WordPress post/user
+  2. Restart the stack
+  
+            make down
+            make
+  
+  3. Verify data still exists
+
+- Persistent storage mapping:
+
+  | Service | Host Path | Container Path / Docker volume |
+  |-----|-----|-----|
+  | WordPress | `/home/login/data/wordpress` | `/var/www/html` |
+  | MariaDB | `/home/login/data/mariadb` | `var/lib/mysql` |
+
+  
+### Restart and Resilience
+
+      docker compose restart
+
+  or
+
+      make down
+      make
+
+  Check:
+  - Service auto-restat
+  - no data loss
+
+- Verify restart policy:
+
+        docker inspect nginx | grep RestartPolicy
+
+  Expected:
+  - `always`
+
+
+### Security Checks
+ 
+- Secrets verification
+
+        docker exec mariadb ls /run/secrets
+
+  Expected:
+  - password files
+
+- Verify secrets are NOT exposed as environment variables:
+
+        docker inspect mariadb | grep -i password
+
+  Expected:
+  - no passwords visible.
 
 ### Clean Shutdown Verification
 - Stop containers:  
@@ -1227,7 +1264,5 @@ Used to debug:
 - Start the container again:
 
         docker start <container>
-
-
 
 
