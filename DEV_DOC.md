@@ -50,15 +50,15 @@ This document describes the technical architecture of the *Inception* project. I
     - [`wp-config.php`](#wp-configphp)
     - [Database structure and tables](#database-structure-and-tables)
 - [Inspection and testing](#inspection-and-testing)
-  - [Containers state verification](#containers-state-verification)
+  - [Infrastructure and clean state verification](#infrastructure-and-clean-state-verification)
   - [Container access (interactive debugging)](#container-access-interactive-debugging)
-  - [Environment variables verification](#environment-variables-verification)
-  - [Docker secrets verification](#docker-secrets-verification)
-  - [WordPress runtime inspection](#wordpress-runtime-inspection)
-  - [MariaDB inspection](#mariadb-inspection)
-  - [Volume persistence verification](#volume-persistence-verification)
-  - [Logs and debugging](#logs-and-debugging)
-  - [Clean shutdown verification](#clean-shutdown-verification)
+  - [Container state and Debug access](#container-state-and-debug-access)
+  - [Network verification](#network-verification)
+  - [MariaDB verification](#mariadb-verification)
+  - [WordPress testing](#wordpress-testing)
+  - [NGINX + HTTPS testing](#nginx-https-testing)
+  - [Persistent layer test](#persistent-layer-test)
+  - [Restart and Resilience](#restart-and-resilience)
  
 --------
 
@@ -909,7 +909,7 @@ This section explains how to **inspect, verify, and debug** the running *Incepti
 
       docker ps -a
       docker images
-      docker volumes ls
+      docker volume ls
   
   Expected result:
   - No project container (neither stopped ones)
@@ -972,18 +972,16 @@ All containers must communicate through the same Docker bridge network.
 Expected:
 - All containers attached  
 
-Test internal resolution:
+Test internal DNS resolution:
+- Docker provides an embedded DNS system that allows containers to resolve each other by service name instead of IP
 
-      docker exec wordpress ping mariadb
-      docker exec nginx ping wordpress
+      docker exec wordpress getent hosts mariadb
+      docker exec nginx getent hosts wordpress
 
-  o
-
-      getent host mariadb
-
-  ❌ PROBAR ESTO!!
   Expected:
-  - Success (container resolves service name vis Docker DNS)
+  - Returns internl Docker IPs (172.x.x.x mariadb)
+  - No manual IP configuration required
+  - Services resolves each other using containers/services names
 
 ### MariaDB verification
 - Access MariaDB:
@@ -1157,29 +1155,14 @@ Test internal resolution:
 
 - Inspect logs:
 
-          docker logs nginx
+          cat /var/log/nginx/acces.log
+          cat /var/log/nginx/error.log
 
   Used to verify:
   - incoming HTTPS requests
   - TLS termination
   - FastCGI forwarding to WordPress
 
-
-### Network isolation test
-- From host, try:
-
-      nc -zv localhost 3306
-
-  Expected:
-  - Failed (MariaDB not exposed)
- 
-- From containers:
-
-      docker exec wordpress ping mariadb
-
-  Expected:
-  - DNS resolution works between containers
-  - WordPress can resolve mariadb service name
       
 ### Persistent layer test
 - Check host storage
