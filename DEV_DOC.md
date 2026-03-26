@@ -111,15 +111,12 @@ System->Processor
 - CPUs: 2 (or more if available)
 - Enable PAE/NX  
 
-Display
-- Video memory: 16-64 MB (no critical, no GUI required)  
-
 Storage
 - Attach the Debian ISO as an optical disk
 - Use a virtual hard disk (`.vdi`) for the system installation  
 
 Network
-- Adapter 1: Bridged Adapter
+- Adapter 1: Bridged Adapter  
   This allows the VM to obtain an IP address on the local network and enables SSH access from the host.
 
 #### Installing Debian inside the VM
@@ -708,7 +705,7 @@ The configuration:
 - Defines TLS certificates and protocols
 - Serves WordPress files from `/var/www/html`
 - Redirects non-existing paths to `index.php`
-- Forwards `.php` requests to `wordpress:9000` via FastCGI
+- Forwards `.php` requests to `wordpress:9000` via FastCGI  
 This allows WordPress to handle "pretty URLs" without physical files.
 
 ##### Foreground execution
